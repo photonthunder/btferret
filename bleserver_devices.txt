@@ -11,4 +11,4 @@ DEVICE = My Other Pi   TYPE=mesh NODE=1000  ADDRESS = 2C:CF:67:3D:C8:B7
     LECHAR = PnP ID          PERMIT=02 SIZE=7 UUID=2A50 ; 2A50=PnP ID  (index 3)
   PRIMARY_SERVICE = 112233445566778899AABBCCDDEEFF00    ; private service, you choose UUID
     LECHAR = Control  PERMIT=06 SIZE=8 UUID=ABCD        ; private characteristic, choose UUID (index 4)
-    LECHAR = Info     PERMIT=06 SIZE=1 UUID=CDEF        ; private characteristic, choose UUID (index 5)
+    LECHAR = Counter PERMIT=16 SIZE=1 UUID=CDEF        ; private characteristic, choose UUID (index 5)

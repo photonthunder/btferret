@@ -2,11 +2,13 @@
 
 import btfpy
 
-
+count = 0
 def le_callback(clientnode,operation,cticn):
+  global count
   if(operation == btfpy.LE_CONNECT):
+    count = 0
     # clientnode has just connected
-    pass
+    # pass
   elif(operation == btfpy.LE_READ):
     # clientnode has just read local characteristic cticn
     pass
@@ -27,7 +29,9 @@ def le_callback(clientnode,operation,cticn):
     # Data (index 6) is notify capable
     # so if the client has enabled notifications for this characteristic
     # the following write will send the data as a notification to the client
-    btfpy.Write_ctic(btfpy.Localnode(),6,[0x67],0)
+    # btfpy.Write_ctic(btfpy.Localnode(),6,[0x67],0)
+    count = count + 5
+    btfpy.Write_ctic(btfpy.Localnode(),5,[count],0)
   elif(operation == btfpy.LE_KEYPRESS):
     # Only active if btfpy.Keys_to_callback(btfpy.KEY_ON,0) has been called before le_server()
     # clientnode is invalid
@@ -46,14 +50,14 @@ btfpy.Output_file("bleserver_bug.txt")
                  # write 0x56 to Info (index 5 in devices.txt)
                  # find index from UUID = CDEF
 index = btfpy.Find_ctic_index(btfpy.Localnode(),btfpy.UUID_2,[0xCD,0xEF])  # should be 5
-
-btfpy.Write_ctic(btfpy.Localnode(),5,[0x56],0)
+# count = count + 5
+# btfpy.Write_ctic(btfpy.Localnode(),5,count,0)
                            # local device is allowed to write to its own
                            # characteristic Info
                            # Size is known from devices.txt, so last
                            # parameter (count) can be 0           
                    # write 0x12 0x34 to Control (index 4)
-btfpy.Write_ctic(btfpy.Localnode(),4,[0x12,0x34],0)  
+btfpy.Write_ctic(btfpy.Localnode(),4,[0x33,0x35,0x37,0x39],0)  
 
 btfpy.Keys_to_callback(btfpy.KEY_ON,0)
                               # OPTIONAL - key presses are sent to le_callback
@@ -69,7 +73,7 @@ btfpy.Set_le_wait(5000)   # 5 second wait for connect/pair to complete
                                   
 btfpy.Le_pair(btfpy.Localnode(),btfpy.JUST_WORKS,0)
 
-btfpy.Le_server(le_callback,0)
+btfpy.Le_server(le_callback,50)
                               
 # btfpy.Le_server(le_callback,100)
                    # Become an LE server and wait for clients to connect.   
