@@ -1413,8 +1413,8 @@ int init_blue_ex(char *filename,int hcin)
 
   insdat = instack + INSHEADSIZE;     
   
-  set_print_flag(PRINT_NORMAL);  
-  // set_print_flag(PRINT_VERBOSE);
+  // set_print_flag(PRINT_NORMAL);  
+  set_print_flag(PRINT_VERBOSE);
 
   gpar.maxpage = 0;
   if(initflag == 0)
