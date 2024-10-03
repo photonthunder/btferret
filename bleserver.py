@@ -40,9 +40,9 @@ def le_callback(clientnode,operation,cticn):
  
 ##### START #####
   
-if(btfpy.Init_blue("devices.txt") == 0):
+if(btfpy.Init_blue("bleserver_devices.txt") == 0):
   exit(0)
-btfpy.Output_file("bug.txt")
+btfpy.Output_file("bleserver_bug.txt")
                  # write 0x56 to Info (index 5 in devices.txt)
                  # find index from UUID = CDEF
 index = btfpy.Find_ctic_index(btfpy.Localnode(),btfpy.UUID_2,[0xCD,0xEF])  # should be 5
@@ -60,9 +60,7 @@ btfpy.Keys_to_callback(btfpy.KEY_ON,0)
                               # with operation=LE_KEYPRESS and cticn=key code 
                               # The key that stops the server changes from x to ESC
                               
-    # CONNECTION/PAIRING PROBLEMS?
-    # See next section 3-7-1 Random address alternative setup 
-
+# section 3-7-1 Random address alternative setup
 btfpy.Set_le_random_address([0xD3,0x56,0xDB,0x04,0x32,0xA6])
 
 btfpy.Set_le_wait(5000)   # 5 second wait for connect/pair to complete
