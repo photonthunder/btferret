@@ -14,4 +14,4 @@ DEVICE = My Other Pi   TYPE=MESH NODE=1000  ADDRESS=2C:CF:67:3D:C8:B7
     LECHAR = Control  PERMIT=06 SIZE=8 UUID=ABCD        ; index 4, read, writeWithoutResponse
     LECHAR = Counter PERMIT=16 SIZE=1 UUID=CDEF         ; index 5, read, notify, writewithout response
     LECHAR = Data PERMIT=12 SIZE=1 UUID=DEAF            ; index 6, read, notify
-    LECHAR = Response PERMIT=12 SIZE=8 UUID=DCBA               ; index 7, read, notify
+    LECHAR = Response PERMIT=12 SIZE=8 UUID=DCBA        ; index 7, read, notify
