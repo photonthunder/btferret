@@ -1,6 +1,7 @@
-DEVICE = My Other Pi   TYPE=mesh NODE=1000  ADDRESS = 2C:CF:67:3D:C8:B7
+DEVICE = My Other Pi   TYPE=LE NODE=1000  ADDRESS = 2C:CF:67:3D:C8:B7
   ; LE characteristics when acting as an LE server
   ; Specify UUIDs and let system allocate handles
+  ; If the Address is going to be random use ADDRESS = MATCH_NAME
   ; https://github.com/petzval/btferret
   PRIMARY_SERVICE = 1800                                ; 1800=Generic access
     LECHAR = Device Name  PERMIT=02 SIZE=16 UUID=2A00   ; 2A00=Device name (index 0)
