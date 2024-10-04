@@ -1,4 +1,4 @@
-DEVICE = My Other Pi   TYPE=LE NODE=1000  ADDRESS = 2C:CF:67:3D:C8:B7
+DEVICE = My Other Pi   TYPE=MESH NODE=1000  ADDRESS=2C:CF:67:3D:C8:B7
   ; LE characteristics when acting as an LE server
   ; Specify UUIDs and let system allocate handles
   ; If the Address is going to be random use ADDRESS = MATCH_NAME
@@ -13,3 +13,5 @@ DEVICE = My Other Pi   TYPE=LE NODE=1000  ADDRESS = 2C:CF:67:3D:C8:B7
   PRIMARY_SERVICE = 112233445566778899AABBCCDDEEFF00    ; private service, you choose UUID
     LECHAR = Control  PERMIT=06 SIZE=8 UUID=ABCD        ; private characteristic, choose UUID (index 4)
     LECHAR = Counter PERMIT=16 SIZE=1 UUID=CDEF        ; private characteristic, choose UUID (index 5)
+    LECHAR = Data PERMIT=12 SIZE=1 UUID=DEAF            ; index 6, notify capable
+    LECHAR = Response PERMIT=02 SIZE=8 UUID=DCBA               ; index 7, read only

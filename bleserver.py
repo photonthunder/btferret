@@ -1,6 +1,7 @@
 # https://github.com/petzval/btferret
 
 import btfpy
+import random
 
 count = 0
 def le_callback(clientnode,operation,cticn):
@@ -15,6 +16,7 @@ def le_callback(clientnode,operation,cticn):
   elif(operation == btfpy.LE_WRITE):
     # clientnode has just written local characteristic cticn
     data = btfpy.Read_ctic(btfpy.Localnode(),cticn)  # read characteristic to data
+    btfpy.Write_ctic(btfpy.Localnode(),7,[data],0)
   elif(operation == btfpy.LE_DISCONNECT):
     # clientnode has just disconnected
     # uncomment next line to stop LE server when client disconnects
@@ -32,6 +34,7 @@ def le_callback(clientnode,operation,cticn):
     # btfpy.Write_ctic(btfpy.Localnode(),6,[0x67],0)
     count = count + 5
     btfpy.Write_ctic(btfpy.Localnode(),5,[count],0)
+    btfpy.Write_ctic(btfpy.Localnode(),6,[random.randint(0,255)],0)
   elif(operation == btfpy.LE_KEYPRESS):
     # Only active if btfpy.Keys_to_callback(btfpy.KEY_ON,0) has been called before le_server()
     # clientnode is invalid
@@ -57,7 +60,7 @@ index = btfpy.Find_ctic_index(btfpy.Localnode(),btfpy.UUID_2,[0xCD,0xEF])  # sho
                            # Size is known from devices.txt, so last
                            # parameter (count) can be 0           
                    # write 0x12 0x34 to Control (index 4)
-btfpy.Write_ctic(btfpy.Localnode(),4,[0x33,0x35,0x37,0x39],0)  
+btfpy.Write_ctic(btfpy.Localnode(),4,[0x45,0x4E,0x54,0x45, 0x52],0)  
 
 btfpy.Keys_to_callback(btfpy.KEY_ON,0)
                               # OPTIONAL - key presses are sent to le_callback
@@ -65,7 +68,7 @@ btfpy.Keys_to_callback(btfpy.KEY_ON,0)
                               # The key that stops the server changes from x to ESC
                               
 # section 3-7-1 Random address alternative setup
-btfpy.Set_le_random_address([0xD3,0x56,0xDB,0x04,0x32,0xA6])
+btfpy.Set_le_random_address([0xD3,0x56,0xDB,0x04,0x32,0xA7])
 
 btfpy.Set_le_wait(5000)   # 5 second wait for connect/pair to complete
 
