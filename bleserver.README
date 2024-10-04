@@ -21,4 +21,33 @@ then compile or recompile from within the btferret folder: python btfpy.py build
 
 I did not have to install anything to get this to compile except for the btferret folder
 
+I have added the following files:
+bleserver_bug.txt -> Stores the last output of the BLE Server
+bleserver_devices.txt -> Where you put services and characteristics
+bleserver.py -> actual python program to run
+bleserver.README -> This readme file
 
+To run the code just type: sudo python bleserver.py
+
+The first time you run the code it will have the following in the output:
+This local device has been allocated NODE = 1000
+It should be added to the bleserver_devices.txt file as follows:
+DEVICE=name (e.g. My Pi) TYPE=MESH  NODE=choose (e.g. 1)  ADDRESS=<2C:CF:67:3D:C8:B7>
+
+Make sure Node is set properly and that the address matches as well, then run again.
+The program doesn't die on its own, just runs forever.
+I stop it by using the console:
+ps -af
+sudo pkill -f bleserver.py
+
+The example has 4 custom characteristics:
+ABCD -> index 4, read, writeWithoutResponse, 8 bytes
+CDEF -> index 5, read, notify, writeWithoutResponse, 1 byte
+DEAF -> index 6, read, notify, 1 byte
+DCBA -> index 7, read, notify, 8 bytes
+
+CDEF counts up by 5 every 5 seconds
+DEAF shows a random byte every 5 seconds  
+A write of up to 8 bytes to ABCD will display on DCBA.
+A valid write (0 - 255) to CDEF will set the count to that value, 
+it will also set DCBA to display "SET CNT"
