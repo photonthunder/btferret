@@ -1,0 +1,24 @@
+First clone or download my fork of btferret (https://github.com/photonthunder/btferret)
+
+You want to stop the bluetooth service, but not matter what I did it wouldn't stop:
+sudo systemctl status bluetooth
+sudo systemctl stop bluetooth
+sudo systemctl disable bluetooth
+
+Until I masked the service:
+sudo systemctl mask bluetooth
+
+It would seem that disable and stop work, but then the service will automatically restart it thus the
+mask was necessary.  In the future we can disable the bluetooth more properly.
+Just unmask to get it started again.
+
+It is really nice to see the HCI commands as they are sent, really helps with troubleshooting.
+To do this turn on debug data just modify set_print_flag from PRINT_NORMAL to PRINT_VERBOSE in btferret/btlib.c:
+//set_print_flag(PRINT_NORMAL);
+  set_print_flag(PRINT_VERBOSE);
+
+then compile or recompile from within the btferret folder: python btfpy.py build
+
+I did not have to install anything to get this to compile except for the btferret folder
+
+
