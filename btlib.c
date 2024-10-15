@@ -322,6 +322,8 @@ struct globpar
 struct globpar gpar;
 
 struct devdata *dev[NUMDEVS];  // allocated as needed by devalloc()
+static int ndev;
+
 
    // incoming stack for readhci()
    // each entry  type,length lo,length hi,device,data
@@ -1301,17 +1303,91 @@ char *btledev[3] = { btle0,btle1,btle2 };
   
 /************ SETUP FUNCTIONS **************/
 
-// int set_device_name(char *name, int len)
+int set_device_name(unsigned char *name, int len)
+{
+  if (len > NAMELEN)
+  {
+    printf("Device Name too long %d > %d\n",len, NAMELEN); 
+    return -1;
+  }
+  memcpy(dev[ndev]->name, name, len);
+  dev[ndev]->name[len] = '\0';
+  return 0;
+}
+
+int set_type(int type)
+{
+  switch(type)
+  {
+    case BTYPE_LO:
+    case BTYPE_CL:
+    case BTYPE_LE:
+    case BTYPE_ME:
+      dev[ndev]->type = type;
+    break;
+    default:
+      printf("Invalid BTYPE %d", type);
+      return -1
+    break;
+  }
+  return 0;
+}
+
+int set_address(unsigned char *address, int len)
+{
+  int hn;
+  unsigned char *data;
+  if (strncmp(address, "MATCH_NAME", 10) == 0)
+  {
+    dev[ndev]->matchname = 1;
+    return 1;
+  }
+  else {
+    dev[ndev]->matchname = 1;
+    data = strtohexx(address, len, &hn);
+    if (hn != 6)
+    {
+      printf("Address %s must be 6 bytes", address);
+      return -1;
+    }
+    else
+    {
+      for(int i = 0; i < 6; ++i)
+      {
+        dev[ndev]->baddr[i] = data[i];
+      }
+      return 0;
+    }
+  }
+}
+
+int set_node(int node)
+{
+  if (node <= 0 || node >= 0x10000)
+  {
+    printf("Invalid Node number %d", node);
+    return -1;
+  }
+  for (int i = 0; i < ndev - 1; i++)
+  {
+    if (node == dev[i]->node)
+    {
+      printf("Repeat Node Number %d", node):
+      return -1;
+    }
+  }
+  dev[ndev]->node = node;
+  return 0;
+}
+
+// int set_pin(unsigned char *pin)
 // {
-//   if (len > NAMELEN)
-//   {
-//     printf("Device Name too long %d > %d\n",len, NAMELEN); 
-//   }
-//   memcpy(dev[dn]->name, name, len);
-//   dev[dn]->name[len] = '\0';
-
-
+//   // TO BE IMPLEMENTED
 // }
+
+
+
+
 
 
 /***************************** FUNCTIONS ************************/
@@ -1354,7 +1430,7 @@ static int errcount;
 static int initflag;
 int pre_init_blue(int hcin)
   {
-  int n, dn, k, flag;
+  int n, k, flag;
   unsigned char *data;
 
     
@@ -1453,8 +1529,8 @@ int pre_init_blue(int hcin)
       dev[k]->type = 0;
     }
   
-  dn = devalloc();
-  if(dn != 0)
+  ndev = devalloc();
+  if(ndev != 0)
     return(0);
      
   dev[0]->type = BTYPE_LO;
@@ -1537,7 +1613,7 @@ int pre_init_blue(int hcin)
       }
     while(n >= 0 && flag == 0);
     }
-    return dn;
+    return(1);
   }
 
 int post_init_blue(void)
@@ -1594,7 +1670,7 @@ int post_init_blue(void)
 
 int init_blue_ex(char *filename,int hcin)
   {
-  int n,hn,sn,dn,i,len,flag,errflag,psnx;
+  int n,hn,sn,i,len,flag,errflag,psnx;
   int clflag,leflag,readret,meshcount,btleindex,reportflag;
   unsigned int ind[16];
   struct cticdata *cp;
@@ -1610,7 +1686,7 @@ int init_blue_ex(char *filename,int hcin)
   else
     gpar.btleflag = 0;
 
-  dn = pre_init_blue(hcin);
+  pre_init_blue(hcin);
 
   stream = NULL; 
   if(gpar.btleflag == 0)
@@ -1692,7 +1768,7 @@ int init_blue_ex(char *filename,int hcin)
       es = "Must start with DEVICE= or LECHAR= or PRIMARY_SERVICE=";
     else if(clflag != 0 && leflag != 0) 
       es = "DEVICE and LECHAR values on same line";  
-    else if(leflag != 0 && dev[dn]->type == BTYPE_CL)
+    else if(leflag != 0 && dev[ndev]->type == BTYPE_CL)
       es = "LECHAR not allowed with classic";     
     else if(ind[0] != 0 && ind[9] == 0)
       es = "Missing NODE";
@@ -1702,8 +1778,8 @@ int init_blue_ex(char *filename,int hcin)
         es = "Missing TYPE or ADDRESS";
       else
         {
-        dn = devalloc();
-        if(dn < 0)
+        ndev = devalloc();
+        if(ndev < 0)
           return(0);  // fatal alloc error
         flag = 1;
         }
@@ -1711,7 +1787,7 @@ int init_blue_ex(char *filename,int hcin)
     else if(leflag != 0) 
       {
       // ind[5] == 0 && ind[6] == 0  no handle/UUID
-      cp = cticalloc(dn); // return ctic pointer - may be to cticnull=failed
+      cp = cticalloc(ndev); // return ctic pointer - may be to cticnull=failed
       if(cp->type != CTIC_UNUSED)
         return(0);   // fatal alloc error
       flag = 2;  // characteristic entry
@@ -1736,14 +1812,14 @@ int init_blue_ex(char *filename,int hcin)
         sn = ind[0] & 0xFFFF;
         while(i < NAMELEN-1 && i < len && s[sn+i] != 0)
           {
-          dev[dn]->name[i] = s[sn+i];
+          dev[ndev]->name[i] = s[sn+i];
           ++i;
           }
-        dev[dn]->name[i] = 0;
+        dev[ndev]->name[i] = 0;
         --i;
-        while(i > 1 && dev[dn]->name[i] == ' ')
+        while(i > 1 && dev[ndev]->name[i] == ' ')
           {
-          dev[dn]->name[i] = 0;
+          dev[ndev]->name[i] = 0;
           --i;
           }
         psnx = -1;
@@ -1753,11 +1829,11 @@ int init_blue_ex(char *filename,int hcin)
         {  // TYPE  
         sn = ind[1] & 0xFFFF;
         if(strncasecmp(s+sn,"CLASSIC",7) == 0)
-          dev[dn]->type = BTYPE_CL;
+          dev[ndev]->type = BTYPE_CL;
         else if(strncasecmp(s+sn,"LE",2) == 0)   
-          dev[dn]->type = BTYPE_LE;
+          dev[ndev]->type = BTYPE_LE;
         else if(strncasecmp(s+sn,"MESH",2) == 0)   
-          dev[dn]->type = BTYPE_ME;
+          dev[ndev]->type = BTYPE_ME;
         else
           {
           NPRINT "%sTYPE must be CLASSIC/LE/MESH\n",errs);
@@ -1771,10 +1847,10 @@ int init_blue_ex(char *filename,int hcin)
         sn = ind[2] & 0xFFFF;
         
         if(strncasecmp(s+sn,"MATCH_NAME",10) == 0)
-          dev[dn]->matchname = 1;
+          dev[ndev]->matchname = 1;
         else
           {
-          dev[dn]->matchname = 0;
+          dev[ndev]->matchname = 0;
           data = strtohexx(s + sn,len,&hn);
           if(hn != 6)
             {
@@ -1784,7 +1860,7 @@ int init_blue_ex(char *filename,int hcin)
           else
             {
             for(i = 0 ; i < 6 ; ++i)
-              dev[dn]->baddr[i] = data[i];
+              dev[ndev]->baddr[i] = data[i];
             }
           }        
         }  // end ind[2] ADDRESS
@@ -1795,10 +1871,10 @@ int init_blue_ex(char *filename,int hcin)
         i = 0;
         while(i < 63 && s[sn+i] != 0 && s[sn+i] != ' ')
           {
-          dev[dn]->pincode[i] = s[sn+i];
+          dev[ndev]->pincode[i] = s[sn+i];
           ++i;
           }     
-        dev[dn]->pincode[i] = 0;   
+        dev[ndev]->pincode[i] = 0;   
         }  // end ind[3] PIN
         
       if(ind[4] != 0)
@@ -1916,19 +1992,19 @@ int init_blue_ex(char *filename,int hcin)
         for(i = 0 ; i < len ; ++i)
           buf[i] = s[sn+i];
         buf[len] = 0;
-        dev[dn]->node = atoi(buf);
+        dev[ndev]->node = atoi(buf);
           // check no repeat
         es = NULL;
-        if(dev[dn]->node <= 0 || dev[dn]->node >= 0x10000)
+        if(dev[ndev]->node <= 0 || dev[ndev]->node >= 0x10000)
           es = "Invalid NODE number";
-        for(i = 0 ; i < dn-1 && es == NULL ; ++i)
+        for(i = 0 ; i < ndev-1 && es == NULL ; ++i)
           {
-          if(dev[i]->node == dev[dn]->node)
+          if(dev[i]->node == dev[ndev]->node)
             es = "Repeat NODE number";
           }
         if(es != NULL)
           { 
-          NPRINT "%s%s %d\n",errs,es,dev[dn]->node);
+          NPRINT "%s%s %d\n",errs,es,dev[ndev]->node);
           errflag = 1;
           }
         }  // end ind[9] NODE
@@ -1940,7 +2016,7 @@ int init_blue_ex(char *filename,int hcin)
         for(i = 0 ; i < len ; ++i)
           buf[i] = s[sn+i];
         buf[len] = 0;
-        dev[dn]->rfchan = atoi(buf);
+        dev[ndev]->rfchan = atoi(buf);
         }  // end ind[10] CHANNEL
 
 
@@ -1948,7 +2024,7 @@ int init_blue_ex(char *filename,int hcin)
         {  // RANDOM = UNCHANGED
         sn = ind[11] & 0xFFFF;
         if(strncasecmp(s+sn,"UNCHANGED",9) == 0)
-          dev[dn]->leaddtype = 1;  // random
+          dev[ndev]->leaddtype = 1;  // random
         else
           {
           NPRINT "%sExpecting RANDOM = UNCHANGED\n",errs);
@@ -1956,7 +2032,7 @@ int init_blue_ex(char *filename,int hcin)
           }
         }
      
-      if(dn == 0 && ind[12] != 0)
+      if(ndev == 0 && ind[12] != 0)
         {  // PRIMARY_SERVICE
         len = entrylen(ind,12);
         sn = ind[12] & 0xFFFF;
@@ -1997,24 +2073,24 @@ int init_blue_ex(char *filename,int hcin)
       // check if local device / mesh
       if(flag == 1)
         {
-        if(gpar.btleflag != 0 || devnfrombadd(dev[dn]->baddr,BTYPE_XALL,DIRN_FOR) == 0)
-          {   // is device 0 board address local - move to dn=0
-          if(dev[dn]->type == BTYPE_ME)
+        if(gpar.btleflag != 0 || devnfrombadd(dev[ndev]->baddr,BTYPE_XALL,DIRN_FOR) == 0)
+          {   // is device 0 board address local - move to ndev=0
+          if(dev[ndev]->type == BTYPE_ME)
             {
-            dev[0]->node = dev[dn]->node;
-            strcpy(dev[0]->name,dev[dn]->name);
+            dev[0]->node = dev[ndev]->node;
+            strcpy(dev[0]->name,dev[ndev]->name);
             }
-          dev[dn]->type = 0;    // free dn
-          dn = 0;
+          dev[ndev]->type = 0;    // free ndev
+          ndev = 0;
           }             // but not a fatal error
-        else if(dev[dn]->type == BTYPE_ME)
+        else if(dev[ndev]->type == BTYPE_ME)
           ++meshcount;
         }   
             
       if(flag == 1)
         {
         if(errflag != 0)
-          dev[dn]->type = 0;  // free
+          dev[ndev]->type = 0;  // free
         }
       else if(flag == 2 && cp->type != CTIC_END)
         {
