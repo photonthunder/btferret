@@ -1299,6 +1299,20 @@ char *btledev[3] = { btle0,btle1,btle2 };
 /************* END TEXT ********************/
 
   
+/************ SETUP FUNCTIONS **************/
+
+// int set_device_name(char *name, int len)
+// {
+//   if (len > NAMELEN)
+//   {
+//     printf("Device Name too long %d > %d\n",len, NAMELEN); 
+//   }
+//   memcpy(dev[dn]->name, name, len);
+//   dev[dn]->name[len] = '\0';
+
+
+// }
+
 
 /***************************** FUNCTIONS ************************/
 
@@ -1336,28 +1350,19 @@ int init_blue(char *filename)
   return(init_blue_ex(filename,0));  // hci0
   }
 
-int init_blue_ex(char *filename,int hcin)
-  {
-  int n,dn,k,sn,hn,i,len,flag,errflag,errcount,psnx;
-  int clflag,leflag,readret,meshcount,btleindex,reportflag;
-  unsigned int ind[16];
-  struct cticdata *cp;
-  char s[256],buf[128],*es;
+static int errcount;
+static int initflag;
+int pre_init_blue(int hcin)
+{
+  int n, dn, k, flag;
   unsigned char *data;
-  FILE *stream;
-  static char errs[16] = {"   ERROR **** "};
-  static int initflag = 0;
+
     
-     // global parameters 
+  // global parameters 
 
   printf("Initialising...\n");
 
   timems(TIM_RUN);
-
-  if(strcmp(filename,"__BTLE__") == 0)
-    gpar.btleflag = 1;
-  else
-    gpar.btleflag = 0;
   
   gpar.btlenode = 0;
   gpar.screenoff = 0;
@@ -1437,7 +1442,6 @@ int init_blue_ex(char *filename,int hcin)
     }
     
   errcount = 0;
-  meshcount = 0;
   
        
   // zero entries  n=first undefined
@@ -1533,7 +1537,79 @@ int init_blue_ex(char *filename,int hcin)
       }
     while(n >= 0 && flag == 0);
     }
-   
+}
+
+int post_init_blue(void)
+{
+  int n;
+
+  if(gpar.lecap == 0)
+    {
+    NPRINT "\n*** Bluetooth adapter is not LE capable ***\n");
+    NPRINT "*** Mesh/LE functions will not work *******\n");
+    }
+  else
+    {
+    getrand(gpar.randbadd,6);
+    gpar.randbadd[0] |=  0xC0;
+
+    for(n = 0 ; n < 6 ; ++n)
+      lerandadd[13-n] = gpar.randbadd[n];
+      
+    VPRINT "Set LE random address\n");
+    sendhci(lerandadd,0);
+    statusok(0,lerandadd);
+
+  
+    VPRINT "Set LE advertising parameters\n");
+    if(gpar.hidflag == 0)
+      {
+      dev[0]->leaddtype = 0;
+      sendhci(leadparam,0);
+      statusok(0,leadparam);
+      VPRINT "Set LE advertising data with device name\n");
+      addname();
+      sendhci(leadvert,0);  // reset mesh packet index = 0
+      statusok(0,leadvert);
+      }
+    else
+      {
+      dev[0]->leaddtype = 1;
+      sendhci(leadparamx,0);
+      statusok(0,leadparamx);
+      NPRINT "Advertise as LE HID device\n");
+      sendhci(hidadvert,0);
+      statusok(0,hidadvert);
+      }
+    VPRINT "Get public keys\n");
+    sendhci(keypair,0);
+    readhci(0,IN_AUTOEND,0,2000,0);
+    n = findhci(IN_AUTOEND,0,INS_POP);
+    }
+
+  flushprint();    
+}
+
+int init_blue_ex(char *filename,int hcin)
+  {
+  int n,dn,hn,sn,i,len,flag,errflag,errcount,psnx;
+  int clflag,leflag,readret,meshcount,btleindex,reportflag;
+  unsigned int ind[16];
+  struct cticdata *cp;
+  char s[256],buf[128],*es;
+  unsigned char *data;
+  FILE *stream;
+  static char errs[16] = {"   ERROR **** "};
+
+  meshcount = 0;
+  
+  if(strcmp(filename,"__BTLE__") == 0)
+    gpar.btleflag = 1;
+  else
+    gpar.btleflag = 0;
+
+  pre_init_blue(hcin);
+
   stream = NULL; 
   if(gpar.btleflag == 0)
     {  
@@ -1969,101 +2045,55 @@ int init_blue_ex(char *filename,int hcin)
         readret = 0;
       }
     }  // end read file line loop
-    
+
   if(gpar.btleflag == 0 && stream != NULL)
+  {
     fclose(stream);
-   
-  if(errcount != 0)
-    {
-    closehci();
-    printf("\n************ initblue() FAILED ************\n");
-    return(0);
-    }
-
-  if(dev[0]->node == 0)
-    {
-    dev[0]->node = newnode();
-    sprintf(buf,"Node %d",dev[0]->node);
-    strcpy(dev[0]->name,buf);    
-    NPRINT "\nThis local device has been allocated NODE = %d\n",dev[0]->node);
-    NPRINT "It should be added to the %s file as follows:\n",filename);
-    NPRINT "DEVICE=name (e.g. My Pi) TYPE=MESH  NODE=choose (e.g. 1)  ADDRESS=%s\n",baddstr(dev[0]->baddr,0));
-    }
-  else
-    {  // write local name
-    for(n = 0 ; n < 8 ; ++n)
-      s[n] = wln[n];
-    for(n = 8 ; n < 256 ; ++n)
-      s[n] = 0;
-    strcpy(s+8,dev[0]->name);
-    sendhci((unsigned char*)s,0);
-    }
-      
-  if(localctics() == 0)
-    ++errcount;    
-
-  flushprint();
-
-  if(errcount != 0)
-    {    
-    printf("\n************ initblue() FAILED ************\n");
-    closehci();            
-    return(0);
-    }
-
-  rwlinkey(0,0,NULL);
-  if(initflag == 0)
-    atexit(close_all);
-  initflag = 1;
-
-
-  if(gpar.lecap == 0)
-    {
-    NPRINT "\n*** Bluetooth adapter is not LE capable ***\n");
-    NPRINT "*** Mesh/LE functions will not work *******\n");
-    }
-  else
-    {
-    getrand(gpar.randbadd,6);
-    gpar.randbadd[0] |=  0xC0;
-
-    for(n = 0 ; n < 6 ; ++n)
-      lerandadd[13-n] = gpar.randbadd[n];
-      
-    VPRINT "Set LE random address\n");
-    sendhci(lerandadd,0);
-    statusok(0,lerandadd);
-
-  
-    VPRINT "Set LE advertising parameters\n");
-    if(gpar.hidflag == 0)
+    if(errcount != 0)
       {
-      dev[0]->leaddtype = 0;
-      sendhci(leadparam,0);
-      statusok(0,leadparam);
-      VPRINT "Set LE advertising data with device name\n");
-      addname();
-      sendhci(leadvert,0);  // reset mesh packet index = 0
-      statusok(0,leadvert);
+      closehci();
+      printf("\n************ initblue() FAILED ************\n");
+      return(0);
+      }
+
+    if(dev[0]->node == 0)
+      {
+      dev[0]->node = newnode();
+      sprintf(buf,"Node %d",dev[0]->node);
+      strcpy(dev[0]->name,buf);    
+      NPRINT "\nThis local device has been allocated NODE = %d\n",dev[0]->node);
+      NPRINT "It should be added to the %s file as follows:\n",filename);
+      NPRINT "DEVICE=name (e.g. My Pi) TYPE=MESH  NODE=choose (e.g. 1)  ADDRESS=%s\n",baddstr(dev[0]->baddr,0));
       }
     else
-      {
-      dev[0]->leaddtype = 1;
-      sendhci(leadparamx,0);
-      statusok(0,leadparamx);
-      NPRINT "Advertise as LE HID device\n");
-      sendhci(hidadvert,0);
-      statusok(0,hidadvert);
+      {  // write local name
+      for(n = 0 ; n < 8 ; ++n)
+        s[n] = wln[n];
+      for(n = 8 ; n < 256 ; ++n)
+        s[n] = 0;
+      strcpy(s+8,dev[0]->name);
+      sendhci((unsigned char*)s,0);
       }
-    VPRINT "Get public keys\n");
-    sendhci(keypair,0);
-    readhci(0,IN_AUTOEND,0,2000,0);
-    n = findhci(IN_AUTOEND,0,INS_POP);
-    }
+      
+    if(localctics() == 0)
+      ++errcount;    
 
-  flushprint();
+    flushprint();
 
-  return(1);     
+    if(errcount != 0)
+      {    
+      printf("\n************ initblue() FAILED ************\n");
+      closehci();            
+      return(0);
+      }
+
+    rwlinkey(0,0,NULL);
+    if(initflag == 0)
+      atexit(close_all);
+    initflag = 1;
+    post_init_blue();
+  }
+  return(1); 
   }
 
 
