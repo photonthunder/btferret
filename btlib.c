@@ -1321,12 +1321,15 @@ int set_type(int type)
   {
     case BTYPE_LO:
     case BTYPE_CL:
+      printf("Currently not supported, use devices.txt method\n");
+      return -1;
+    break;
     case BTYPE_LE:
     case BTYPE_ME:
       dev[ndev]->type = type;
     break;
     default:
-      printf("Invalid BTYPE %d", type);
+      printf("Invalid BTYPE %d\n", type);
       return -1
     break;
   }
@@ -1347,7 +1350,7 @@ int set_address(unsigned char *address, int len)
     data = strtohexx(address, len, &hn);
     if (hn != 6)
     {
-      printf("Address %s must be 6 bytes", address);
+      printf("Address %s must be 6 bytes\n", address);
       return -1;
     }
     else
@@ -1365,14 +1368,14 @@ int set_node(int node)
 {
   if (node <= 0 || node >= 0x10000)
   {
-    printf("Invalid Node number %d", node);
+    printf("Invalid Node number %d\n", node);
     return -1;
   }
   for (int i = 0; i < ndev - 1; i++)
   {
     if (node == dev[i]->node)
     {
-      printf("Repeat Node Number %d", node):
+      printf("Repeat Node Number %d\n", node):
       return -1;
     }
   }
@@ -1380,10 +1383,52 @@ int set_node(int node)
   return 0;
 }
 
-// int set_pin(unsigned char *pin)
-// {
-//   // TO BE IMPLEMENTED
-// }
+int set_lechar(unsigned char *primary_service, unsigned char *name, int permit, int size, unsigned char *uuid)
+{
+  int hn, psnx;
+  unsigned char *data;
+  struct cticdata *cp;
+  int ps_len = strlen(primary_service);
+  
+  psnx = -1;
+
+  data = strtohexx(primary_service, ps_len, &hn);)
+  if (hn != 16 && hn != 2)
+  {
+    printf("Primary Service must be 2 or 16 bytes\n");
+    return -1;
+  }
+  if (hn == 2 && data[0] == 0x18 && data[1] == 0x12)
+  {
+    gpar.hidflag = 1;
+  }
+  cp = &cticnull;
+  cp = cticalloc(ndev);
+  if (cp->type != CTIC_UNUSED)
+  {
+    printf("Fatal CTIC ALLOC Error\n");
+    return -1;
+  }
+
+  if (psnx >= 30)
+  {
+    printf("Too many Primary Services %d\n", psnx);
+    return -1;
+  }
+  if (psnx < 0)
+  {
+    psnx = 0;
+  }
+  ++psnx;             
+  pserv[psnx].handle = 0;
+  pserv[psnx].uuidtype = hn;
+  for(int i = 0 ; i < hn ; ++i)
+  {
+    pserv[psnx].uuid[i] = data[i];
+  }
+
+
+}
 
 
 
