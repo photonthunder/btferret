@@ -1353,7 +1353,7 @@ int init_blue(char *filename)
 static int errcount;
 static int initflag;
 int pre_init_blue(int hcin)
-{
+  {
   int n, dn, k, flag;
   unsigned char *data;
 
@@ -1537,10 +1537,11 @@ int pre_init_blue(int hcin)
       }
     while(n >= 0 && flag == 0);
     }
-}
+    return dn;
+  }
 
 int post_init_blue(void)
-{
+  {
   int n;
 
   if(gpar.lecap == 0)
@@ -1587,12 +1588,13 @@ int post_init_blue(void)
     n = findhci(IN_AUTOEND,0,INS_POP);
     }
 
-  flushprint();    
-}
+  flushprint();  
+  return(1);  
+  }
 
 int init_blue_ex(char *filename,int hcin)
   {
-  int n,dn,hn,sn,i,len,flag,errflag,errcount,psnx;
+  int n,hn,sn,dn,i,len,flag,errflag,psnx;
   int clflag,leflag,readret,meshcount,btleindex,reportflag;
   unsigned int ind[16];
   struct cticdata *cp;
@@ -1608,7 +1610,7 @@ int init_blue_ex(char *filename,int hcin)
   else
     gpar.btleflag = 0;
 
-  pre_init_blue(hcin);
+  dn = pre_init_blue(hcin);
 
   stream = NULL; 
   if(gpar.btleflag == 0)
@@ -2047,7 +2049,7 @@ int init_blue_ex(char *filename,int hcin)
     }  // end read file line loop
 
   if(gpar.btleflag == 0 && stream != NULL)
-  {
+    {
     fclose(stream);
     if(errcount != 0)
       {
@@ -2092,7 +2094,7 @@ int init_blue_ex(char *filename,int hcin)
       atexit(close_all);
     initflag = 1;
     post_init_blue();
-  }
+    }
   return(1); 
   }
 
