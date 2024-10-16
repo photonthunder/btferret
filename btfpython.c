@@ -765,7 +765,114 @@ static PyObject* Init_blue(PyObject* self,PyObject* args)
 
   return Py_BuildValue("i",n);  
   }
+
+//int set_device_name(unsigned char *name, int len);
+static PyObject* Set_device_name(PyObject* self,PyObject* args)
+  {
+  int n,len;
+  char *buf
   
+  if(PyObject_Size(args) != 2 || !PyArg_ParseTuple(args,"si",&buf,&len))
+    {
+    printerror((PyObject*)Init_blue_ex);
+    n  = 0;
+    }
+  else   
+    n = set_device_name(buf, len);
+
+  return Py_BuildValue("i",n);  
+  }
+
+//int set_type(int type)
+static PyObject* Set_type(PyObject* self,PyObject* args)
+  {
+  int n,type;
+  
+  if(PyObject_Size(args) != 1 || !PyArg_ParseTuple(args,"i",&type))
+    {
+    printerror((PyObject*)Init_blue_ex);
+    n  = 0;
+    }
+  else   
+    n = set_type(type);
+
+  return Py_BuildValue("i",n);  
+  }
+
+//int set_address(unsigned char *address, int len)
+static PyObject* Set_address(PyObject* self,PyObject* args)
+  {
+  int n,len;
+  char *buf
+  
+  if(PyObject_Size(args) != 2 || !PyArg_ParseTuple(args,"si",&buf,&len))
+    {
+    printerror((PyObject*)Init_blue_ex);
+    n  = 0;
+    }
+  else   
+    n = set_address(buf, len);
+
+  return Py_BuildValue("i",n);  
+  }
+
+//int set_node(int node)
+static PyObject* Set_node(PyObject* self,PyObject* args)
+  {
+  int n,node;
+  
+  if(PyObject_Size(args) != 1 || !PyArg_ParseTuple(args,"i",&node))
+    {
+    printerror((PyObject*)Init_blue_ex);
+    n  = 0;
+    }
+  else   
+    n = set_node(node);
+
+  return Py_BuildValue("i",n);  
+  }
+
+// int set_lechar(unsigned char *primary_service, unsigned char *name, int permit, int size, unsigned char *uuid)
+static PyObject* Set_lechar(PyObject* self,PyObject* args)
+  {
+  int n,permit,size;
+  char *psbuf, *name, *uuid
+  
+  if(PyObject_Size(args) != 5 || !PyArg_ParseTuple(args,"ssiis",&psbuf,&name,&permit,&size,&uuid))
+    {
+    printerror((PyObject*)Init_blue_ex);
+    n  = 0;
+    }
+  else   
+    n = pre_init_blue(psbuf,name,permit,size,uuid);
+
+  return Py_BuildValue("i",n);  
+  }
+
+//int pre_init_blue(int hcin)
+static PyObject* Pre_init_blue(PyObject* self,PyObject* args)
+  {
+  int n,dev;
+  
+  if(PyObject_Size(args) != 1 || !PyArg_ParseTuple(args,"i",&dev))
+    {
+    printerror((PyObject*)Init_blue_ex);
+    n  = 0;
+    }
+  else   
+    n = pre_init_blue(dev);
+
+  return Py_BuildValue("i",n);  
+  }
+
+//int post_init_blue(void)
+static PyObject* Post_init_blue(PyObject* self,PyObject* args)
+  {
+  int post_init_blue();
+  Py_RETURN_NONE; 
+  }
+
+
 //int init_blue_ex(char *filename,int hcin);
 static PyObject* Init_blue_ex(PyObject* self,PyObject* args)
   {

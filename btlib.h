@@ -112,7 +112,15 @@ int find_ctic_index(int node,int flag,unsigned char *uuid);
 
 int hid_key_code(int key);
 
+int set_device_name(unsigned char *name, int len);
+int set_type(int type);
+int set_address(unsigned char *address, int len);
+int set_node(int node);
+int set_lechar(unsigned char *primary_service, unsigned char *name, int permit, int size, unsigned char *uuid);
+
 int init_blue(char *filename);
+int pre_init_blue(int hcin);
+int post_init_blue(void);
 int init_blue_ex(char *filename,int hcin);
 int init_btle(char *name,int hcin);
 

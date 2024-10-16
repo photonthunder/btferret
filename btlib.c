@@ -1303,6 +1303,57 @@ char *btledev[3] = { btle0,btle1,btle2 };
   
 /************ SETUP FUNCTIONS **************/
 
+static bool compare_uuid(unsigned char *uuid1, unsigned char *uuid2, int len)
+{
+  for (int i = 0; i < len; i++)
+  {
+    if (uuid1[i] != uuid2[i])
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+typdef struct {
+    bool name;
+    bool type;
+    bool node;
+    bool address;
+} devsetdata;
+
+static devsetdata devset;
+static bool device_params_set(void)
+{
+  bool all_set = true;
+    devset.name = false;
+  devset.type = false;
+  devset.node = false;
+  devset.address = false;
+
+  if (devset.name == false)
+  {
+      printf("Set Device Name First");
+      all_set = false;
+  }
+  if (devset.type == false)
+  {
+      printf("Set Device Type First");
+      all_set = false;
+  }
+    if (devset.node == false)
+  {
+      printf("Set Device Node First");
+      all_set = false;
+  }
+    if (devset.address == false)
+  {
+      printf("Set Device Address First");
+      all_set = false;
+  }
+  return all_set;
+}
+
 int set_device_name(unsigned char *name, int len)
 {
   if (len > NAMELEN)
@@ -1383,14 +1434,23 @@ int set_node(int node)
   return 0;
 }
 
+static int npserv;
+static int uuid_flag;
 int set_lechar(unsigned char *primary_service, unsigned char *name, int permit, int size, unsigned char *uuid)
 {
-  int hn, psnx;
+  int n, hn;
   unsigned char *data;
   struct cticdata *cp;
+  bool pserv_exists;
+  char s[256];
   int ps_len = strlen(primary_service);
-  
-  psnx = -1;
+  int name_len = strlen(name);
+  int uuid_len = strlen(uuid);
+
+  if (device_params_set() == false)
+  {
+    return -1;
+  }
 
   data = strtohexx(primary_service, ps_len, &hn);)
   if (hn != 16 && hn != 2)
@@ -1410,24 +1470,106 @@ int set_lechar(unsigned char *primary_service, unsigned char *name, int permit, 
     return -1;
   }
 
-  if (psnx >= 30)
+  if (npserv >= 30)
   {
-    printf("Too many Primary Services %d\n", psnx);
+    printf("Too many Primary Services %d\n", npserv);
     return -1;
   }
-  if (psnx < 0)
+  if (npserv < 0)
   {
-    psnx = 0;
+    npserv = 0;
+    uuid_flag = 0;
   }
-  ++psnx;             
-  pserv[psnx].handle = 0;
-  pserv[psnx].uuidtype = hn;
-  for(int i = 0 ; i < hn ; ++i)
+  pserv_exists = false;
+  for (int i = 0; i < 32; i++)
   {
-    pserv[psnx].uuid[i] = data[i];
+    if compare_uuid(pserv[i].uuid, data, hn)  == true
+    {
+      pserv_exists = true;
+      npserv = i;
+      break;
+    }
+  }
+  if (pserv_exists == false)
+  {
+    ++npserv;         
+    pserv[npserv].handle = 0;
+    pserv[npserv].uuidtype = hn;
+    memcpy(pserv[npserv].uuid, data, hn);
+    if(gpar.btleflag != 0 || devnfrombadd(dev[ndev]->baddr,BTYPE_XALL,DIRN_FOR) == 0)
+    {   // is device 0 board address local - move to ndev=0
+      if(dev[ndev]->type == BTYPE_ME)
+        {
+        dev[0]->node = dev[ndev]->node;
+        strcpy(dev[0]->name,dev[ndev]->name);
+        }
+      dev[ndev]->type = 0;    // free ndev
+      ndev = 0;
+    }
+    else {
+      printf("No match to address local, so aborting");
+      return -1;
+    }
+
+  }
+  memcpy(cp->name, name, name_len);
+  cp->psnx = npserv;
+
+  if (permit > 0xFF)
+  {
+    printf("Permit must be 1 Hex Byte (%X < 0xFF)\n", permit);
+    return -1;
+  }
+  else if ((permit & 0x30) == 0x30)
+  {
+    printf("Permit notify and indicate enabled\n");
+    return -1;
+  }
+  else
+  {
+    cp->perm = permit;
   }
 
+  if (size < 1 || size > LEDATLEN)
+  {
+    printf("Size must be 1 - %d, size = %d", LEDATLEN, size);
+    return -1;
+  }
+  cp->size = size;
+  cp->origsize = size;
 
+  data = strtohexx(uuid, uuid_len, &hn);
+  if (hn != 16 && hn != 2)
+  {
+    printf("UUID must be 2 or 16 bytes\n");
+    return -1;
+  }
+  cp->uuidtype = hn;
+  memcpy(cp->uuid, data, hn);
+  if (hn == 2 && data[0] == 0x2A && data[1] == 0x4D)
+  {
+    uuid_flag++;
+    cp->reportflag = uuid_flag;
+    cp->reportid = uuid_flag;
+  }
+  if (cp->type != CTIC_END)
+  {
+    cp->type = CTIC_ACTIVE;
+  }
+
+  for(n = 0 ; n < 8 ; ++n)
+    s[n] = wln[n];
+  for(n = 8 ; n < 256 ; ++n)
+    s[n] = 0;
+  strcpy(s+8,dev[0]->name);
+  sendhci((unsigned char*)s,0);
+
+  if(localctics() == 0)
+  {
+    printf("localctics failed\n");
+    return -1;
+  }
+  rwlinkey(0,0,NULL);
 }
 
 
@@ -1480,6 +1622,12 @@ int pre_init_blue(int hcin)
 
     
   // global parameters 
+  npserv = -1;
+  uuid_flag = 0;
+  devset.name = false;
+  devset.type = false;
+  devset.node = false;
+  devset.address = false;
 
   printf("Initialising...\n");
 
@@ -2549,7 +2697,7 @@ char *device_address(int node)
 int devnfrombadd(unsigned char *badd,int type,int dirn)
   {
   int n;
-  
+  VPRINT "badd = %s, type = %d, dirn = %d\n", badd, type, dirn);
   for(n = 0 ; devok(n) != 0 ; ++n)
     { 
     if(dev[n]->matchname != 1)
