@@ -1329,22 +1329,22 @@ static int device_params_set(void)
 
   if (devset.name == 0)
   {
-      printf("Set Device Name First");
+      printf("Set Device Name First\n");
       all_set = 0;
   }
   if (devset.type == 0)
   {
-      printf("Set Device Type First");
+      printf("Set Device Type First\n");
       all_set = 0;
   }
     if (devset.node == 0)
   {
-      printf("Set Device Node First");
+      printf("Set Device Node First\n");
       all_set = 0;
   }
     if (devset.address == 0)
   {
-      printf("Set Device Address First");
+      printf("Set Device Address First\n");
       all_set = 0;
   }
   return all_set;
@@ -1359,6 +1359,7 @@ int set_device_name(unsigned char *name, int len)
   }
   memcpy(dev[ndev]->name, name, len);
   dev[ndev]->name[len] = '\0';
+  devset.name = 1;
   return 1;
 }
 
@@ -1374,6 +1375,7 @@ int set_type(int type)
     case BTYPE_LE:
     case BTYPE_ME:
       dev[ndev]->type = type;
+      devset.type= 1;
     break;
     default:
       printf("Invalid BTYPE %d\n", type);
@@ -1406,6 +1408,7 @@ int set_address(char *address, int len)
       {
         dev[ndev]->baddr[i] = data[i];
       }
+      devset.address = 1;
       return 1;
     }
   }
@@ -1427,6 +1430,7 @@ int set_node(int node)
     }
   }
   dev[ndev]->node = node;
+  devset.node = 1;
   return 1;
 }
 
