@@ -35,8 +35,8 @@ It should be added to the bleserver_devices.txt file as follows:
 DEVICE=name (e.g. My Pi) TYPE=MESH  NODE=choose (e.g. 1)  ADDRESS=<2C:CF:67:3D:C8:B7>
 
 Make sure Node is set properly and that the address matches as well, then run again.
-The program doesn't die on its own, just runs forever.
-I stop it by using the console:
+The program doesn't die on its own, just runs forever until you hit ESC
+If there is an issue, you can also stop it by using the console:
 ps -af
 sudo pkill -f bleserver.py
 
