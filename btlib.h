@@ -114,9 +114,9 @@ int hid_key_code(int key);
 
 int set_device_name(unsigned char *name, int len);
 int set_type(int type);
-int set_address(unsigned char *address, int len);
+int set_address(char *address, int len);
 int set_node(int node);
-int set_lechar(unsigned char *primary_service, unsigned char *name, int permit, int size, unsigned char *uuid);
+int set_lechar(char *primary_service, char *name, int permit, int size, char *uuid);
 
 int init_blue(char *filename);
 int pre_init_blue(int hcin);

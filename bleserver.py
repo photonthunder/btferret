@@ -16,8 +16,9 @@ class BLEServer:
     return [ord(char) for char in input_string]
 
   def initialize(self, device_name="bleserver_devices.txt", bug_name="bleserver_bug.txt"):
-    if(btfpy.Init_blue(device_name) == 0):
-      exit(0)
+    # if(btfpy.Init_blue(device_name) == 0):
+    #   exit(0)
+    if(btfpy.Pre_init_blue(0)) == 0)
     btfpy.Output_file(bug_name)
     self.local_node = btfpy.Localnode()
     self.abcd_index = btfpy.Find_ctic_index(self.local_node, btfpy.UUID_2, [0xAB,0xCD])

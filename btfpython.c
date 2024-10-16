@@ -19,6 +19,13 @@ static PyObject* Find_ctics(PyObject* self,PyObject* args);
 static PyObject* Find_ctic_index(PyObject* self,PyObject* args);
 static PyObject* Hid_key_code(PyObject* self,PyObject* args);
 static PyObject* Init_blue(PyObject* self,PyObject* args);
+static PyObject* Set_device_name(PyObject* self,PyObject* args);
+static PyObject* Set_type(PyObject* self,PyObject* args);
+static PyObject* Set_address(PyObject* self,PyObject* args);
+static PyObject* Set_node(PyObject* self,PyObject* args);
+static PyObject* Set_lechar(PyObject* self,PyObject* args);
+static PyObject* Pre_init_blue(PyObject* self,PyObject* args);
+static PyObject* Post_init_blue(PyObject* self,PyObject* args);
 static PyObject* Init_blue_ex(PyObject* self,PyObject* args);
 static PyObject* Keys_to_callback(PyObject* self,PyObject* args);
 static PyObject* Le_pair(PyObject* self,PyObject* args);
@@ -84,6 +91,13 @@ static PyMethodDef BtfpyMethods[] =
   {"Find_ctic_index",Find_ctic_index,METH_VARARGS,"Find ctic index"},
   {"Hid_key_code",Hid_key_code,METH_VARARGS,"HID key code"},
   {"Init_blue",Init_blue,METH_VARARGS,"Init blue"},
+  {"Set_device_name",Set_device_name,METH_VARARGS,"Set device name"},
+  {"Set_type",Set_type,METH_VARARGS,"Set type"},
+  {"Set_address",Set_address,METH_VARARGS,"Set address"},
+  {"Set_node",Set_node,METH_VARARGS,"Set node"},
+  {"Set_lechar",Set_lechar,METH_VARARGS,"Set lechar"},
+  {"Pre_init_blue",Pre_init_blue,METH_VARARGS,"Pre init blue"},
+  {"Post_init_blue",Post_init_blue,METH_VARARGS,"Post init blue"},
   {"Init_blue_ex",Init_blue_ex,METH_VARARGS,"Init blue ex"},
   {"Keys_to_callback",Keys_to_callback,METH_VARARGS,"Keys to callback"},
   {"Le_pair",Le_pair,METH_VARARGS,"LE pair"},
@@ -770,7 +784,7 @@ static PyObject* Init_blue(PyObject* self,PyObject* args)
 static PyObject* Set_device_name(PyObject* self,PyObject* args)
   {
   int n,len;
-  char *buf
+  unsigned char *buf;
   
   if(PyObject_Size(args) != 2 || !PyArg_ParseTuple(args,"si",&buf,&len))
     {
@@ -799,11 +813,11 @@ static PyObject* Set_type(PyObject* self,PyObject* args)
   return Py_BuildValue("i",n);  
   }
 
-//int set_address(unsigned char *address, int len)
+//int set_address(char *address, int len)
 static PyObject* Set_address(PyObject* self,PyObject* args)
   {
   int n,len;
-  char *buf
+  char *buf;
   
   if(PyObject_Size(args) != 2 || !PyArg_ParseTuple(args,"si",&buf,&len))
     {
@@ -832,11 +846,11 @@ static PyObject* Set_node(PyObject* self,PyObject* args)
   return Py_BuildValue("i",n);  
   }
 
-// int set_lechar(unsigned char *primary_service, unsigned char *name, int permit, int size, unsigned char *uuid)
+// int set_lechar(char *primary_service, char *name, int permit, int size, char *uuid)
 static PyObject* Set_lechar(PyObject* self,PyObject* args)
   {
   int n,permit,size;
-  char *psbuf, *name, *uuid
+  char *psbuf, *name, *uuid;
   
   if(PyObject_Size(args) != 5 || !PyArg_ParseTuple(args,"ssiis",&psbuf,&name,&permit,&size,&uuid))
     {
@@ -844,7 +858,7 @@ static PyObject* Set_lechar(PyObject* self,PyObject* args)
     n  = 0;
     }
   else   
-    n = pre_init_blue(psbuf,name,permit,size,uuid);
+    n = set_lechar(psbuf,name,permit,size,uuid);
 
   return Py_BuildValue("i",n);  
   }

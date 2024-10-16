@@ -1303,53 +1303,49 @@ char *btledev[3] = { btle0,btle1,btle2 };
   
 /************ SETUP FUNCTIONS **************/
 
-static bool compare_uuid(unsigned char *uuid1, unsigned char *uuid2, int len)
+static int compare_uuid(unsigned char *uuid1, unsigned char *uuid2, int len)
 {
   for (int i = 0; i < len; i++)
   {
     if (uuid1[i] != uuid2[i])
     {
-      return false;
+      return 0;
     }
   }
-  return true;
+  return 1;
 }
 
-typdef struct {
-    bool name;
-    bool type;
-    bool node;
-    bool address;
-} devsetdata;
+struct devsetdata{
+    int name;
+    int type;
+    int node;
+    int address;
+};
 
-static devsetdata devset;
-static bool device_params_set(void)
+struct devsetdata devset;
+static int device_params_set(void)
 {
-  bool all_set = true;
-    devset.name = false;
-  devset.type = false;
-  devset.node = false;
-  devset.address = false;
+  int all_set = 1;
 
-  if (devset.name == false)
+  if (devset.name == 0)
   {
       printf("Set Device Name First");
-      all_set = false;
+      all_set = 0;
   }
-  if (devset.type == false)
+  if (devset.type == 0)
   {
       printf("Set Device Type First");
-      all_set = false;
+      all_set = 0;
   }
-    if (devset.node == false)
+    if (devset.node == 0)
   {
       printf("Set Device Node First");
-      all_set = false;
+      all_set = 0;
   }
-    if (devset.address == false)
+    if (devset.address == 0)
   {
       printf("Set Device Address First");
-      all_set = false;
+      all_set = 0;
   }
   return all_set;
 }
@@ -1359,11 +1355,11 @@ int set_device_name(unsigned char *name, int len)
   if (len > NAMELEN)
   {
     printf("Device Name too long %d > %d\n",len, NAMELEN); 
-    return -1;
+    return 0;
   }
   memcpy(dev[ndev]->name, name, len);
   dev[ndev]->name[len] = '\0';
-  return 0;
+  return 1;
 }
 
 int set_type(int type)
@@ -1373,7 +1369,7 @@ int set_type(int type)
     case BTYPE_LO:
     case BTYPE_CL:
       printf("Currently not supported, use devices.txt method\n");
-      return -1;
+      return 0;
     break;
     case BTYPE_LE:
     case BTYPE_ME:
@@ -1381,20 +1377,20 @@ int set_type(int type)
     break;
     default:
       printf("Invalid BTYPE %d\n", type);
-      return -1
+      return 0;
     break;
   }
-  return 0;
+  return 1;
 }
 
-int set_address(unsigned char *address, int len)
+int set_address(char *address, int len)
 {
   int hn;
   unsigned char *data;
   if (strncmp(address, "MATCH_NAME", 10) == 0)
   {
     dev[ndev]->matchname = 1;
-    return 1;
+    return 0;
   }
   else {
     dev[ndev]->matchname = 1;
@@ -1402,7 +1398,7 @@ int set_address(unsigned char *address, int len)
     if (hn != 6)
     {
       printf("Address %s must be 6 bytes\n", address);
-      return -1;
+      return 0;
     }
     else
     {
@@ -1410,7 +1406,7 @@ int set_address(unsigned char *address, int len)
       {
         dev[ndev]->baddr[i] = data[i];
       }
-      return 0;
+      return 1;
     }
   }
 }
@@ -1420,43 +1416,43 @@ int set_node(int node)
   if (node <= 0 || node >= 0x10000)
   {
     printf("Invalid Node number %d\n", node);
-    return -1;
+    return 0;
   }
   for (int i = 0; i < ndev - 1; i++)
   {
     if (node == dev[i]->node)
     {
-      printf("Repeat Node Number %d\n", node):
-      return -1;
+      printf("Repeat Node Number %d\n", node);
+      return 0;
     }
   }
   dev[ndev]->node = node;
-  return 0;
+  return 1;
 }
 
 static int npserv;
 static int uuid_flag;
-int set_lechar(unsigned char *primary_service, unsigned char *name, int permit, int size, unsigned char *uuid)
+int set_lechar(char *primary_service, char *name, int permit, int size, char *uuid)
 {
   int n, hn;
   unsigned char *data;
   struct cticdata *cp;
-  bool pserv_exists;
+  int pserv_exists;
   char s[256];
   int ps_len = strlen(primary_service);
   int name_len = strlen(name);
   int uuid_len = strlen(uuid);
 
-  if (device_params_set() == false)
+  if (device_params_set() == 0)
   {
-    return -1;
+    return 0;
   }
 
-  data = strtohexx(primary_service, ps_len, &hn);)
+  data = strtohexx(primary_service, ps_len, &hn);
   if (hn != 16 && hn != 2)
   {
     printf("Primary Service must be 2 or 16 bytes\n");
-    return -1;
+    return 0;
   }
   if (hn == 2 && data[0] == 0x18 && data[1] == 0x12)
   {
@@ -1467,30 +1463,30 @@ int set_lechar(unsigned char *primary_service, unsigned char *name, int permit, 
   if (cp->type != CTIC_UNUSED)
   {
     printf("Fatal CTIC ALLOC Error\n");
-    return -1;
+    return 0;
   }
 
   if (npserv >= 30)
   {
     printf("Too many Primary Services %d\n", npserv);
-    return -1;
+    return 0;
   }
   if (npserv < 0)
   {
     npserv = 0;
     uuid_flag = 0;
   }
-  pserv_exists = false;
+  pserv_exists = 0;
   for (int i = 0; i < 32; i++)
   {
-    if compare_uuid(pserv[i].uuid, data, hn)  == true
+    if (compare_uuid(pserv[i].uuid, data, hn)  == 0)
     {
-      pserv_exists = true;
+      pserv_exists = 1;
       npserv = i;
       break;
     }
   }
-  if (pserv_exists == false)
+  if (pserv_exists == 0)
   {
     ++npserv;         
     pserv[npserv].handle = 0;
@@ -1508,7 +1504,7 @@ int set_lechar(unsigned char *primary_service, unsigned char *name, int permit, 
     }
     else {
       printf("No match to address local, so aborting");
-      return -1;
+      return 0;
     }
 
   }
@@ -1518,12 +1514,12 @@ int set_lechar(unsigned char *primary_service, unsigned char *name, int permit, 
   if (permit > 0xFF)
   {
     printf("Permit must be 1 Hex Byte (%X < 0xFF)\n", permit);
-    return -1;
+    return 0;
   }
   else if ((permit & 0x30) == 0x30)
   {
     printf("Permit notify and indicate enabled\n");
-    return -1;
+    return 0;
   }
   else
   {
@@ -1533,7 +1529,7 @@ int set_lechar(unsigned char *primary_service, unsigned char *name, int permit, 
   if (size < 1 || size > LEDATLEN)
   {
     printf("Size must be 1 - %d, size = %d", LEDATLEN, size);
-    return -1;
+    return 0;
   }
   cp->size = size;
   cp->origsize = size;
@@ -1542,7 +1538,7 @@ int set_lechar(unsigned char *primary_service, unsigned char *name, int permit, 
   if (hn != 16 && hn != 2)
   {
     printf("UUID must be 2 or 16 bytes\n");
-    return -1;
+    return 0;
   }
   cp->uuidtype = hn;
   memcpy(cp->uuid, data, hn);
@@ -1567,9 +1563,10 @@ int set_lechar(unsigned char *primary_service, unsigned char *name, int permit, 
   if(localctics() == 0)
   {
     printf("localctics failed\n");
-    return -1;
+    return 0;
   }
   rwlinkey(0,0,NULL);
+  return 1;
 }
 
 
@@ -1624,10 +1621,10 @@ int pre_init_blue(int hcin)
   // global parameters 
   npserv = -1;
   uuid_flag = 0;
-  devset.name = false;
-  devset.type = false;
-  devset.node = false;
-  devset.address = false;
+  devset.name = 0;
+  devset.type = 0;
+  devset.node = 0;
+  devset.address = 0;
 
   printf("Initialising...\n");
 
