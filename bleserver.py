@@ -16,37 +16,39 @@ class BLEServer:
     return [ord(char) for char in input_string]
 
   def initialize(self, device_name="bleserver_devices.txt", bug_name="bleserver_bug.txt"):
-    # if (btfpy.Init_blue(device_name) == 0):
-    #   exit(0)
+    ORIGINAL = False
+    if ORIGINAL == True:
+      if (btfpy.Init_blue(device_name) == 0):
+        exit(0)
+    else:
+      if (btfpy.Pre_init_blue(0) == 0):
+        exit(0)
+      device_name = "My New Pi"
+      if (btfpy.Set_device_name(device_name, len(device_name)) == 0):
+        exit(0)
+      if (btfpy.Set_type(btfpy.BTYPE_ME) == 0):
+        exit(0)
+      node = 1000
+      if (btfpy.Set_node(node) == 0):
+        exit(0)
+      address = "2C:CF:67:3D:C8:B7"
+      if (btfpy.Set_address(address, len(address)) == 0):
+        exit(0)
+      primary_service = "1800"
+      char_name = "Device Name"
+      char_permit = 0x02
+      char_size = 16
+      char_uuid = "2A00"
+      print("Start Character addition")
+      if (btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0):
+        exit(0)
+      print("Start Post Init Blue")
+      if(btfpy.Post_init_blue() == 0):
+        exit(0)
+    print("Init Blue Complete")
 
-    if (btfpy.Pre_init_blue(0) == 0):
-      exit(0)
-    device_name = "My New Pi"
-    if (btfpy.Set_device_name(device_name, len(device_name)) == 0):
-      exit(0)
-    if (btfpy.Set_type(btfpy.BTYPE_ME) == 0):
-      exit(0)
-    node = 1000
-    if (btfpy.Set_node(node) == 0):
-      exit(0)
-    address = "2C:CF:67:3D:C8:B7"
-    if (btfpy.Set_address(address, len(address)) == 0):
-      exit(0)
-    primary_service = "1800"
-    char_name = "Device Name"
-    char_permit = 0x02
-    char_size = 16
-    char_uuid = "2A00"
-    if (btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0):
-      exit(0)
 
 
-
-    
-    
-
-    if(btfpy.Post_init_blue() == 0):
-      exit(0)
     btfpy.Output_file(bug_name)
     self.local_node = btfpy.Localnode()
     # self.abcd_index = btfpy.Find_ctic_index(self.local_node, btfpy.UUID_2, [0xAB,0xCD])

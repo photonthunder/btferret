@@ -1395,7 +1395,7 @@ int set_address(char *address, int len)
     return 0;
   }
   else {
-    dev[ndev]->matchname = 1;
+    dev[ndev]->matchname = 0;
     data = strtohexx(address, len, &hn);
     if (hn != 6)
     {
@@ -1837,8 +1837,9 @@ int post_init_blue(void)
     for(n = 0 ; n < 6 ; ++n)
       lerandadd[13-n] = gpar.randbadd[n];
       
-    VPRINT "Set LE random address\n");
+    VPRINT "Set LE random address in Post\n");
     sendhci(lerandadd,0);
+    VPRINT "Check Status\n");
     statusok(0,lerandadd);
 
   
@@ -2719,11 +2720,12 @@ char *device_address(int node)
 int devnfrombadd(unsigned char *badd,int type,int dirn)
   {
   int n;
-  VPRINT "devnfrombadd");
+  printf("devnfrombadd\n");
   for(n = 0 ; devok(n) != 0 ; ++n)
     { 
     if(dev[n]->matchname != 1)
-      {   
+      {  
+      printf("dba %d\n", n); 
       if(bincmp(badd,dev[n]->baddr,6,dirn) != 0 && (type == 0 || (type & dev[n]->type) != 0))
         return(n);
       }
@@ -6365,7 +6367,7 @@ int statusok(int flag,unsigned char *cmd)
   
   retval = 0;
   repflag = 0;
-  
+  printf("Check Status\n");
   do
     {
     if(flag == 0)

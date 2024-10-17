@@ -882,8 +882,10 @@ static PyObject* Pre_init_blue(PyObject* self,PyObject* args)
 //int post_init_blue(void)
 static PyObject* Post_init_blue(PyObject* self,PyObject* args)
   {
-  int post_init_blue();
-  Py_RETURN_NONE; 
+  int n;
+  n = post_init_blue();
+
+  return Py_BuildValue("i",n);  
   }
 
 

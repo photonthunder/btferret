@@ -54,13 +54,8 @@ Read local board address
       0000  01 02 20 00 
 > Event 0E = 01 02 20 00 FB 00 07
       0000  04 0E 07 01 02 20 00 FB - 00 07 
-Device data from bleserver_devices.txt file
-DEVICE = My Other Pi   TYPE=MESH NODE=1000  ADDRESS=2C:CF:67:3D:C8:B7
-badd = ,Ïg=È·ð, type = 0, dirn = 0
-PRIMARY_SERVICE = 1800
-  LECHAR = Device Name  PERMIT=02 SIZE=16 UUID=2A00
 < HCI OGF=03 OCF=13
-      0000  01 13 0C F8 4D 79 20 4F - 74 68 65 72 20 50 69 00 
+      0000  01 13 0C F8 4D 79 20 4E - 65 77 20 50 69 00 00 00 
       0010  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
       0020  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
       0030  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
@@ -76,9 +71,10 @@ PRIMARY_SERVICE = 1800
       00D0  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
       00E0  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
       00F0  00 00 00 00 00 00 00 00 - 00 00 00 00 
-Set LE random address
+Set LE random address in Post
 < HCI OGF=08 OCF=05
-      0000  01 05 20 06 8D D4 1E A9 - B6 DE 
+      0000  01 05 20 06 F7 8F 85 B1 - 7B F2 
+Check Status
 > Event 0E = 01 13 0C 00
       0000  04 0E 04 01 13 0C 00 
 > Event 0E = 01 05 20 00
@@ -93,8 +89,8 @@ Set LE advertising parameters
 STATUS OK
 Set LE advertising data with device name
 < HCI OGF=08 OCF=08
-      0000  01 08 20 20 16 08 FF 42 - C4 00 00 C0 DE 99 0C 08 
-      0010  4D 79 20 4F 74 68 65 72 - 20 50 69 00 00 00 00 00 
+      0000  01 08 20 20 14 08 FF 42 - C4 00 00 C0 DE 99 0A 08 
+      0010  4D 79 20 4E 65 77 20 50 - 69 00 00 00 00 00 00 00 
       0020  00 00 00 00 
 > Event 0E = 01 08 20 00
       0000  04 0E 04 01 08 20 00 
@@ -105,9 +101,9 @@ Get public keys
 > Event 0F = 00 01 25 20
       0000  04 0F 04 00 01 25 20 
 GOT local XY keys
-> Event 3E = 08 00 5A 3B 7D E9 12 9F 42 99...
-      0000  04 3E 42 08 00 5A 3B 7D - E9 12 9F 42 99 CF BF 44 
-      0010  4D 21 FB C8 64 B7 71 A0 - FE 25 07 51 AB BE 14 C8 
-      0020  42 E2 94 C2 40 D1 28 1C - B3 F8 06 67 9B 89 26 A2 
-      0030  4A FB AB DC 17 28 4B D9 - 35 FB 1E 99 A9 05 7B F9 
-      0040  18 0C F3 55 38 
+> Event 3E = 08 00 D0 D8 E7 3F 2A B0 C1 40...
+      0000  04 3E 42 08 00 D0 D8 E7 - 3F 2A B0 C1 40 3D 94 06 
+      0010  68 7E 07 47 48 91 36 1A - 13 86 15 31 39 1A 72 1F 
+      0020  F8 4E 88 C1 41 8F 3B 1E - AB EA 43 3B 99 78 3C B5 
+      0030  9C 01 45 1B D8 37 92 F1 - F2 E7 02 BF EC A1 EA 26 
+      0040  B1 FC 1B 62 BD 
