@@ -69,7 +69,7 @@ class BLEServer:
     # Have self.abcd show "ENTER" at startup
     # btfpy.Write_ctic(self.local_node, self.abcd_index, self.string_to_hex("ENTER"), 0)  
 
-    # btfpy.Keys_to_callback(btfpy.KEY_ON,0)
+    btfpy.Keys_to_callback(btfpy.KEY_ON,0)
                                   # OPTIONAL - key presses are sent to le_callback
                                   # with operation=LE_KEYPRESS and cticn=key code 
                                   # The key that stops the server changes from x to ESC
@@ -124,8 +124,8 @@ class BLEServer:
       self.count = self.count + 5
       if self.count > 255:
         self.count = 0
-      btfpy.Write_ctic(self.local_node, self.cdef_index, [self.count], 0)
-      btfpy.Write_ctic(self.local_node, self.deaf_index, [random.randint(0,255)], 0)
+      #btfpy.Write_ctic(self.local_node, self.cdef_index, [self.count], 0)
+      #btfpy.Write_ctic(self.local_node, self.deaf_index, [random.randint(0,255)], 0)
       pass
     elif(operation == btfpy.LE_KEYPRESS):
       # Only active if btfpy.Keys_to_callback(btfpy.KEY_ON,0) has been called before le_server()

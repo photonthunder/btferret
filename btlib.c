@@ -1404,10 +1404,18 @@ int set_address(char *address, int len)
     }
     else
     {
-      for(int i = 0; i < 6; ++i)
+      //memcpy(dev[ndec]->baddr[i], data[i], hn);
+      printf("Address ");
+      for(int i = 0; i < hn; ++i)
       {
         dev[ndev]->baddr[i] = data[i];
+        printf("%X", data[i]);
+        if (i < hn - 1)
+        {
+          printf(":");
+        }
       }
+      printf("\n");
       devset.address = 1;
       return 1;
     }
@@ -1483,8 +1491,9 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
   pserv_exists = 0;
   for (int i = 0; i < 32; i++)
   {
-    if (compare_uuid(pserv[i].uuid, data, hn)  == 0)
+    if (compare_uuid(pserv[i].uuid, data, hn)  == 1)
     {
+      printf("Primary Service already exists");
       pserv_exists = 1;
       npserv = i;
       break;
@@ -1492,11 +1501,12 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
   }
   if (pserv_exists == 0)
   {
+    printf("Set up Primary Service\n");
     ++npserv;         
     pserv[npserv].handle = 0;
     pserv[npserv].uuidtype = hn;
     memcpy(pserv[npserv].uuid, data, hn);
-    if(gpar.btleflag != 0 || devnfrombadd(dev[ndev]->baddr,BTYPE_XALL,DIRN_FOR) == 0)
+    if(devnfrombadd(dev[ndev]->baddr,BTYPE_XALL,DIRN_FOR) == 0)
     {   // is device 0 board address local - move to ndev=0
       if(dev[ndev]->type == BTYPE_ME)
         {
@@ -1507,7 +1517,7 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
       ndev = 0;
     }
     else {
-      printf("No match to address local, so aborting");
+      printf("No match to address local, so aborting\n");
       return 0;
     }
 
@@ -2053,8 +2063,19 @@ int init_blue_ex(char *filename,int hcin)
             }  
           else
             {
-            for(i = 0 ; i < 6 ; ++i)
+            // for(i = 0 ; i < 6 ; ++i)
+            //   dev[ndev]->baddr[i] = data[i];
+            printf("Address ");
+            for(int i = 0; i < hn; ++i)
+            {
               dev[ndev]->baddr[i] = data[i];
+              VPRINT "%X", data[i]);
+              if (i < hn - 1)
+              {
+                VPRINT ":");
+              }
+            }
+            VPRINT "\n");
             }
           }        
         }  // end ind[2] ADDRESS
@@ -2698,7 +2719,7 @@ char *device_address(int node)
 int devnfrombadd(unsigned char *badd,int type,int dirn)
   {
   int n;
-  VPRINT "badd = %s, type = %d, dirn = %d\n", badd, type, dirn);
+  VPRINT "devnfrombadd");
   for(n = 0 ; devok(n) != 0 ; ++n)
     { 
     if(dev[n]->matchname != 1)
