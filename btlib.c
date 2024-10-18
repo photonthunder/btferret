@@ -1530,7 +1530,7 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
     {   // is device 0 board address local - move to ndev=0
       if(dev[ndev]->type == BTYPE_ME)
         {
-        printf("Move to ndev 0 from ndev %d", ndev);
+        // printf("Move to ndev 0 from ndev %d", ndev);
         dev[0]->node = dev[ndev]->node;
         strcpy(dev[0]->name,dev[ndev]->name);
         }
@@ -3394,14 +3394,14 @@ int devokp(int ndevice)
     
 int devok(int ndevice)
   {
-  if (dev[ndevice] == NULL)
-  {
-    VPRINT "ndevice = %d, dev[ndevice] == NULL\n", ndevice);
-  }
-  else
-  {
-    VPRINT "ndevice = %d, dev[ndevice]->type = %d\n", ndevice, dev[ndevice]->type);
-  }
+  // if (dev[ndevice] == NULL)
+  // {
+  //   VPRINT "ndevice = %d, dev[ndevice] == NULL\n", ndevice);
+  // }
+  // else
+  // {
+  //   VPRINT "ndevice = %d, dev[ndevice]->type = %d\n", ndevice, dev[ndevice]->type);
+  // }
   flushprint();
   if(ndevice < 0 || ndevice >= NUMDEVS || dev[ndevice] == NULL || dev[ndevice]->type == 0)
     return(0);   
@@ -3413,8 +3413,8 @@ int devnp(int node)
   {
   
   int dn;
-  VPRINT "devnp %d\n", node);
-  flushprint();
+  // VPRINT "devnp %d\n", node);
+  // flushprint();
   dn = devn(node);
   if(dn < 0)
     {
@@ -3434,8 +3434,8 @@ int devn(int node)
     flushprint();
     return(-1);  // invalid node
   }
-  VPRINT "devok(0) = %d, dev[0]->node = %d\n", devok(0), dev[0]->node);
-  flushprint();
+  // VPRINT "devok(0) = %d, dev[0]->node = %d\n", devok(0), dev[0]->node);
+  // flushprint();
   for(n = 0 ; devok(n) != 0 ; ++n)
     {
     if(dev[n]->node == node)
