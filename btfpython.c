@@ -25,6 +25,7 @@ static PyObject* Set_address(PyObject* self,PyObject* args);
 static PyObject* Set_node(PyObject* self,PyObject* args);
 static PyObject* Process_device_params(PyObject* self,PyObject* args);
 static PyObject* Set_lechar(PyObject* self,PyObject* args);
+static PyObject* Char_add_done(PyObject* self,PyObject* args);
 static PyObject* Pre_init_blue(PyObject* self,PyObject* args);
 static PyObject* Post_init_blue(PyObject* self,PyObject* args);
 static PyObject* Init_blue_ex(PyObject* self,PyObject* args);
@@ -98,6 +99,7 @@ static PyMethodDef BtfpyMethods[] =
   {"Set_node",Set_node,METH_VARARGS,"Set node"},
   {"Process_device_params",Process_device_params,METH_VARARGS,"Process device params"},
   {"Set_lechar",Set_lechar,METH_VARARGS,"Set lechar"},
+  {"Char_add_done",Char_add_done,METH_VARARGS,"Char add done"},
   {"Pre_init_blue",Pre_init_blue,METH_VARARGS,"Pre init blue"},
   {"Post_init_blue",Post_init_blue,METH_VARARGS,"Post init blue"},
   {"Init_blue_ex",Init_blue_ex,METH_VARARGS,"Init blue ex"},
@@ -853,6 +855,14 @@ static PyObject* Process_device_params(PyObject* self,PyObject* args)
   {
   int n;  
   n = process_device_params();
+  return Py_BuildValue("i",n);  
+  }
+
+//int char_add_done(void)
+static PyObject* Char_add_done(PyObject* self,PyObject* args)
+  {
+  int n;  
+  n = char_add_done();
   return Py_BuildValue("i",n);  
   }
 

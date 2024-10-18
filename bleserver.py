@@ -16,7 +16,7 @@ class BLEServer:
     return [ord(char) for char in input_string]
 
   def initialize(self, device_name="bleserver_devices.txt", bug_name="bleserver_bug.txt"):
-    ORIGINAL = False
+    ORIGINAL = True
     if ORIGINAL == True:
       print("Original Code")
       if (btfpy.Init_blue(device_name) == 0):
@@ -46,25 +46,28 @@ class BLEServer:
       char_permit = 0x02
       char_size = 16
       char_uuid = "2A00"
-      if (btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0):
+      if btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0:
         exit(0)
       primary_service = "1800"
       char_name = "Appearance"
       char_permit = 0x02
       char_size = 2
       char_uuid = "2A01"
-      if (btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0):
+      if btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0:
         exit(0)
-      primary_service = "1801"
-      char_name = "Service Changed"
-      char_permit = 0x20
-      char_size = 4
-      char_uuid = "2A05"
-      if (btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0):
+      # primary_service = "1801"
+      # char_name = "Service Changed"
+      # char_permit = 0x20
+      # char_size = 4
+      # char_uuid = "2A05"
+      # if (btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0):
+      #   exit(0)
+      print("Dont Adding Characteristics")
+      if btfpy.Char_add_done() == 0:
         exit(0)
 
       print("Start Post Init Blue")
-      if(btfpy.Post_init_blue() == 0):
+      if btfpy.Post_init_blue() == 0:
         exit(0)
     print("Init Blue Complete")
 

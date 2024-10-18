@@ -118,6 +118,7 @@ int set_address(char *address, int len);
 int set_node(int node);
 int process_device_params(void);
 int set_lechar(char *primary_service, char *name, int permit, int size, char *uuid);
+int char_add_done(void);
 
 int init_blue(char *filename);
 int pre_init_blue(int hcin);

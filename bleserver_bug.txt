@@ -5,138 +5,67 @@ Bind to Bluetooth devid user channel
 Reset
 < HCI OGF=03 OCF=03
       0000  01 03 0C 00 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 > Event 0E = 01 03 0C 00
       0000  04 0E 04 01 03 0C 00 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 STATUS OK
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 Set event masks
 < HCI OGF=03 OCF=01
       0000  01 01 0C 08 FF FF FB FF - 07 F8 BF 3D 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 > Event 0E = 01 01 0C 00
       0000  04 0E 04 01 01 0C 00 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 STATUS OK
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 < HCI OGF=08 OCF=01
       0000  01 01 20 08 FF 05 00 00 - 00 00 00 00 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 > Event 0E = 01 01 20 00
       0000  04 0E 04 01 01 20 00 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 STATUS OK
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 Set page/inquiry scan and timeouts = 10 secs
 < HCI OGF=03 OCF=1A
       0000  01 1A 0C 01 03 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 > Event 0E = 01 1A 0C 00
       0000  04 0E 04 01 1A 0C 00 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 STATUS OK
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 < HCI OGF=03 OCF=16
       0000  01 16 0C 02 A0 3F 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 > Event 0E = 01 16 0C 00
       0000  04 0E 04 01 16 0C 00 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 STATUS OK
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 < HCI OGF=03 OCF=18
       0000  01 18 0C 02 00 40 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 > Event 0E = 01 18 0C 00
       0000  04 0E 04 01 18 0C 00 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 STATUS OK
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 HCI Socket OK
 Read local supported commands
 < HCI OGF=04 OCF=02
       0000  01 02 10 00 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 > Event 0E = 01 02 10 00 FF FF FF 03 CC FF...
       0000  04 0E 44 01 02 10 00 FF - FF FF 03 CC FF EF FF FF 
       0010  FF EC 1F F2 0F E8 FE 3F - F7 8F FF 1C 00 04 00 61 
       0020  F7 FF FF 7F F8 FF FF FF - FF 07 08 00 00 00 00 00 
       0030  08 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
       0040  00 00 00 00 00 00 00 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 Read local board address
 < HCI OGF=04 OCF=09
       0000  01 09 10 00 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 > Event 0E = 01 09 10 00 B7 C8 3D 67 CF 2C
       0000  04 0E 0A 01 09 10 00 B7 - C8 3D 67 CF 2C 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 < HCI OGF=08 OCF=02
       0000  01 02 20 00 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 > Event 0E = 01 02 20 00 FB 00 07
       0000  04 0E 07 01 02 20 00 FB - 00 07 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice] == NULL
 Device data from bleserver_devices.txt file
 DEVICE = My Other Pi   TYPE=MESH NODE=1000  ADDRESS=2C:CF:67:3D:C8:B7
 2C:CF:67:3D:C8:B7
-ndevice = 0, dev[ndevice]->type = 1
 Change node to 0 from 1
 PRIMARY_SERVICE = 1800
   LECHAR = Device Name  PERMIT=02 SIZE=16 UUID=2A00
-ndevice = 0, dev[ndevice]->type = 1
+ctialloc for service
   LECHAR = Appearance   PERMIT=02 SIZE=2  UUID=2A01
-ndevice = 0, dev[ndevice]->type = 1
+ctialloc for service
 PRIMARY_SERVICE = 1801
   LECHAR = Service changed PERMIT=20 SIZE=4 UUID=2A05
-ndevice = 0, dev[ndevice]->type = 1
+ctialloc for service
 < HCI OGF=03 OCF=13
       0000  01 13 0C F8 4D 79 20 4F - 74 68 65 72 20 50 69 00 
       0010  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
@@ -154,142 +83,40 @@ ndevice = 0, dev[ndevice]->type = 1
       00D0  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
       00E0  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
       00F0  00 00 00 00 00 00 00 00 - 00 00 00 00 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice]->type = 0
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
 Service changed 2A05 enabled
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 0, dev[ndevice]->type = 1
 Set LE random address in Post
 < HCI OGF=08 OCF=05
-      0000  01 05 20 06 B5 42 EF 2C - 70 D3 
+      0000  01 05 20 06 E4 F0 86 78 - 58 C8 
 Check Status
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice]->type = 0
 > Event 0E = 01 13 0C 00
       0000  04 0E 04 01 13 0C 00 
 > Event 0E = 01 05 20 00
       0000  04 0E 04 01 05 20 00 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice]->type = 0
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice]->type = 0
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice]->type = 0
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice]->type = 0
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice]->type = 0
 STATUS OK
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice]->type = 0
 Set LE advertising parameters
 < HCI OGF=08 OCF=06
       0000  01 06 20 0F 00 02 00 02 - 00 00 00 00 00 00 00 00 
       0010  00 07 00 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice]->type = 0
 > Event 0E = 01 06 20 00
       0000  04 0E 04 01 06 20 00 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice]->type = 0
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice]->type = 0
 STATUS OK
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice]->type = 0
 Set LE advertising data with device name
 < HCI OGF=08 OCF=08
       0000  01 08 20 20 16 08 FF 42 - C4 00 00 C0 DE 99 0C 08 
       0010  4D 79 20 4F 74 68 65 72 - 20 50 69 00 00 00 00 00 
       0020  00 00 00 00 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice]->type = 0
 > Event 0E = 01 08 20 00
       0000  04 0E 04 01 08 20 00 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice]->type = 0
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice]->type = 0
 STATUS OK
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice]->type = 0
 Get public keys
 < HCI OGF=08 OCF=25
       0000  01 25 20 00 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice]->type = 0
 > Event 0F = 00 01 25 20
       0000  04 0F 04 00 01 25 20 
 GOT local XY keys
-> Event 3E = 08 00 CF A1 D6 85 35 EF CE 79...
-      0000  04 3E 42 08 00 CF A1 D6 - 85 35 EF CE 79 94 6E 83 
-      0010  70 09 96 7A 13 23 FB 84 - CE 55 8F 35 E7 41 57 3C 
-      0020  29 72 75 97 9B A9 8C 8A - F3 6B 24 24 B4 77 38 42 
-      0030  58 19 EE 84 81 31 47 50 - C6 4D AC 67 88 51 94 04 
-      0040  43 A8 BC 1E 2D 
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice]->type = 0
-ndevice = 0, dev[ndevice]->type = 1
-ndevice = 1, dev[ndevice]->type = 0
+> Event 3E = 08 00 41 82 DB D5 89 0E 26 96...
+      0000  04 3E 42 08 00 41 82 DB - D5 89 0E 26 96 C5 C8 17 
+      0010  95 DF CB 0E C3 CC 2E 16 - C0 D7 24 C2 4A A6 37 1E 
+      0020  62 A2 A7 28 66 68 F0 57 - B0 84 66 2A 4C B5 78 CF 
+      0030  53 FC 67 F9 6D 07 54 1D - EC 9A 4F 63 AF 2F E5 E1 
+      0040  DD E0 96 BB 81 

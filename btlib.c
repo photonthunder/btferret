@@ -1566,13 +1566,14 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
       return 0;
     }
   }
-  printf("ndev = %d\n", ndev);
+  printf("ndev = %d, npserv = %d\n", ndev, npserv);
   cp = cticalloc(ndev);
   if (cp->type != CTIC_UNUSED)
   {
     printf("Fatal CTIC ALLOC Error\n");
     return 0;
   }
+  printf("cticalloc ok\n");
   cp->psnx = npserv;
 
   memcpy(cp->name, name, name_len);
@@ -1617,14 +1618,18 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
   {
     cp->type = CTIC_ACTIVE;
   }
+  return 1;
+} 
 
+int char_add_done(void)
+{
   if(localctics() == 0)
   {
     printf("localctics failed\n");
     flushprint();
     return 0;
   }
-  // rwlinkey(0,0,NULL);
+  //rwlinkey(0,0,NULL);
   return 1;
 }
 
@@ -2042,6 +2047,7 @@ int init_blue_ex(char *filename,int hcin)
       {
       // ind[5] == 0 && ind[6] == 0  no handle/UUID
       cp = cticalloc(ndev); // return ctic pointer - may be to cticnull=failed
+      VPRINT "ctialloc for service\n");
       if(cp->type != CTIC_UNUSED)
         return(0);   // fatal alloc error
       flag = 2;  // characteristic entry
