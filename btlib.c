@@ -1321,6 +1321,7 @@ struct devsetdata{
     int node;
     int address;
     int ndev_set;
+    int ndev_zero;
 };
 
 struct devsetdata devset;
@@ -1471,7 +1472,7 @@ int process_device_params(void)
   }
   else
   {
-    for(n = 0 ; n < 32 ; ++n)
+    for(int n = 0 ; n < 32 ; ++n)
     {
       pserv[n].handle = -1;
       pserv[n].eog = 0xFFFF;
@@ -1479,7 +1480,7 @@ int process_device_params(void)
     pserv[0].handle = 0;
     pserv[0].eog = 0;
     pserv[0].uuidtype = 16;
-    for(i = 0 ; i < 16 ; ++i)
+    for(int i = 0 ; i < 16 ; ++i)
     {
       pserv[0].uuid[i] = baseuuid[i];
     }
@@ -1503,7 +1504,6 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
   int ps_len = strlen(primary_service);
   int name_len = strlen(name);
   int uuid_len = strlen(uuid);
-  cp = &cticnull;
 
   if (device_params_set() == 0)
   {
@@ -1519,12 +1519,6 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
   if (hn == 2 && data[0] == 0x18 && data[1] == 0x12)
   {
     gpar.hidflag = 1;
-  }
-  cp = cticalloc(ndev);
-  if (cp->type != CTIC_UNUSED)
-  {
-    printf("Fatal CTIC ALLOC Error\n");
-    return 0;
   }
 
   if (npserv >= 30)
@@ -1557,7 +1551,7 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
     memcpy(pserv[npserv].uuid, data, hn);
     if(devnfrombadd(dev[ndev]->baddr,BTYPE_XALL,DIRN_FOR) == 0)
     {   // is device 0 board address local - move to ndev=0
-      if(dev[ndev]->type == BTYPE_ME)
+      if((dev[ndev]->type == BTYPE_ME) && (devset.ndev_zero == 0))
         {
         // printf("Move to ndev 0 from ndev %d", ndev);
         dev[0]->node = dev[ndev]->node;
@@ -1565,16 +1559,23 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
         }
       dev[ndev]->type = 0;    // free ndev
       ndev = 0;
+      devset.ndev_zero = 1;
     }
     else {
       printf("No match to address local, so aborting\n");
       return 0;
     }
-
   }
-  memcpy(cp->name, name, name_len);
+  printf("ndev = %d\n", ndev);
+  cp = cticalloc(ndev);
+  if (cp->type != CTIC_UNUSED)
+  {
+    printf("Fatal CTIC ALLOC Error\n");
+    return 0;
+  }
   cp->psnx = npserv;
 
+  memcpy(cp->name, name, name_len);
   if (permit > 0xFF)
   {
     printf("Permit must be 1 Hex Byte (%X < 0xFF)\n", permit);
@@ -1620,9 +1621,10 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
   if(localctics() == 0)
   {
     printf("localctics failed\n");
+    flushprint();
     return 0;
   }
-  rwlinkey(0,0,NULL);
+  // rwlinkey(0,0,NULL);
   return 1;
 }
 
@@ -3424,7 +3426,7 @@ int devok(int ndevice)
   // {
   //   VPRINT "ndevice = %d, dev[ndevice]->type = %d\n", ndevice, dev[ndevice]->type);
   // }
-  flushprint();
+  // flushprint();
   if(ndevice < 0 || ndevice >= NUMDEVS || dev[ndevice] == NULL || dev[ndevice]->type == 0)
     return(0);   
   return(1);

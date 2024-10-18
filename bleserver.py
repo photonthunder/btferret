@@ -18,9 +18,11 @@ class BLEServer:
   def initialize(self, device_name="bleserver_devices.txt", bug_name="bleserver_bug.txt"):
     ORIGINAL = False
     if ORIGINAL == True:
+      print("Original Code")
       if (btfpy.Init_blue(device_name) == 0):
         exit(0)
     else:
+      print("New Code")
       if (btfpy.Pre_init_blue(0) == 0):
         exit(0)
 
