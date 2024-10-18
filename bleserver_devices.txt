@@ -5,7 +5,7 @@ DEVICE = My Other Pi   TYPE=MESH NODE=1000  ADDRESS=2C:CF:67:3D:C8:B7
   ; https://github.com/petzval/btferret
   PRIMARY_SERVICE = 1800                                ; 1800=Generic access
     LECHAR = Device Name  PERMIT=02 SIZE=16 UUID=2A00   ; 2A00=Device name (index 0)
-  ;  LECHAR = Appearance   PERMIT=02 SIZE=2  UUID=2A01   ; 2A01=Appearance (index 1)
+    LECHAR = Appearance   PERMIT=02 SIZE=2  UUID=2A01   ; 2A01=Appearance (index 1)
   ;PRIMARY_SERVICE = 1801                                ; 1801=Generic attributes
   ;  LECHAR = Service changed PERMIT=20 SIZE=4 UUID=2A05 ; 2A05=Service changed  (index 2)
   ;PRIMARY_SERVICE = 180A                                ; 180A=Device information

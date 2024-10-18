@@ -116,6 +116,7 @@ int set_device_name(unsigned char *name, int len);
 int set_type(int type);
 int set_address(char *address, int len);
 int set_node(int node);
+int process_device_params(void);
 int set_lechar(char *primary_service, char *name, int permit, int size, char *uuid);
 
 int init_blue(char *filename);

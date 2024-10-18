@@ -23,6 +23,7 @@ class BLEServer:
     else:
       if (btfpy.Pre_init_blue(0) == 0):
         exit(0)
+
       device_name = "My New Pi"
       if (btfpy.Set_device_name(device_name, len(device_name)) == 0):
         exit(0)
@@ -34,14 +35,25 @@ class BLEServer:
       address = "2C:CF:67:3D:C8:B7"
       if (btfpy.Set_address(address, len(address)) == 0):
         exit(0)
+      if (btfpy.Process_device_params() == 0):
+        exit(0)
+
+      print("Start Character addition")
       primary_service = "1800"
       char_name = "Device Name"
       char_permit = 0x02
       char_size = 16
       char_uuid = "2A00"
-      print("Start Character addition")
       if (btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0):
         exit(0)
+      primary_service = "1800"
+      char_name = "Appearance"
+      char_permit = 0x02
+      char_size = 2
+      char_uuid = "2A01"
+      if (btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0):
+        exit(0)
+
       print("Start Post Init Blue")
       if(btfpy.Post_init_blue() == 0):
         exit(0)

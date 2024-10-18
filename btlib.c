@@ -1443,12 +1443,12 @@ int set_address(char *address, int len)
 
 int set_node(int node)
 {
+  check_dev_allocate();
   if (node <= 0 || node >= 0x10000)
   {
     printf("Invalid Node number %d\n", node);
     return 0;
   }
-  check_dev_allocate();
   for (int i = 0; i < ndev - 1; i++)
   {
     if (node == dev[i]->node)
@@ -1462,15 +1462,31 @@ int set_node(int node)
   return 1;
 }
 
+int process_device_params(void)
+{
+  char s[256];
+  if (device_params_set() == 0)
+  {
+    return 0;
+  }
+  else
+  {
+    memset(s, 0x00, 256);
+    memcpy(s, wln, 8);
+    strcpy(s+8,dev[ndev]->name);
+    sendhci((unsigned char*)s,0);
+    return 1;
+  }
+}
+
 static int npserv;
 static int uuid_flag;
 int set_lechar(char *primary_service, char *name, int permit, int size, char *uuid)
 {
-  int n, hn;
+  int hn;
   unsigned char *data;
   struct cticdata *cp;
   int pserv_exists;
-  char s[256];
   int ps_len = strlen(primary_service);
   int name_len = strlen(name);
   int uuid_len = strlen(uuid);
@@ -1551,7 +1567,7 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
     printf("Permit must be 1 Hex Byte (%X < 0xFF)\n", permit);
     return 0;
   }
-  else if ((permit & 0x30) == 0x30)
+  else if ((permit & 0x30) == 0x30) 
   {
     printf("Permit notify and indicate enabled\n");
     return 0;
@@ -1587,13 +1603,6 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
   {
     cp->type = CTIC_ACTIVE;
   }
-
-  for(n = 0 ; n < 8 ; ++n)
-    s[n] = wln[n];
-  for(n = 8 ; n < 256 ; ++n)
-    s[n] = 0;
-  strcpy(s+8,dev[0]->name);
-  sendhci((unsigned char*)s,0);
 
   if(localctics() == 0)
   {
