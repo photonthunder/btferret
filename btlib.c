@@ -1471,6 +1471,19 @@ int process_device_params(void)
   }
   else
   {
+    for(n = 0 ; n < 32 ; ++n)
+    {
+      pserv[n].handle = -1;
+      pserv[n].eog = 0xFFFF;
+    }
+    pserv[0].handle = 0;
+    pserv[0].eog = 0;
+    pserv[0].uuidtype = 16;
+    for(i = 0 ; i < 16 ; ++i)
+    {
+      pserv[0].uuid[i] = baseuuid[i];
+    }
+
     memset(s, 0x00, 256);
     memcpy(s, wln, 8);
     strcpy(s+8,dev[ndev]->name);
@@ -1529,7 +1542,7 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
   {
     if (compare_uuid(pserv[i].uuid, data, hn)  == 1)
     {
-      printf("Primary Service already exists");
+      printf("Primary Service already exists\n");
       pserv_exists = 1;
       npserv = i;
       break;
@@ -1537,8 +1550,8 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
   }
   if (pserv_exists == 0)
   {
-    printf("Set up Primary Service\n");
-    ++npserv;         
+    ++npserv;   
+    printf("Set up Primary Service %d\n", npserv);      
     pserv[npserv].handle = 0;
     pserv[npserv].uuidtype = hn;
     memcpy(pserv[npserv].uuid, data, hn);

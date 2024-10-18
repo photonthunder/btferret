@@ -53,6 +53,13 @@ class BLEServer:
       char_uuid = "2A01"
       if (btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0):
         exit(0)
+      primary_service = "1801"
+      char_name = "Service Changed"
+      char_permit = 0x20
+      char_size = 4
+      char_uuid = "2A05"
+      if (btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0):
+        exit(0)
 
       print("Start Post Init Blue")
       if(btfpy.Post_init_blue() == 0):
