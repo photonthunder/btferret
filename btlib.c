@@ -1320,6 +1320,7 @@ struct devsetdata{
     int type;
     int node;
     int address;
+    int ndev_set;
 };
 
 struct devsetdata devset;
@@ -1350,6 +1351,21 @@ static int device_params_set(void)
   return all_set;
 }
 
+static int check_dev_allocate(void)
+{
+  if (devset.ndev_set == 0)
+  {
+    ndev = devalloc();
+    if(ndev < 0)
+    {
+      printf("ndev %d < 0\n", ndev);
+      return(0);  // fatal alloc error
+    }
+    devset.ndev_set = 1;
+  }
+  return 1;
+}
+
 int set_device_name(unsigned char *name, int len)
 {
   if (len > NAMELEN)
@@ -1357,6 +1373,7 @@ int set_device_name(unsigned char *name, int len)
     printf("Device Name too long %d > %d\n",len, NAMELEN); 
     return 0;
   }
+  check_dev_allocate();
   memcpy(dev[ndev]->name, name, len);
   dev[ndev]->name[len] = '\0';
   devset.name = 1;
@@ -1374,6 +1391,7 @@ int set_type(int type)
     break;
     case BTYPE_LE:
     case BTYPE_ME:
+      check_dev_allocate();
       dev[ndev]->type = type;
       devset.type= 1;
     break;
@@ -1389,6 +1407,7 @@ int set_address(char *address, int len)
 {
   int hn;
   unsigned char *data;
+  check_dev_allocate();
   if (strncmp(address, "MATCH_NAME", 10) == 0)
   {
     dev[ndev]->matchname = 1;
@@ -1429,6 +1448,7 @@ int set_node(int node)
     printf("Invalid Node number %d\n", node);
     return 0;
   }
+  check_dev_allocate();
   for (int i = 0; i < ndev - 1; i++)
   {
     if (node == dev[i]->node)
@@ -1454,6 +1474,7 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
   int ps_len = strlen(primary_service);
   int name_len = strlen(name);
   int uuid_len = strlen(uuid);
+  cp = &cticnull;
 
   if (device_params_set() == 0)
   {
@@ -1470,7 +1491,6 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
   {
     gpar.hidflag = 1;
   }
-  cp = &cticnull;
   cp = cticalloc(ndev);
   if (cp->type != CTIC_UNUSED)
   {
@@ -1510,6 +1530,7 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
     {   // is device 0 board address local - move to ndev=0
       if(dev[ndev]->type == BTYPE_ME)
         {
+        printf("Move to ndev 0 from ndev %d", ndev);
         dev[0]->node = dev[ndev]->node;
         strcpy(dev[0]->name,dev[ndev]->name);
         }
@@ -1639,6 +1660,7 @@ int pre_init_blue(int hcin)
   devset.type = 0;
   devset.node = 0;
   devset.address = 0;
+  devset.ndev_set = 0;
 
   printf("Initialising...\n");
 
@@ -1735,7 +1757,10 @@ int pre_init_blue(int hcin)
   
   ndev = devalloc();
   if(ndev != 0)
+  {
+    VPRINT "ndev %d != 0\n", ndev);
     return(0);
+  }
      
   dev[0]->type = BTYPE_LO;
   dev[0]->meshindex = 1;  // first message index
@@ -2293,6 +2318,7 @@ int init_blue_ex(char *filename,int hcin)
           {   // is device 0 board address local - move to ndev=0
           if(dev[ndev]->type == BTYPE_ME)
             {
+            VPRINT "Change node to 0 from %d\n", ndev);
             dev[0]->node = dev[ndev]->node;
             strcpy(dev[0]->name,dev[ndev]->name);
             }
@@ -2708,7 +2734,6 @@ char *device_address(int node)
     ndevice = 0;
   else
   {
-    printf("device_address");
     ndevice = devnp(node);
   }
   
@@ -2723,12 +2748,10 @@ char *device_address(int node)
 int devnfrombadd(unsigned char *badd,int type,int dirn)
   {
   int n;
-  printf("devnfrombadd\n");
   for(n = 0 ; devok(n) != 0 ; ++n)
     { 
     if(dev[n]->matchname != 1)
       {  
-      printf("dba %d\n", n); 
       if(bincmp(badd,dev[n]->baddr,6,dirn) != 0 && (type == 0 || (type & dev[n]->type) != 0))
         return(n);
       }
@@ -3371,6 +3394,15 @@ int devokp(int ndevice)
     
 int devok(int ndevice)
   {
+  if (dev[ndevice] == NULL)
+  {
+    VPRINT "ndevice = %d, dev[ndevice] == NULL\n", ndevice);
+  }
+  else
+  {
+    VPRINT "ndevice = %d, dev[ndevice]->type = %d\n", ndevice, dev[ndevice]->type);
+  }
+  flushprint();
   if(ndevice < 0 || ndevice >= NUMDEVS || dev[ndevice] == NULL || dev[ndevice]->type == 0)
     return(0);   
   return(1);
@@ -3379,12 +3411,14 @@ int devok(int ndevice)
 
 int devnp(int node)
   {
+  
   int dn;
+  VPRINT "devnp %d\n", node);
   flushprint();
   dn = devn(node);
   if(dn < 0)
     {
-    NPRINT "Invalid node in devnp %d\n", node);
+    NPRINT "Invalid node %d\n", node);
     flushprint();
     }
   return(dn);
@@ -3395,8 +3429,13 @@ int devn(int node)
   int n;
   
   if(node <= 0 || node >= 0x10000)
+  {
+    VPRINT "Node out of range %d\n", node);
+    flushprint();
     return(-1);  // invalid node
-    
+  }
+  VPRINT "devok(0) = %d, dev[0]->node = %d\n", devok(0), dev[0]->node);
+  flushprint();
   for(n = 0 ; devok(n) != 0 ; ++n)
     {
     if(dev[n]->node == node)
@@ -3471,7 +3510,6 @@ int device_connected(int node)
   {
   int ndevice;
   struct devdata *dp;
-  printf("device_connected"); 
   ndevice = devnp(node);
   if(ndevice > 0)
     {
@@ -3501,7 +3539,6 @@ return device type
 int device_type(int node)
   {
   int ndevice;
-  printf("device_type");
   ndevice = devnp(node);
   
   if(ndevice < 0)
@@ -3510,7 +3547,6 @@ int device_type(int node)
   return(dev[ndevice]->type);
   }
 
-  
 int localnode()
   {
   return(dev[0]->node); 
@@ -5005,7 +5041,7 @@ int le_pair(int node,int flags,int passkey)
   {  
   int n,ndevice,scflag;
   struct devdata *dp;
-  printf("le_pair"); 
+  VPRINT "le_pair %d\n", node); 
   ndevice = devnp(node);
   if(ndevice < 0)
     return(0);
@@ -5247,7 +5283,6 @@ int wait_for_disconnect(int node,int timout)
   unsigned long long timstart;
  
   flushprint();
-  printf("wait_for_dis");  
   ndevice = devnp(node);
   if(ndevice < 0)
     return(0);
@@ -5276,7 +5311,6 @@ int wait_for_disconnect(int node,int timout)
 int disconnect_node(int node)
   {
   int ndevice;
-  printf("disconnect_node");
   ndevice = devnp(node);
   if(ndevice < 0)
     return(0);
@@ -5484,7 +5518,6 @@ int writecticx(int node,int cticn,unsigned char *data,int count,int notflag,int 
   struct devdata *dp;
   int n,k,devn,chandle,locsize,ndevice,flag;
   unsigned char *cmd;
-  printf("writecticx");
   ndevice = devnp(node);
   if(ndevice < 0)
     return(0);
@@ -5811,7 +5844,6 @@ int read_ctic(int node,int cticn,unsigned char *data,int datlen)
     data[n] = 0;
 
   gpar.readerror = ERROR_FATAL;
-  printf("read_ctic");
   ndevice = devnp(node);
   if(ndevice < 0)
     return(0);
@@ -6370,7 +6402,6 @@ int statusok(int flag,unsigned char *cmd)
   
   retval = 0;
   repflag = 0;
-  printf("Check Status\n");
   do
     {
     if(flag == 0)
@@ -10855,7 +10886,6 @@ int clconnectxx(int ndevice)
 int find_channel(int node,int flag,unsigned char *uuid)
   {
   int flags,retval,ndevice;
-  printf("find_channel");
   ndevice = devnp(node);
   if(ndevice < 0)
     return(0);
@@ -10885,7 +10915,6 @@ int find_channel(int node,int flag,unsigned char *uuid)
 int list_channels(int node,int flag)
   {
   int flags,retval,ndevice;
-  printf("list_channels");
   ndevice = devnp(node);
   if(ndevice < 0)
     return(0);
@@ -10916,7 +10945,6 @@ int list_channels(int node,int flag)
 int list_uuid(int node,unsigned char *uuid)
   {
   int retval,ndevice;
-  printf("list_uuid"); 
   ndevice = devnp(node);
   if(ndevice < 0)
     return(0);
@@ -11286,7 +11314,6 @@ int printchannels(int ndevice,int flags,struct servicedata *serv,int servlen)
 int find_ctics(int node)
   {
   int retval,ndevice;
-  printf("find_ctics");
   ndevice = devnp(node);
   if(ndevice < 0)
     return(-1);
@@ -11300,7 +11327,6 @@ int find_ctics(int node)
 int list_ctics(int node,int flag)
   {
   int retval,ndevice;
-  printf("list_ctics");
   ndevice = devnp(node);
   if(ndevice < 0)
     return(-1);
@@ -12593,7 +12619,6 @@ int decodedes(unsigned char *sin,int len,struct sdpdata *sdpp)  //  int level,in
 int connect_node(int node,int channelflag,int channel)
   {
   int ndevice,type,retval;
-  printf("connect_node");
   ndevice = devnp(node);
   if(ndevice < 0)
     return(0);
@@ -12826,7 +12851,6 @@ int write_node(int node,unsigned char *outbuff,int count)
 
   if(count == 0)
     return(1);
-  printf("write_node");    
   ndevice = devnp(node);  
   if(ndevice < 0)
     return(0);
@@ -13022,7 +13046,6 @@ void read_node_clear(int node)
   {
   int n,ndevice;
        
-  printf("read_node_clear");
   ndevice = devnp(node);
   if(ndevice < 0)
     return;
@@ -13101,7 +13124,6 @@ int readserial(int *node,unsigned char *inbuff,int count,char endchar,int flag,i
     ndevice = *node;
   else
     {  // specified device
-    printf("read_serial");
     ndevice = devnp(*node);
     if(ndevice < 0)
       {
