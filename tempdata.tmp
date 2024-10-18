@@ -1,3 +1,4 @@
+berry@raspberrypi:~/btferret $ sudo python bleserver.py
 Initialising...
 Bluez down
 Open HCI user socket
@@ -87,7 +88,7 @@ PRIMARY_SERVICE = 1800
       00F0  00 00 00 00 00 00 00 00 - 00 00 00 00 
 Set LE random address in Post
 < HCI OGF=08 OCF=05
-      0000  01 05 20 06 B7 C8 D5 60 - 95 C7 
+      0000  01 05 20 06 63 FC 81 18 - E2 E7 
 Check Status
 Check Status
 > Event 0E = 01 13 0C 00
@@ -118,12 +119,12 @@ Get public keys
 > Event 0F = 00 01 25 20
       0000  04 0F 04 00 01 25 20 
 GOT local XY keys
-> Event 3E = 08 00 69 BB 6A 3A E7 FA EE 41...
-      0000  04 3E 42 08 00 69 BB 6A - 3A E7 FA EE 41 D1 55 4F 
-      0010  7F ED 0E C9 70 09 D5 41 - F1 6C 3B 88 6A 73 AC 80 
-      0020  E0 80 00 53 A9 FF 4B 9E - F1 6E D5 F2 48 7D C9 C8 
-      0030  72 5D E4 65 B7 8E 23 54 - DB C2 FF 69 7A 72 B1 07 
-      0040  0E D8 FF DC DD 
+> Event 3E = 08 00 97 7A 46 43 77 D1 98 09...
+      0000  04 3E 42 08 00 97 7A 46 - 43 77 D1 98 09 EA 1E C6 
+      0010  18 3A 91 37 A8 5B 26 72 - 50 81 26 14 A5 19 B9 37 
+      0020  91 81 91 12 EA B8 95 04 - 77 2A 5B 63 8F FA 82 E1 
+      0030  B9 9F BC 0E 68 DE 98 A6 - AD 3F 7F E6 4F 4E DB 03 
+      0040  CF E9 A4 F1 00 
 Init Blue Complete
 All screen output saved to bleserver_bug.txt file
 Set LE random address
@@ -148,12 +149,4 @@ Advertising as D3:56:DB:04:32:A7 My Other Pi
       0000  04 0E 04 01 08 20 00 
 > Event 0E = 01 0A 20 00
       0000  04 0E 04 01 0A 20 00 
-Key press stop server...
-< HCI OGF=08 OCF=0A
-      0000  01 0A 20 01 01 
-< HCI OGF=08 OCF=06
-      0000  01 06 20 0F 00 02 00 02 - 00 00 00 00 00 00 00 00 
-      0010  00 07 00 
-< HCI OGF=08 OCF=0A
-      0000  01 0A 20 01 00 
-HCI closed
+

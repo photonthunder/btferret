@@ -73,7 +73,7 @@ Read local board address
       00F0  00 00 00 00 00 00 00 00 - 00 00 00 00 
 Set LE random address in Post
 < HCI OGF=08 OCF=05
-      0000  01 05 20 06 F7 8F 85 B1 - 7B F2 
+      0000  01 05 20 06 62 D9 7F EA - A2 DE 
 Check Status
 > Event 0E = 01 13 0C 00
       0000  04 0E 04 01 13 0C 00 
@@ -101,9 +101,9 @@ Get public keys
 > Event 0F = 00 01 25 20
       0000  04 0F 04 00 01 25 20 
 GOT local XY keys
-> Event 3E = 08 00 D0 D8 E7 3F 2A B0 C1 40...
-      0000  04 3E 42 08 00 D0 D8 E7 - 3F 2A B0 C1 40 3D 94 06 
-      0010  68 7E 07 47 48 91 36 1A - 13 86 15 31 39 1A 72 1F 
-      0020  F8 4E 88 C1 41 8F 3B 1E - AB EA 43 3B 99 78 3C B5 
-      0030  9C 01 45 1B D8 37 92 F1 - F2 E7 02 BF EC A1 EA 26 
-      0040  B1 FC 1B 62 BD 
+> Event 3E = 08 00 D8 1E 43 45 BE 9F 68 88...
+      0000  04 3E 42 08 00 D8 1E 43 - 45 BE 9F 68 88 63 11 1E 
+      0010  33 FF 8F 44 F8 1F D4 1B - 3A 34 6D EC C1 29 D7 59 
+      0020  66 50 23 2A F0 B3 D4 DE - 5F 98 F0 EE 7B B8 C5 1B 
+      0030  18 5C D8 C5 62 EB 14 35 - 04 FF A5 3D 7D 2A 91 0D 
+      0040  04 EB D8 39 5E 

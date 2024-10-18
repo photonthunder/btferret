@@ -2707,7 +2707,10 @@ char *device_address(int node)
   if(node == 0)
     ndevice = 0;
   else
+  {
+    printf("device_address");
     ndevice = devnp(node);
+  }
   
   if(ndevice >= 0 && dev[ndevice]->matchname != 1)
     return(baddstr(dev[ndevice]->baddr,0));
@@ -3377,11 +3380,11 @@ int devok(int ndevice)
 int devnp(int node)
   {
   int dn;
-  
+  flushprint();
   dn = devn(node);
   if(dn < 0)
     {
-    NPRINT "Invalid node\n");
+    NPRINT "Invalid node in devnp %d\n", node);
     flushprint();
     }
   return(dn);
@@ -3468,7 +3471,7 @@ int device_connected(int node)
   {
   int ndevice;
   struct devdata *dp;
-   
+  printf("device_connected"); 
   ndevice = devnp(node);
   if(ndevice > 0)
     {
@@ -3498,7 +3501,7 @@ return device type
 int device_type(int node)
   {
   int ndevice;
-  
+  printf("device_type");
   ndevice = devnp(node);
   
   if(ndevice < 0)
@@ -5002,7 +5005,7 @@ int le_pair(int node,int flags,int passkey)
   {  
   int n,ndevice,scflag;
   struct devdata *dp;
-   
+  printf("le_pair"); 
   ndevice = devnp(node);
   if(ndevice < 0)
     return(0);
@@ -5244,7 +5247,7 @@ int wait_for_disconnect(int node,int timout)
   unsigned long long timstart;
  
   flushprint();
-    
+  printf("wait_for_dis");  
   ndevice = devnp(node);
   if(ndevice < 0)
     return(0);
@@ -5273,7 +5276,7 @@ int wait_for_disconnect(int node,int timout)
 int disconnect_node(int node)
   {
   int ndevice;
-  
+  printf("disconnect_node");
   ndevice = devnp(node);
   if(ndevice < 0)
     return(0);
@@ -5481,7 +5484,7 @@ int writecticx(int node,int cticn,unsigned char *data,int count,int notflag,int 
   struct devdata *dp;
   int n,k,devn,chandle,locsize,ndevice,flag;
   unsigned char *cmd;
-  
+  printf("writecticx");
   ndevice = devnp(node);
   if(ndevice < 0)
     return(0);
@@ -5808,7 +5811,7 @@ int read_ctic(int node,int cticn,unsigned char *data,int datlen)
     data[n] = 0;
 
   gpar.readerror = ERROR_FATAL;
-  
+  printf("read_ctic");
   ndevice = devnp(node);
   if(ndevice < 0)
     return(0);
@@ -10852,7 +10855,7 @@ int clconnectxx(int ndevice)
 int find_channel(int node,int flag,unsigned char *uuid)
   {
   int flags,retval,ndevice;
-  
+  printf("find_channel");
   ndevice = devnp(node);
   if(ndevice < 0)
     return(0);
@@ -10882,7 +10885,7 @@ int find_channel(int node,int flag,unsigned char *uuid)
 int list_channels(int node,int flag)
   {
   int flags,retval,ndevice;
-  
+  printf("list_channels");
   ndevice = devnp(node);
   if(ndevice < 0)
     return(0);
@@ -10913,7 +10916,7 @@ int list_channels(int node,int flag)
 int list_uuid(int node,unsigned char *uuid)
   {
   int retval,ndevice;
-    
+  printf("list_uuid"); 
   ndevice = devnp(node);
   if(ndevice < 0)
     return(0);
@@ -11283,7 +11286,7 @@ int printchannels(int ndevice,int flags,struct servicedata *serv,int servlen)
 int find_ctics(int node)
   {
   int retval,ndevice;
-  
+  printf("find_ctics");
   ndevice = devnp(node);
   if(ndevice < 0)
     return(-1);
@@ -11297,7 +11300,7 @@ int find_ctics(int node)
 int list_ctics(int node,int flag)
   {
   int retval,ndevice;
-  
+  printf("list_ctics");
   ndevice = devnp(node);
   if(ndevice < 0)
     return(-1);
@@ -12590,7 +12593,7 @@ int decodedes(unsigned char *sin,int len,struct sdpdata *sdpp)  //  int level,in
 int connect_node(int node,int channelflag,int channel)
   {
   int ndevice,type,retval;
-  
+  printf("connect_node");
   ndevice = devnp(node);
   if(ndevice < 0)
     return(0);
@@ -12823,7 +12826,7 @@ int write_node(int node,unsigned char *outbuff,int count)
 
   if(count == 0)
     return(1);
-      
+  printf("write_node");    
   ndevice = devnp(node);  
   if(ndevice < 0)
     return(0);
@@ -13019,7 +13022,7 @@ void read_node_clear(int node)
   {
   int n,ndevice;
        
-    
+  printf("read_node_clear");
   ndevice = devnp(node);
   if(ndevice < 0)
     return;
@@ -13098,6 +13101,7 @@ int readserial(int *node,unsigned char *inbuff,int count,char endchar,int flag,i
     ndevice = *node;
   else
     {  // specified device
+    printf("read_serial");
     ndevice = devnp(*node);
     if(ndevice < 0)
       {
