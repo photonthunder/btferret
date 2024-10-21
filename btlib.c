@@ -1553,13 +1553,16 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
     {   // is device 0 board address local - move to ndev=0
       if((dev[ndev]->type == BTYPE_ME) && (devset.ndev_zero == 0))
         {
-        // printf("Move to ndev 0 from ndev %d", ndev);
-        dev[0]->node = dev[ndev]->node;
-        strcpy(dev[0]->name,dev[ndev]->name);
+          if (ndev > 0)
+            {
+            // printf("Move to ndev 0 from ndev %d", ndev);
+            dev[0]->node = dev[ndev]->node;
+            strcpy(dev[0]->name,dev[ndev]->name);
+            dev[ndev]->type = 0;    // free ndev
+            ndev = 0;
+            }
         }
-      dev[ndev]->type = 0;    // free ndev
-      ndev = 0;
-      devset.ndev_zero = 1;
+        devset.ndev_zero = 1;
     }
     else {
       printf("No match to address local, so aborting\n");
@@ -3409,8 +3412,6 @@ int newnode()
   return(0);    
   }
   
-
-
 int devokp(int ndevice)
   {
   if(devok(ndevice) == 0)

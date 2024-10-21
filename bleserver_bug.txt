@@ -66,6 +66,18 @@ ctialloc for service
 PRIMARY_SERVICE = 1801
   LECHAR = Service changed PERMIT=20 SIZE=4 UUID=2A05
 ctialloc for service
+PRIMARY_SERVICE = 180A
+  LECHAR = PnP ID          PERMIT=02 SIZE=7 UUID=2A50
+ctialloc for service
+PRIMARY_SERVICE = 112233445566778899AABBCCDDEEFF00
+  LECHAR = Control  PERMIT=06 SIZE=8 UUID=ABCD
+ctialloc for service
+  LECHAR = Counter PERMIT=16 SIZE=1 UUID=CDEF
+ctialloc for service
+  LECHAR = Data PERMIT=12 SIZE=1 UUID=DEAF
+ctialloc for service
+  LECHAR = Response PERMIT=12 SIZE=8 UUID=DCBA
+ctialloc for service
 < HCI OGF=03 OCF=13
       0000  01 13 0C F8 4D 79 20 4F - 74 68 65 72 20 50 69 00 
       0010  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
@@ -86,7 +98,7 @@ ctialloc for service
 Service changed 2A05 enabled
 Set LE random address in Post
 < HCI OGF=08 OCF=05
-      0000  01 05 20 06 E4 F0 86 78 - 58 C8 
+      0000  01 05 20 06 24 A5 CF 16 - 80 C3 
 Check Status
 > Event 0E = 01 13 0C 00
       0000  04 0E 04 01 13 0C 00 
@@ -114,9 +126,9 @@ Get public keys
 > Event 0F = 00 01 25 20
       0000  04 0F 04 00 01 25 20 
 GOT local XY keys
-> Event 3E = 08 00 41 82 DB D5 89 0E 26 96...
-      0000  04 3E 42 08 00 41 82 DB - D5 89 0E 26 96 C5 C8 17 
-      0010  95 DF CB 0E C3 CC 2E 16 - C0 D7 24 C2 4A A6 37 1E 
-      0020  62 A2 A7 28 66 68 F0 57 - B0 84 66 2A 4C B5 78 CF 
-      0030  53 FC 67 F9 6D 07 54 1D - EC 9A 4F 63 AF 2F E5 E1 
-      0040  DD E0 96 BB 81 
+> Event 3E = 08 00 90 F3 1A 46 9E D5 9A DB...
+      0000  04 3E 42 08 00 90 F3 1A - 46 9E D5 9A DB 09 E0 A1 
+      0010  85 5E 8E 6A F0 06 AB E8 - B9 B7 CD 4A 36 E5 D8 F0 
+      0020  1B 06 9D 54 86 BF DF 9D - 4A 77 74 F2 8F 91 29 E9 
+      0030  20 C7 77 0E 48 7D 6F 56 - C6 B5 8F B6 29 F7 0D 84 
+      0040  78 C7 42 F2 F3 

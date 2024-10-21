@@ -55,13 +55,48 @@ class BLEServer:
       char_uuid = "2A01"
       if btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0:
         exit(0)
-      # primary_service = "1801"
-      # char_name = "Service Changed"
-      # char_permit = 0x20
-      # char_size = 4
-      # char_uuid = "2A05"
-      # if (btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0):
-      #   exit(0)
+      primary_service = "1801"
+      char_name = "Service Changed"
+      char_permit = 0x20
+      char_size = 4
+      char_uuid = "2A05"
+      if (btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0):
+        exit(0)
+      primary_service = "180A"
+      char_name = "PnP ID"
+      char_permit = 0x02
+      char_size = 7
+      char_uuid = "2A50"
+      if (btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0):
+        exit(0)
+      primary_service = "112233445566778899AABBCCDDEEFF00"
+      char_name = "Control"
+      char_permit = 0x06
+      char_size = 8
+      char_uuid = "ABCD"
+      if (btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0):
+        exit(0)
+      primary_service = "112233445566778899AABBCCDDEEFF00"
+      char_name = "Counter"
+      char_permit = 0x16
+      char_size = 1
+      char_uuid = "CDEF"
+      if (btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0):
+        exit(0)
+      primary_service = "112233445566778899AABBCCDDEEFF00"
+      char_name = "Data"
+      char_permit = 0x12
+      char_size = 1
+      char_uuid = "DEAF"
+      if (btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0):
+        exit(0)
+      primary_service = "112233445566778899AABBCCDDEEFF00"
+      char_name = "Response"
+      char_permit = 0x12
+      char_size = 8
+      char_uuid = "DCBA"
+      if (btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0):
+        exit(0)
       print("Dont Adding Characteristics")
       if btfpy.Char_add_done() == 0:
         exit(0)
@@ -75,25 +110,25 @@ class BLEServer:
 
     btfpy.Output_file(bug_name)
     self.local_node = btfpy.Localnode()
-    # self.abcd_index = btfpy.Find_ctic_index(self.local_node, btfpy.UUID_2, [0xAB,0xCD])
-    # if self.abcd_index != 4:
-    #   print("Not 4")
-    #   exit(0)
-    # self.cdef_index = btfpy.Find_ctic_index(self.local_node, btfpy.UUID_2, [0xCD,0xEF])
-    # if self.cdef_index != 5:
-    #   print("Not 5")
-    #   exit(0)
-    # self.deaf_index = btfpy.Find_ctic_index(self.local_node, btfpy.UUID_2, [0xDE,0xAF])
-    # if self.deaf_index != 6:
-    #   print("Not 6")
-    #   exit(0)
-    # self.dcba_index = btfpy.Find_ctic_index(self.local_node, btfpy.UUID_2, [0xDC,0xBA])
-    # if self.dcba_index != 7:
-    #   print("Not 7")
-    #   exit(0)
+    self.abcd_index = btfpy.Find_ctic_index(self.local_node, btfpy.UUID_2, [0xAB,0xCD])
+    if self.abcd_index != 4:
+      print("Not 4")
+      exit(0)
+    self.cdef_index = btfpy.Find_ctic_index(self.local_node, btfpy.UUID_2, [0xCD,0xEF])
+    if self.cdef_index != 5:
+      print("Not 5")
+      exit(0)
+    self.deaf_index = btfpy.Find_ctic_index(self.local_node, btfpy.UUID_2, [0xDE,0xAF])
+    if self.deaf_index != 6:
+      print("Not 6")
+      exit(0)
+    self.dcba_index = btfpy.Find_ctic_index(self.local_node, btfpy.UUID_2, [0xDC,0xBA])
+    if self.dcba_index != 7:
+      print("Not 7")
+      exit(0)
 
     # Have self.abcd show "ENTER" at startup
-    # btfpy.Write_ctic(self.local_node, self.abcd_index, self.string_to_hex("ENTER"), 0)  
+    btfpy.Write_ctic(self.local_node, self.abcd_index, self.string_to_hex("ENTER"), 0)  
 
     btfpy.Keys_to_callback(btfpy.KEY_ON,0)
                                   # OPTIONAL - key presses are sent to le_callback
@@ -150,8 +185,8 @@ class BLEServer:
       self.count = self.count + 5
       if self.count > 255:
         self.count = 0
-      #btfpy.Write_ctic(self.local_node, self.cdef_index, [self.count], 0)
-      #btfpy.Write_ctic(self.local_node, self.deaf_index, [random.randint(0,255)], 0)
+      btfpy.Write_ctic(self.local_node, self.cdef_index, [self.count], 0)
+      btfpy.Write_ctic(self.local_node, self.deaf_index, [random.randint(0,255)], 0)
       pass
     elif(operation == btfpy.LE_KEYPRESS):
       # Only active if btfpy.Keys_to_callback(btfpy.KEY_ON,0) has been called before le_server()
