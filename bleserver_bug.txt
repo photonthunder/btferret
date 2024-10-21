@@ -98,7 +98,7 @@ ctialloc for service
 Service changed 2A05 enabled
 Set LE random address in Post
 < HCI OGF=08 OCF=05
-      0000  01 05 20 06 24 A5 CF 16 - 80 C3 
+      0000  01 05 20 06 60 BD 20 9C - FA DF 
 Check Status
 > Event 0E = 01 13 0C 00
       0000  04 0E 04 01 13 0C 00 
@@ -126,9 +126,9 @@ Get public keys
 > Event 0F = 00 01 25 20
       0000  04 0F 04 00 01 25 20 
 GOT local XY keys
-> Event 3E = 08 00 90 F3 1A 46 9E D5 9A DB...
-      0000  04 3E 42 08 00 90 F3 1A - 46 9E D5 9A DB 09 E0 A1 
-      0010  85 5E 8E 6A F0 06 AB E8 - B9 B7 CD 4A 36 E5 D8 F0 
-      0020  1B 06 9D 54 86 BF DF 9D - 4A 77 74 F2 8F 91 29 E9 
-      0030  20 C7 77 0E 48 7D 6F 56 - C6 B5 8F B6 29 F7 0D 84 
-      0040  78 C7 42 F2 F3 
+> Event 3E = 08 00 50 7D F9 82 9E 22 91 19...
+      0000  04 3E 42 08 00 50 7D F9 - 82 9E 22 91 19 F6 55 13 
+      0010  A8 06 2F 0D B8 F7 1D 90 - 63 13 80 8C 62 60 7E 72 
+      0020  B8 A9 9A 96 11 88 21 99 - 79 A3 2F 53 C7 B8 E9 27 
+      0030  2B 4F 42 AE 66 93 A1 38 - B2 4D 7E 33 1C 00 E5 44 
+      0040  D5 76 A6 F8 A9 

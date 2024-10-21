@@ -97,7 +97,7 @@ class BLEServer:
       char_uuid = "DCBA"
       if (btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0):
         exit(0)
-      print("Dont Adding Characteristics")
+      print("Done Adding Characteristics")
       if btfpy.Char_add_done() == 0:
         exit(0)
 
