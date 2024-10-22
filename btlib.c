@@ -1521,16 +1521,6 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
     gpar.hidflag = 1;
   }
 
-  if (npserv >= 30)
-  {
-    printf("Too many Primary Services %d\n", npserv);
-    return 0;
-  }
-  if (npserv < 0)
-  {
-    npserv = 0;
-    uuid_flag = 0;
-  }
   pserv_exists = 0;
   for (int i = 0; i < 32; i++)
   {
@@ -1543,11 +1533,25 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
     }
   }
   if (pserv_exists == 0)
-  {
-    ++npserv;   
+  {  
+    if (npserv >= 30)
+    {
+      printf("Too many Primary Services %d\n", npserv);
+      return 0;
+    }
+    if (npserv < 0)
+    {
+      npserv = 0;
+      uuid_flag = 0;
+    }
+    else
+    {
+      npserv++;
+    }
     printf("Set up Primary Service %d\n", npserv);      
     pserv[npserv].handle = 0;
     pserv[npserv].uuidtype = hn;
+    memset(pserv[npserv].uuid, 0, 16);
     memcpy(pserv[npserv].uuid, data, hn);
     if(devnfrombadd(dev[ndev]->baddr,BTYPE_XALL,DIRN_FOR) == 0)
     {   // is device 0 board address local - move to ndev=0
@@ -1626,6 +1630,16 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
 
 int char_add_done(void)
 {
+  printf("npserv = %d\n", npserv);
+  for(int i = 0; i < 5; i++)
+  {
+    printf("pserv[%d].uuid = ", i);
+    for(int j = 0; j < pserv[npserv].uuidtype; j++)
+    {
+      printf("%X:", pserv[i].uuid[j]);
+    }
+    printf("\n");
+  }
   if(localctics() == 0)
   {
     printf("localctics failed\n");
@@ -2135,7 +2149,7 @@ int init_blue_ex(char *filename,int hcin)
             //   }
             // }
             // VPRINT "\n");
-            // }
+            }
           }        
         }  // end ind[2] ADDRESS
       

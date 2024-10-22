@@ -54,32 +54,8 @@ Read local board address
       0000  01 02 20 00 
 > Event 0E = 01 02 20 00 FB 00 07
       0000  04 0E 07 01 02 20 00 FB - 00 07 
-Device data from bleserver_devices.txt file
-DEVICE = My Other Pi   TYPE=MESH NODE=1000  ADDRESS=2C:CF:67:3D:C8:B7
-2C:CF:67:3D:C8:B7
-Change node to 0 from 1
-PRIMARY_SERVICE = 1800
-  LECHAR = Device Name  PERMIT=02 SIZE=16 UUID=2A00
-ctialloc for service
-  LECHAR = Appearance   PERMIT=02 SIZE=2  UUID=2A01
-ctialloc for service
-PRIMARY_SERVICE = 1801
-  LECHAR = Service changed PERMIT=20 SIZE=4 UUID=2A05
-ctialloc for service
-PRIMARY_SERVICE = 180A
-  LECHAR = PnP ID          PERMIT=02 SIZE=7 UUID=2A50
-ctialloc for service
-PRIMARY_SERVICE = 112233445566778899AABBCCDDEEFF00
-  LECHAR = Control  PERMIT=06 SIZE=8 UUID=ABCD
-ctialloc for service
-  LECHAR = Counter PERMIT=16 SIZE=1 UUID=CDEF
-ctialloc for service
-  LECHAR = Data PERMIT=12 SIZE=1 UUID=DEAF
-ctialloc for service
-  LECHAR = Response PERMIT=12 SIZE=8 UUID=DCBA
-ctialloc for service
 < HCI OGF=03 OCF=13
-      0000  01 13 0C F8 4D 79 20 4F - 74 68 65 72 20 50 69 00 
+      0000  01 13 0C F8 4D 79 20 4E - 65 77 20 50 69 00 00 00 
       0010  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
       0020  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
       0030  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
@@ -98,7 +74,7 @@ ctialloc for service
 Service changed 2A05 enabled
 Set LE random address in Post
 < HCI OGF=08 OCF=05
-      0000  01 05 20 06 60 BD 20 9C - FA DF 
+      0000  01 05 20 06 A1 C7 74 0F - 1D D9 
 Check Status
 > Event 0E = 01 13 0C 00
       0000  04 0E 04 01 13 0C 00 
@@ -114,8 +90,8 @@ Set LE advertising parameters
 STATUS OK
 Set LE advertising data with device name
 < HCI OGF=08 OCF=08
-      0000  01 08 20 20 16 08 FF 42 - C4 00 00 C0 DE 99 0C 08 
-      0010  4D 79 20 4F 74 68 65 72 - 20 50 69 00 00 00 00 00 
+      0000  01 08 20 20 14 08 FF 42 - C4 00 00 C0 DE 99 0A 08 
+      0010  4D 79 20 4E 65 77 20 50 - 69 00 00 00 00 00 00 00 
       0020  00 00 00 00 
 > Event 0E = 01 08 20 00
       0000  04 0E 04 01 08 20 00 
@@ -126,9 +102,9 @@ Get public keys
 > Event 0F = 00 01 25 20
       0000  04 0F 04 00 01 25 20 
 GOT local XY keys
-> Event 3E = 08 00 50 7D F9 82 9E 22 91 19...
-      0000  04 3E 42 08 00 50 7D F9 - 82 9E 22 91 19 F6 55 13 
-      0010  A8 06 2F 0D B8 F7 1D 90 - 63 13 80 8C 62 60 7E 72 
-      0020  B8 A9 9A 96 11 88 21 99 - 79 A3 2F 53 C7 B8 E9 27 
-      0030  2B 4F 42 AE 66 93 A1 38 - B2 4D 7E 33 1C 00 E5 44 
-      0040  D5 76 A6 F8 A9 
+> Event 3E = 08 00 3D 13 FF DD 66 D6 C6 A9...
+      0000  04 3E 42 08 00 3D 13 FF - DD 66 D6 C6 A9 0B C8 43 
+      0010  74 4F 3F 33 FD A4 12 7B - EF 67 59 E6 35 DE A9 F1 
+      0020  11 C3 48 80 62 E5 39 7B - 34 81 47 EA 1A 01 AD CA 
+      0030  BC 72 F4 40 73 88 A9 5B - FE A1 5B 4E 8D 3B 4C BE 
+      0040  DB CE 21 4A 40 

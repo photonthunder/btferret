@@ -16,7 +16,7 @@ class BLEServer:
     return [ord(char) for char in input_string]
 
   def initialize(self, device_name="bleserver_devices.txt", bug_name="bleserver_bug.txt"):
-    ORIGINAL = True
+    ORIGINAL = False
     if ORIGINAL == True:
       print("Original Code")
       if (btfpy.Init_blue(device_name) == 0):
@@ -76,21 +76,21 @@ class BLEServer:
       char_uuid = "ABCD"
       if (btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0):
         exit(0)
-      primary_service = "112233445566778899AABBCCDDEEFF00"
+      # primary_service = "112233445566778899AABBCCDDEEFF00"
       char_name = "Counter"
       char_permit = 0x16
       char_size = 1
       char_uuid = "CDEF"
       if (btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0):
         exit(0)
-      primary_service = "112233445566778899AABBCCDDEEFF00"
+      # primary_service = "112233445566778899AABBCCDDEEFF00"
       char_name = "Data"
       char_permit = 0x12
       char_size = 1
       char_uuid = "DEAF"
       if (btfpy.Set_lechar(primary_service, char_name, char_permit, char_size, char_uuid) == 0):
         exit(0)
-      primary_service = "112233445566778899AABBCCDDEEFF00"
+      # primary_service = "112233445566778899AABBCCDDEEFF00"
       char_name = "Response"
       char_permit = 0x12
       char_size = 8
