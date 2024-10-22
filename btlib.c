@@ -2122,20 +2122,20 @@ int init_blue_ex(char *filename,int hcin)
             }  
           else
             {
-            // for(i = 0 ; i < 6 ; ++i)
-            //   dev[ndev]->baddr[i] = data[i];
-            printf("Address ");
-            for(int i = 0; i < hn; ++i)
-            {
+            for(i = 0 ; i < 6 ; ++i)
               dev[ndev]->baddr[i] = data[i];
-              VPRINT "%X", data[i]);
-              if (i < hn - 1)
-              {
-                VPRINT ":");
-              }
-            }
-            VPRINT "\n");
-            }
+            // printf("Address ");
+            // for(int i = 0; i < hn; ++i)
+            // {
+            //   dev[ndev]->baddr[i] = data[i];
+            //   VPRINT "%X", data[i]);
+            //   if (i < hn - 1)
+            //   {
+            //     VPRINT ":");
+            //   }
+            // }
+            // VPRINT "\n");
+            // }
           }        
         }  // end ind[2] ADDRESS
       
@@ -2776,8 +2776,6 @@ char *device_address(int node)
     return("00:00:00:00:00:00");
   }
   
-
-
 int devnfrombadd(unsigned char *badd,int type,int dirn)
   {
   int n;
@@ -2807,8 +2805,6 @@ int devnfromhandle(unsigned char *hand)
   return(0);    
   }  
    
- 
- 
 void mesh_on()
   {  // turn on LE advertising
   sendhci(leadvon,0);
@@ -3444,8 +3440,7 @@ int devnp(int node)
   {
   
   int dn;
-  // VPRINT "devnp %d\n", node);
-  // flushprint();
+  
   dn = devn(node);
   if(dn < 0)
     {
@@ -3465,8 +3460,7 @@ int devn(int node)
     flushprint();
     return(-1);  // invalid node
   }
-  // VPRINT "devok(0) = %d, dev[0]->node = %d\n", devok(0), dev[0]->node);
-  // flushprint();
+
   for(n = 0 ; devok(n) != 0 ; ++n)
     {
     if(dev[n]->node == node)
@@ -3541,7 +3535,7 @@ int device_connected(int node)
   {
   int ndevice;
   struct devdata *dp;
-  
+
   ndevice = devnp(node);
   if(ndevice > 0)
     {
