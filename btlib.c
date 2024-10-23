@@ -1331,24 +1331,25 @@ static int device_params_set(void)
 
   if (devset.name == 0)
   {
-      printf("Set Device Name First\n");
+      NPRINT "Set Device Name First\n");
       all_set = 0;
   }
   if (devset.type == 0)
   {
-      printf("Set Device Type First\n");
+      NPRINT "Set Device Type First\n");
       all_set = 0;
   }
     if (devset.node == 0)
   {
-      printf("Set Device Node First\n");
+      NPRINT "Set Device Node First\n");
       all_set = 0;
   }
-    if (devset.address == 0)
-  {
-      printf("Set Device Address First\n");
-      all_set = 0;
-  }
+  //   if (devset.address == 0)
+  // {
+  //     NPRINT "Set Device Address First\n");
+  //     all_set = 0;
+  // }
+  flushprint();
   return all_set;
 }
 
@@ -1359,7 +1360,8 @@ static int check_dev_allocate(void)
     ndev = devalloc();
     if(ndev < 0)
     {
-      printf("ndev %d < 0\n", ndev);
+      NPRINT "ndev %d < 0\n", ndev);
+      flushprint();
       return(0);  // fatal alloc error
     }
     devset.ndev_set = 1;
@@ -1371,7 +1373,8 @@ int set_device_name(unsigned char *name, int len)
 {
   if (len > NAMELEN)
   {
-    printf("Device Name too long %d > %d\n",len, NAMELEN); 
+    NPRINT "Device Name too long %d > %d\n",len, NAMELEN); 
+    flushprint();
     return 0;
   }
   check_dev_allocate();
@@ -1387,7 +1390,8 @@ int set_type(int type)
   {
     case BTYPE_LO:
     case BTYPE_CL:
-      printf("Currently not supported, use devices.txt method\n");
+      NPRINT "Currently not supported, use devices.txt method\n");
+      flushprint();
       return 0;
     break;
     case BTYPE_LE:
@@ -1397,7 +1401,8 @@ int set_type(int type)
       devset.type= 1;
     break;
     default:
-      printf("Invalid BTYPE %d\n", type);
+      NPRINT "Invalid BTYPE %d\n", type);
+      flushprint();
       return 0;
     break;
   }
@@ -1406,6 +1411,8 @@ int set_type(int type)
 
 int set_address(char *address, int len)
 {
+  NPRINT("For now just uses the board address, entry ignored\n");
+  #if 0
   int hn;
   unsigned char *data;
   check_dev_allocate();
@@ -1419,27 +1426,30 @@ int set_address(char *address, int len)
     data = strtohexx(address, len, &hn);
     if (hn != 6)
     {
-      printf("Address %s must be 6 bytes\n", address);
+      NPRINT "Address %s must be 6 bytes\n", address);
+      flushprint();
       return 0;
     }
     else
     {
       //memcpy(dev[ndec]->baddr[i], data[i], hn);
-      printf("Address ");
+      VPRINT "Address ");
       for(int i = 0; i < hn; ++i)
       {
         dev[ndev]->baddr[i] = data[i];
-        printf("%X", data[i]);
+        VPRINT "%X", data[i]);
         if (i < hn - 1)
         {
-          printf(":");
+          VPRINT ":");
         }
       }
-      printf("\n");
+      VPRINT "\n");
+      flushprint();
       devset.address = 1;
       return 1;
     }
   }
+  #endif
 }
 
 int set_node(int node)
@@ -1447,14 +1457,16 @@ int set_node(int node)
   check_dev_allocate();
   if (node <= 0 || node >= 0x10000)
   {
-    printf("Invalid Node number %d\n", node);
+    NPRINT "Invalid Node number %d\n", node);
+    flushprint();
     return 0;
   }
   for (int i = 0; i < ndev - 1; i++)
   {
     if (node == dev[i]->node)
     {
-      printf("Repeat Node Number %d\n", node);
+      VPRINT "Repeat Node Number %d\n", node);
+      flushprint();
       return 0;
     }
   }
@@ -1513,7 +1525,8 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
   data = strtohexx(primary_service, ps_len, &hn);
   if (hn != 16 && hn != 2)
   {
-    printf("Primary Service must be 2 or 16 bytes\n");
+    NPRINT "Primary Service must be 2 or 16 bytes\n");
+    flushprint();
     return 0;
   }
   if (hn == 2 && data[0] == 0x18 && data[1] == 0x12)
@@ -1526,7 +1539,7 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
   {
     if (compare_uuid(pserv[i].uuid, data, hn)  == 1)
     {
-      printf("Primary Service already exists\n");
+      // VPRINT "Primary Service already exists\n");
       pserv_exists = 1;
       npserv = i;
       break;
@@ -1536,7 +1549,8 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
   {  
     if (npserv >= 30)
     {
-      printf("Too many Primary Services %d\n", npserv);
+      NPRINT "Too many Primary Services %d\n", npserv);
+      flushprint();
       return 0;
     }
     if (npserv < 0)
@@ -1548,18 +1562,17 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
     {
       npserv++;
     }
-    printf("Set up Primary Service %d\n", npserv);      
+    VPRINT "Set up Primary Service %d\n", npserv);      
     pserv[npserv].handle = 0;
     pserv[npserv].uuidtype = hn;
     memset(pserv[npserv].uuid, 0, 16);
     memcpy(pserv[npserv].uuid, data, hn);
-    if(devnfrombadd(dev[ndev]->baddr,BTYPE_XALL,DIRN_FOR) == 0)
-    {   // is device 0 board address local - move to ndev=0
+    //if(devnfrombadd(dev[ndev]->baddr,BTYPE_XALL,DIRN_FOR) == 0)
+    //{   // is device 0 board address local - move to ndev=0
       if((dev[ndev]->type == BTYPE_ME) && (devset.ndev_zero == 0))
         {
           if (ndev > 0)
             {
-            // printf("Move to ndev 0 from ndev %d", ndev);
             dev[0]->node = dev[ndev]->node;
             strcpy(dev[0]->name,dev[ndev]->name);
             dev[ndev]->type = 0;    // free ndev
@@ -1567,31 +1580,34 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
             }
         }
         devset.ndev_zero = 1;
-    }
-    else {
-      printf("No match to address local, so aborting\n");
-      return 0;
-    }
+    // }
+    // else {
+    //   NPRINT "No match to address local, so aborting\n");
+    //   flushprint();
+    //   return 0;
+    // }
   }
-  printf("ndev = %d, npserv = %d\n", ndev, npserv);
+
   cp = cticalloc(ndev);
   if (cp->type != CTIC_UNUSED)
   {
-    printf("Fatal CTIC ALLOC Error\n");
+    NPRINT "Fatal CTIC ALLOC Error\n");
+    flushprint();
     return 0;
   }
-  printf("cticalloc ok\n");
   cp->psnx = npserv;
 
   memcpy(cp->name, name, name_len);
   if (permit > 0xFF)
   {
-    printf("Permit must be 1 Hex Byte (%X < 0xFF)\n", permit);
+    NPRINT "Permit must be 1 Hex Byte (%X < 0xFF)\n", permit);
+    flushprint();
     return 0;
   }
   else if ((permit & 0x30) == 0x30) 
   {
-    printf("Permit notify and indicate enabled\n");
+    NPRINT "Permit notify and indicate enabled\n");
+    flushprint();
     return 0;
   }
   else
@@ -1601,7 +1617,8 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
 
   if (size < 1 || size > LEDATLEN)
   {
-    printf("Size must be 1 - %d, size = %d", LEDATLEN, size);
+    NPRINT "Size must be 1 - %d, size = %d", LEDATLEN, size);
+    flushprint();
     return 0;
   }
   cp->size = size;
@@ -1610,7 +1627,8 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
   data = strtohexx(uuid, uuid_len, &hn);
   if (hn != 16 && hn != 2)
   {
-    printf("UUID must be 2 or 16 bytes\n");
+    NPRINT "UUID must be 2 or 16 bytes\n");
+    flushprint();
     return 0;
   }
   cp->uuidtype = hn;
@@ -1630,19 +1648,20 @@ int set_lechar(char *primary_service, char *name, int permit, int size, char *uu
 
 int char_add_done(void)
 {
-  printf("npserv = %d\n", npserv);
-  for(int i = 0; i < 5; i++)
+  // VPRINT "npserv = %d\n", npserv);
+  for(int i = 0; i < npserv + 1; i++)
   {
-    printf("pserv[%d].uuid = ", i);
+    VPRINT "pserv[%d].uuid = ", i);
     for(int j = 0; j < pserv[npserv].uuidtype; j++)
     {
-      printf("%X:", pserv[i].uuid[j]);
+      VPRINT "%X:", pserv[i].uuid[j]);
     }
-    printf("\n");
+    VPRINT "\n");
   }
+  flushprint();
   if(localctics() == 0)
   {
-    printf("localctics failed\n");
+    NPRINT "localctics failed\n");
     flushprint();
     return 0;
   }
@@ -1756,7 +1775,7 @@ int pre_init_blue(int hcin)
   
     if(gpar.s == NULL || instack == NULL)
       {
-      printf("Memory allocate fail\n");
+      NPRINT "Memory allocate fail\n");
       return(0);
       }
     }
@@ -1860,6 +1879,12 @@ int pre_init_blue(int hcin)
       leadvert[PAKHEADSIZE+8] = ((data[2] ^ data[1]) ^ data[0]) | 0xC0;   
       }
     popins();
+    VPRINT "Local Board Address = ");
+    for(int j = 0; j < 6; j++)
+    {
+      VPRINT "%X:", dev[0]->baddr[j]);
+    }
+    VPRINT "\n");
     }
   else
     {
@@ -2138,17 +2163,6 @@ int init_blue_ex(char *filename,int hcin)
             {
             for(i = 0 ; i < 6 ; ++i)
               dev[ndev]->baddr[i] = data[i];
-            // printf("Address ");
-            // for(int i = 0; i < hn; ++i)
-            // {
-            //   dev[ndev]->baddr[i] = data[i];
-            //   VPRINT "%X", data[i]);
-            //   if (i < hn - 1)
-            //   {
-            //     VPRINT ":");
-            //   }
-            // }
-            // VPRINT "\n");
             }
           }        
         }  // end ind[2] ADDRESS

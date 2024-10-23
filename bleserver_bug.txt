@@ -50,6 +50,7 @@ Read local board address
       0000  01 09 10 00 
 > Event 0E = 01 09 10 00 B7 C8 3D 67 CF 2C
       0000  04 0E 0A 01 09 10 00 B7 - C8 3D 67 CF 2C 
+Local Board Address = 2C:CF:67:3D:C8:B7:
 < HCI OGF=08 OCF=02
       0000  01 02 20 00 
 > Event 0E = 01 02 20 00 FB 00 07
@@ -71,10 +72,18 @@ Read local board address
       00D0  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
       00E0  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
       00F0  00 00 00 00 00 00 00 00 - 00 00 00 00 
+Set up Primary Service 0
+Set up Primary Service 1
+Set up Primary Service 2
+Set up Primary Service 3
+pserv[0].uuid = 18:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:
+pserv[1].uuid = 18:1:0:0:0:0:0:0:0:0:0:0:0:0:0:0:
+pserv[2].uuid = 18:A:0:0:0:0:0:0:0:0:0:0:0:0:0:0:
+pserv[3].uuid = 11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:0:
 Service changed 2A05 enabled
 Set LE random address in Post
 < HCI OGF=08 OCF=05
-      0000  01 05 20 06 A1 C7 74 0F - 1D D9 
+      0000  01 05 20 06 CB 9B 76 58 - 2D CD 
 Check Status
 > Event 0E = 01 13 0C 00
       0000  04 0E 04 01 13 0C 00 
@@ -102,9 +111,9 @@ Get public keys
 > Event 0F = 00 01 25 20
       0000  04 0F 04 00 01 25 20 
 GOT local XY keys
-> Event 3E = 08 00 3D 13 FF DD 66 D6 C6 A9...
-      0000  04 3E 42 08 00 3D 13 FF - DD 66 D6 C6 A9 0B C8 43 
-      0010  74 4F 3F 33 FD A4 12 7B - EF 67 59 E6 35 DE A9 F1 
-      0020  11 C3 48 80 62 E5 39 7B - 34 81 47 EA 1A 01 AD CA 
-      0030  BC 72 F4 40 73 88 A9 5B - FE A1 5B 4E 8D 3B 4C BE 
-      0040  DB CE 21 4A 40 
+> Event 3E = 08 00 A8 51 3C 45 08 68 D8 1E...
+      0000  04 3E 42 08 00 A8 51 3C - 45 08 68 D8 1E 7D 58 AD 
+      0010  18 D8 E4 60 68 8F 15 1D - DD 3C D8 4F CC A7 5C 1D 
+      0020  BF 3E 44 99 DF 67 39 80 - 54 54 A4 7B 4F 42 6D 50 
+      0030  C9 09 07 44 5B EC 8C 1C - F5 B9 4F 3C 6A 42 42 02 
+      0040  68 EB 8A B4 95 

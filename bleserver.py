@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # https://github.com/petzval/btferret
 
 import btfpy
@@ -34,9 +35,9 @@ class BLEServer:
       node = 1000
       if (btfpy.Set_node(node) == 0):
         exit(0)
-      address = "2C:CF:67:3D:C8:B7"
-      if (btfpy.Set_address(address, len(address)) == 0):
-        exit(0)
+      # address = "2C:CF:67:3D:C8:B7"
+      # if (btfpy.Set_address(address, len(address)) == 0):
+      #   exit(0)
       if (btfpy.Process_device_params() == 0):
         exit(0)
 

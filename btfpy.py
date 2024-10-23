@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 #### run with build option:   python3 btfpy.py build
 import os
 from setuptools import setup, Extension
