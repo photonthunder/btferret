@@ -6,12 +6,6 @@ import fcntl
 import time
 import os
 
-import socket
-import struct
-import fcntl
-import time
-import os
-
 # Define constants from the C code
 HCIDEVDOWN = 0x400448ca  # Value for HCIDEVDOWN (from Linux headers)
 BTPROTO_HCI = 1          # Bluetooth protocol HCI
@@ -71,13 +65,23 @@ def hcisock():
         print(f"Socket open error: {e}")
         return 0
 
-    # Prepare the sockaddr_hci structure (AF_BLUETOOTH, devid, channel)
-    sa_family = AF_BLUETOOTH
+    # # Prepare the sockaddr_hci structure as a byte array
+    # sa = bytearray(6)
+    # sa[0] = AF_BLUETOOTH         # hci_family = AF_BLUETOOTH
+    # sa[1] = 0                    # Padding byte (for alignment)
+    # sa[2] = gpar['devid'] & 0xFF  # Low byte of device ID (hci_dev)
+    # sa[3] = (gpar['devid'] >> 8) & 0xFF  # High byte of device ID
+    # sa[4] = HCI_CHANNEL_USER     # hci_channel = HCI_CHANNEL_USER
+    # sa[5] = 0                    # Padding byte (for alignment)
+
+    # Prepare the sockaddr_hci structure correctly using struct.pack
+    # This corresponds to: struct sockaddr_hci { sa_family_t hci_family; unsigned short hci_dev; unsigned short hci_channel; }
+    hci_family = AF_BLUETOOTH
     hci_dev = gpar['devid']
     hci_channel = HCI_CHANNEL_USER
-
-    # Pack sockaddr_hci structure: "H" for AF_BLUETOOTH, "H" for devid, "H" for channel
-    sa = struct.pack("HHH", sa_family, hci_dev, hci_channel)
+    
+    # Pack sockaddr_hci structure using struct.pack: "H" for hci_family, "H" for devid, "H" for channel
+    sa = struct.pack("BBBBBB", hci_family, 0, hci_dev, 0, hci_channel, 0)
 
     # Bind the socket to the device and HCI user channel
     try:
@@ -94,14 +98,14 @@ def hcisock():
     print("Reset")
     send_hci_command(dd, btreset)
     
-    # print("Set event masks")
-    # send_hci_command(dd, eventmask)
-    # send_hci_command(dd, lemask)
+    print("Set event masks")
+    send_hci_command(dd, eventmask)
+    send_hci_command(dd, lemask)
 
-    # print("Set page/inquiry scan and timeouts = 10 secs")
-    # send_hci_command(dd, scanip)
-    # send_hci_command(dd, setcto)
-    # send_hci_command(dd, setpto)
+    print("Set page/inquiry scan and timeouts = 10 secs")
+    send_hci_command(dd, scanip)
+    send_hci_command(dd, setcto)
+    send_hci_command(dd, setpto)
 
     print("HCI Socket OK")
     return 1
@@ -124,5 +128,6 @@ setpto = struct.pack("<BHB", 0x01, 0x0C16, 0x10)  # Example page timeout
 # Main flow:
 bluezdown()  # Close BlueZ first
 hcisock()    # Open the HCI socket and send commands
+
 
 
