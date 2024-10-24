@@ -83,7 +83,7 @@ pserv[3].uuid = 11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:0:
 Service changed 2A05 enabled
 Set LE random address in Post
 < HCI OGF=08 OCF=05
-      0000  01 05 20 06 15 7E 11 4D - A9 E6 
+      0000  01 05 20 06 A2 FC FF 54 - 1D C3 
 Check Status
 > Event 0E = 01 13 0C 00
       0000  04 0E 04 01 13 0C 00 
@@ -105,15 +105,23 @@ Set LE advertising data with device name
 > Event 0E = 01 08 20 00
       0000  04 0E 04 01 08 20 00 
 STATUS OK
+Test Scan Response Data
+< HCI OGF=08 OCF=09
+      0000  01 09 20 20 12 FF AA BB - CC DD EE FF 11 22 33 44 
+      0010  55 66 77 88 99 00 00 00 - 00 00 00 00 00 00 00 00 
+      0020  00 00 00 00 
+> Event 0E = 01 09 20 00
+      0000  04 0E 04 01 09 20 00 
+STATUS OK
 Get public keys
 < HCI OGF=08 OCF=25
       0000  01 25 20 00 
 > Event 0F = 00 01 25 20
       0000  04 0F 04 00 01 25 20 
 GOT local XY keys
-> Event 3E = 08 00 44 40 DC 95 43 E8 9E D4...
-      0000  04 3E 42 08 00 44 40 DC - 95 43 E8 9E D4 54 27 F8 
-      0010  94 64 99 4A 7B 7E 0C 93 - 99 BF E9 AC 5F 82 3A 41 
-      0020  E7 CC 9F 30 2C 9F E9 BD - AE 93 EA 49 93 CC 23 E3 
-      0030  C0 D8 01 31 0A 21 AF F2 - 91 82 B5 92 37 3C 92 F8 
-      0040  E0 7D DE 83 E8 
+> Event 3E = 08 00 C0 03 4A F9 09 EB 34 FF...
+      0000  04 3E 42 08 00 C0 03 4A - F9 09 EB 34 FF 62 9D 6C 
+      0010  4D 5A 67 B6 8E 7F 22 83 - 0E BA 03 2A 46 B0 03 4A 
+      0020  52 B9 E3 D7 B3 AB 0F 0D - A9 0B B0 1B 83 24 A1 1B 
+      0030  A9 90 64 9D 8E 1F C7 C1 - 6C 6A A7 0E B0 09 57 5C 
+      0040  1D 62 E9 97 FD 
