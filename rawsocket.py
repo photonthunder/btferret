@@ -6,6 +6,12 @@ import fcntl
 import time
 import os
 
+import socket
+import struct
+import fcntl
+import time
+import os
+
 # Define constants from the C code
 HCIDEVDOWN = 0x400448ca  # Value for HCIDEVDOWN (from Linux headers)
 BTPROTO_HCI = 1          # Bluetooth protocol HCI
@@ -65,8 +71,13 @@ def hcisock():
         print(f"Socket open error: {e}")
         return 0
 
-    # Prepare the sockaddr structure
-    sa = struct.pack("6B", AF_BLUETOOTH, 0, gpar['devid'] & 0xFF, (gpar['devid'] >> 8) & 0xFF, HCI_CHANNEL_USER, 0)
+    # Prepare the sockaddr_hci structure (AF_BLUETOOTH, devid, channel)
+    sa_family = AF_BLUETOOTH
+    hci_dev = gpar['devid']
+    hci_channel = HCI_CHANNEL_USER
+
+    # Pack sockaddr_hci structure: "H" for AF_BLUETOOTH, "H" for devid, "H" for channel
+    sa = struct.pack("HHH", sa_family, hci_dev, hci_channel)
 
     # Bind the socket to the device and HCI user channel
     try:
@@ -114,45 +125,4 @@ setpto = struct.pack("<BHB", 0x01, 0x0C16, 0x10)  # Example page timeout
 bluezdown()  # Close BlueZ first
 hcisock()    # Open the HCI socket and send commands
 
-
-
-
-
-# Constants for HCI
-HCI_DEV = 0  # Typically, hci0 (use 0 for hci0, 1 for hci1, etc.)
-HCI_COMMAND_PKT = 0x01  # Packet indicator for HCI command
-
-# Bluetooth HCI Commands (Example: Reset HCI Command)
-OGF = 0x03  # Opcode Group Field (Controller & Baseband Commands)
-OCF = 0x0003  # Opcode Command Field (Reset Command)
-opcode = (OCF & 0x03FF) | (OGF << 10)  # Opcode is a combination of OGF and OCF
-length = 0x00  # No parameters for the HCI reset command
-
-# Create a raw socket
-sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_RAW, socket.BTPROTO_HCI)
-sock.bind((HCI_DEV,))
-
-# Set a timeout (e.g., 5 seconds)
-sock.settimeout(5.0)
-
-# Construct the HCI command packet (in Little Endian format)
-command_pkt = struct.pack("<BHB", HCI_COMMAND_PKT, opcode, length)
-
-# Output the HCI command being sent (in bytes)
-print("HCI Command (in bytes):", command_pkt)
-print("HCI Command (in hex):", command_pkt.hex())
-
-# Send the HCI command packet to the Bluetooth controller
-sock.send(command_pkt)
-
-# Try to receive the response with a timeout
-try:
-    response = sock.recv(1024)
-    print("HCI Response (in bytes):", response)
-    print("HCI Response (in hex):", response.hex())
-except socket.timeout:
-    print("No response received within the timeout period")
-
-# Close the socket
-sock.close()
 
