@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-
 import socket
 import struct
 import fcntl
+import ctypes
 import time
 import os
 
-# Define constants from the C code
+# Define constants
 HCIDEVDOWN = 0x400448ca  # Value for HCIDEVDOWN (from Linux headers)
 BTPROTO_HCI = 1          # Bluetooth protocol HCI
 AF_BLUETOOTH = 31        # Bluetooth address family
@@ -19,6 +19,13 @@ gpar = {
     'devid': 0,  # hci0, usually device ID 0
     'hci': -1    # HCI socket descriptor, initially invalid
 }
+
+class SockaddrHCI(ctypes.Structure):
+    _fields_ = [
+        ("hci_family", ctypes.c_ushort),    # Address family (AF_BLUETOOTH)
+        ("hci_dev", ctypes.c_ushort),       # Device ID (e.g., hci0 = 0)
+        ("hci_channel", ctypes.c_ushort)    # HCI Channel (e.g., HCI_CHANNEL_USER)
+    ]
 
 def bluezdown():
     """ Bring down BlueZ stack. """
@@ -65,28 +72,17 @@ def hcisock():
         print(f"Socket open error: {e}")
         return 0
 
-    # # Prepare the sockaddr_hci structure as a byte array
-    # sa = bytearray(6)
-    # sa[0] = AF_BLUETOOTH         # hci_family = AF_BLUETOOTH
-    # sa[1] = 0                    # Padding byte (for alignment)
-    # sa[2] = gpar['devid'] & 0xFF  # Low byte of device ID (hci_dev)
-    # sa[3] = (gpar['devid'] >> 8) & 0xFF  # High byte of device ID
-    # sa[4] = HCI_CHANNEL_USER     # hci_channel = HCI_CHANNEL_USER
-    # sa[5] = 0                    # Padding byte (for alignment)
-
-    # Prepare the sockaddr_hci structure correctly using struct.pack
-    # This corresponds to: struct sockaddr_hci { sa_family_t hci_family; unsigned short hci_dev; unsigned short hci_channel; }
-    hci_family = AF_BLUETOOTH
-    hci_dev = gpar['devid']
-    hci_channel = HCI_CHANNEL_USER
-    
-    # Pack sockaddr_hci structure using struct.pack: "H" for hci_family, "H" for devid, "H" for channel
-    sa = struct.pack("BBBBBB", hci_family, 0, hci_dev, 0, hci_channel, 0)
+    # Prepare the sockaddr_hci structure using ctypes
+    sa = SockaddrHCI()
+    sa.hci_family = AF_BLUETOOTH
+    sa.hci_dev = gpar['devid']
+    sa.hci_channel = HCI_CHANNEL_USER
 
     # Bind the socket to the device and HCI user channel
     try:
         print("Bind to Bluetooth devid user channel")
-        dd.bind(sa)
+        # Use the raw buffer of sa for the bind call
+        dd.bind((bytes(sa),))
     except OSError as e:
         print(f"Bind failed: {e}")
         dd.close()
@@ -128,6 +124,3 @@ setpto = struct.pack("<BHB", 0x01, 0x0C16, 0x10)  # Example page timeout
 # Main flow:
 bluezdown()  # Close BlueZ first
 hcisock()    # Open the HCI socket and send commands
-
-
-
