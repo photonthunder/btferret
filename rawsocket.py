@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import socket
 import struct
 import fcntl
@@ -10,10 +11,10 @@ import os
 HCIDEVDOWN = 0x400448ca  # Value for HCIDEVDOWN (from Linux headers)
 BTPROTO_HCI = 1          # Bluetooth protocol HCI
 AF_BLUETOOTH = 31        # Bluetooth address family
-HCI_CHANNEL_USER = 1     # HCI Channel for user-mode HCI socket
+HCI_CHANNEL_RAW = 0      # HCI Channel for raw HCI commands
 HCI_DEV = 0              # Typically, hci0 (use 0 for hci0, 1 for hci1, etc.)
 
-# This would be a global parameter in your program
+# Global parameters
 gpar = {
     'bluez': 1,  # Assuming BlueZ is currently up
     'devid': 0,  # hci0, usually device ID 0
@@ -24,7 +25,7 @@ class SockaddrHCI(ctypes.Structure):
     _fields_ = [
         ("hci_family", ctypes.c_ushort),    # Address family (AF_BLUETOOTH)
         ("hci_dev", ctypes.c_ushort),       # Device ID (e.g., hci0 = 0)
-        ("hci_channel", ctypes.c_ushort)    # HCI Channel (e.g., HCI_CHANNEL_USER)
+        ("hci_channel", ctypes.c_ushort)    # HCI Channel (e.g., HCI_CHANNEL_RAW)
     ]
 
 def bluezdown():
@@ -58,11 +59,11 @@ def bluezdown():
     return retval
 
 def hcisock():
-    """ Open an HCI user-mode socket, bind it to the device, and send HCI commands. """
+    """ Open an HCI raw-mode socket, bind it to the device, and send HCI commands. """
     if gpar['hci'] > 0:
         return 1  # HCI socket is already open
 
-    print("Open HCI user socket")
+    print("Open HCI raw socket")
     
     try:
         # Open a RAW HCI socket
@@ -76,13 +77,13 @@ def hcisock():
     sa = SockaddrHCI()
     sa.hci_family = AF_BLUETOOTH
     sa.hci_dev = gpar['devid']
-    sa.hci_channel = HCI_CHANNEL_USER
+    sa.hci_channel = HCI_CHANNEL_RAW  # Use RAW mode for better compatibility
 
-    # Bind the socket to the device and HCI user channel
+    # Bind the socket to the device and HCI raw channel
     try:
-        print("Bind to Bluetooth devid user channel")
+        print("Bind to Bluetooth device raw channel")
         # Use the raw buffer of sa for the bind call
-        dd.bind((bytes(sa),))
+        dd.bind(bytes(sa))
     except OSError as e:
         print(f"Bind failed: {e}")
         dd.close()
