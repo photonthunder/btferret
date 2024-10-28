@@ -30,6 +30,11 @@ SCAN_IP = SCAN_PAGE | SCAN_INQUIRY  # Enable both scans
 CONN_TIMEOUT_10_SEC = 16000
 PAGE_TIMEOUT_10_SEC = 16000
 
+def set_hci_filter(sock):
+    """Set an HCI filter to capture all events and responses."""
+    flt = struct.pack("IIII", 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF)
+    sock.setsockopt(socket.SOL_HCI, socket.HCI_FILTER, flt)
+
 def send_hci_command(sock, ogf, ocf, params=b''):
     """Function to send HCI command"""
     opcode = (ogf << 10) | ocf
@@ -55,39 +60,43 @@ def receive_hci_event(sock):
         print(f"Socket error: {e}")
 
 def main():
-    # Open an HCI socket
-    sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_RAW, socket.BTPROTO_HCI)
+    # Open an HCI socket SOCK_RAW | SOCK_CLOEXEC | SOCK_NONBLOCK
+    # sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_RAW, socket.BTPROTO_HCI)
+    sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_RAW | socket.SOCK_CLOEXEC | socket.SOCK_NONBLOCK, socket.BTPROTO_HCI)
     sock.bind((HCI_DEVICE_ID,))
+    
+    # Set HCI filter to capture all events and command completions
+    # set_hci_filter(sock)
     
     try:
         # 1. Send HCI Reset command
         send_hci_command(sock, OGF_HOST_CTL, OCF_RESET)
         receive_hci_event(sock)  # Receive the response
 
-        # 2. Send eventmask HCI command (set the event mask)
-        eventmask = struct.pack('<Q', 0xFFFFFFFFFFFFFBFF)  # Example event mask
-        send_hci_command(sock, OGF_HOST_CTL, OCF_SET_EVENT_MASK, eventmask)
-        receive_hci_event(sock)  # Receive the response
+        # # 2. Send eventmask HCI command (set the event mask)
+        # eventmask = struct.pack('<Q', 0xFFFFFFFFFFFFFBFF)  # Example event mask
+        # send_hci_command(sock, OGF_HOST_CTL, OCF_SET_EVENT_MASK, eventmask)
+        # receive_hci_event(sock)  # Receive the response
 
-        # 3. Send lemask HCI command (set the LE event mask)
-        lemask = struct.pack('<Q', 0xFFFFFFFFFFFFFBFF)  # Example LE event mask
-        send_hci_command(sock, OGF_LE_CTL, OCF_LE_SET_EVENT_MASK, lemask)
-        receive_hci_event(sock)  # Receive the response
+        # # 3. Send lemask HCI command (set the LE event mask)
+        # lemask = struct.pack('<Q', 0xFFFFFFFFFFFFFBFF)  # Example LE event mask
+        # send_hci_command(sock, OGF_LE_CTL, OCF_LE_SET_EVENT_MASK, lemask)
+        # receive_hci_event(sock)  # Receive the response
 
-        # 4. Send scanip HCI command (set scan mode: inquiry + page scan)
-        scanip = struct.pack('<B', SCAN_IP)
-        send_hci_command(sock, OGF_HOST_CTL, OCF_WRITE_SCAN_ENABLE, scanip)
-        receive_hci_event(sock)  # Receive the response
+        # # 4. Send scanip HCI command (set scan mode: inquiry + page scan)
+        # scanip = struct.pack('<B', SCAN_IP)
+        # send_hci_command(sock, OGF_HOST_CTL, OCF_WRITE_SCAN_ENABLE, scanip)
+        # receive_hci_event(sock)  # Receive the response
 
-        # 5. Send setcto HCI command (set connection timeout to 10 seconds)
-        setcto = struct.pack('<H', CONN_TIMEOUT_10_SEC)
-        send_hci_command(sock, OGF_HOST_CTL, OCF_WRITE_CONN_ACCEPT_TIMEOUT, setcto)
-        receive_hci_event(sock)  # Receive the response
+        # # 5. Send setcto HCI command (set connection timeout to 10 seconds)
+        # setcto = struct.pack('<H', CONN_TIMEOUT_10_SEC)
+        # send_hci_command(sock, OGF_HOST_CTL, OCF_WRITE_CONN_ACCEPT_TIMEOUT, setcto)
+        # receive_hci_event(sock)  # Receive the response
 
-        # 6. Send setpto HCI command (set page timeout to 10 seconds)
-        setpto = struct.pack('<H', PAGE_TIMEOUT_10_SEC)
-        send_hci_command(sock, OGF_HOST_CTL, OCF_WRITE_PAGE_TIMEOUT, setpto)
-        receive_hci_event(sock)  # Receive the response
+        # # 6. Send setpto HCI command (set page timeout to 10 seconds)
+        # setpto = struct.pack('<H', PAGE_TIMEOUT_10_SEC)
+        # send_hci_command(sock, OGF_HOST_CTL, OCF_WRITE_PAGE_TIMEOUT, setpto)
+        # receive_hci_event(sock)  # Receive the response
 
         print("All HCI commands sent and responses received successfully!")
         
@@ -96,3 +105,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
