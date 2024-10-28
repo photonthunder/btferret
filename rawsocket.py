@@ -1,127 +1,142 @@
 #!/usr/bin/env python3
 
 import socket
+import time
 import struct
 import fcntl
-import ctypes
-import time
 import os
 
-# Define constants
-HCIDEVDOWN = 0x400448ca  # Value for HCIDEVDOWN (from Linux headers)
-BTPROTO_HCI = 1          # Bluetooth protocol HCI
-AF_BLUETOOTH = 31        # Bluetooth address family
-HCI_CHANNEL_RAW = 0      # HCI Channel for raw HCI commands
-HCI_DEV = 0              # Typically, hci0 (use 0 for hci0, 1 for hci1, etc.)
+# Constants
+PRBUFSZ = 1024
+INSTACKSIZE = 4096
+INS_FREE = 0
+INS_POP = 1
+INS_LOCK = 2
+INSHEADSIZE = 4
+NUMDEVS = 10
+BTPROTO_HCI = 1
+HCIDEVDOWN = 0x400448ca  # ioctl command to bring HCI device down
 
-# Global parameters
-gpar = {
-    'bluez': 1,  # Assuming BlueZ is currently up
-    'devid': 0,  # hci0, usually device ID 0
-    'hci': -1    # HCI socket descriptor, initially invalid
-}
+class Gpar:
+    def __init__(self):
+        self.s = None
+        self.maxpage = 0
+        self.devid = 0
+        self.blockflag = 0
+        self.hci = -1
 
-class SockaddrHCI(ctypes.Structure):
-    _fields_ = [
-        ("hci_family", ctypes.c_ushort),    # Address family (AF_BLUETOOTH)
-        ("hci_dev", ctypes.c_ushort),       # Device ID (e.g., hci0 = 0)
-        ("hci_channel", ctypes.c_ushort)    # HCI Channel (e.g., HCI_CHANNEL_RAW)
-    ]
+gpar = Gpar()
+
+dev = [None] * NUMDEVS
+instack = [INS_FREE] * INSTACKSIZE
+insdat = instack[INSHEADSIZE:]
+initflag = 0
+
+def sendhci(command, length):
+    pass  # Placeholder for sending HCI command
+
+def statusok(arg1, arg2):
+    pass  # Placeholder for checking status
 
 def bluezdown():
-    """ Bring down BlueZ stack. """
-    if gpar['bluez'] == 0:
-        print("BlueZ already down")
-        return 1  # already down
 
-    print("BlueZ down")
-
-    retval = 0
+    print("Bluez down")
     try:
-        dd = socket.socket(AF_BLUETOOTH, socket.SOCK_RAW | socket.SOCK_CLOEXEC | socket.SOCK_NONBLOCK, BTPROTO_HCI)
-    except OSError as e:
-        print(f"Failed to create socket: {e}")
-        return retval
-
-    try:
-        if fcntl.ioctl(dd, HCIDEVDOWN, gpar['devid']) >= 0:
+        # Create the Bluetooth socket
+        dd = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_RAW | socket.SOCK_CLOEXEC | socket.SOCK_NONBLOCK, BTPROTO_HCI)
+        
+        # Perform the ioctl call to bring the Bluetooth interface down
+        try:
+            fcntl.ioctl(dd, HCIDEVDOWN, gpar.devid)
             retval = 1
-    except OSError as e:
-        print(f"Failed to bring BlueZ down: {e}")
-    finally:
-        dd.close()
+        except Exception as e:
+            print(f"Bluez down ioctl failed: {e}")
+        finally:
+            dd.close()
 
-    if retval == 0:
-        print("BlueZ down failed")
+    except socket.error as e:
+        print(f"Socket creation error: {e}")
 
-    gpar['bluez'] = 0  # Update state: BlueZ is down
     time.sleep(1)
     return retval
 
 def hcisock():
-    """ Open an HCI raw-mode socket, bind it to the device, and send HCI commands. """
-    if gpar['hci'] > 0:
-        return 1  # HCI socket is already open
+    if gpar.hci > 0:
+        return 1
 
-    print("Open HCI raw socket")
-    
+    print("Open HCI user socket")
     try:
-        # Open a RAW HCI socket
-        print("Open BTPROTO socket")
-        dd = socket.socket(AF_BLUETOOTH, socket.SOCK_RAW | socket.SOCK_CLOEXEC | socket.SOCK_NONBLOCK, BTPROTO_HCI)
-    except OSError as e:
+        dd = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_RAW | socket.SOCK_CLOEXEC | socket.SOCK_NONBLOCK, BTPROTO_HCI)
+
+    except socket.error as e:
         print(f"Socket open error: {e}")
         return 0
 
-    # Prepare the sockaddr_hci structure using ctypes
-    sa = SockaddrHCI()
-    sa.hci_family = AF_BLUETOOTH
-    sa.hci_dev = gpar['devid']
-    sa.hci_channel = HCI_CHANNEL_RAW  # Use RAW mode for better compatibility
+    print("Bind to Bluetooth devid user channel")
+    
+    sa = struct.pack("6B", 31, 0, gpar.devid & 0xFF, (gpar.devid >> 8) & 0xFF, 1, 0)
 
-    # Bind the socket to the device and HCI raw channel
     try:
-        print("Bind to Bluetooth device raw channel")
-        # Use the raw buffer of sa for the bind call
-        dd.bind(bytes(sa))
-    except OSError as e:
+        # dd.bind(sa)
+        dd.bind((0, 1))
+    except socket.error as e:
         print(f"Bind failed: {e}")
         dd.close()
         return 0
 
-    gpar['hci'] = dd  # Save the socket descriptor
+    gpar.hci = dd
 
-    # Now send some HCI commands like Reset, Event Masks, etc.
     print("Reset")
-    send_hci_command(dd, btreset)
-    
+    sendhci('btreset', 0)
+    statusok(0, 'btreset')
+
     print("Set event masks")
-    send_hci_command(dd, eventmask)
-    send_hci_command(dd, lemask)
+    sendhci('eventmask', 0)
+    statusok(0, 'eventmask')
+    sendhci('lemask', 0)
+    statusok(0, 'lemask')
 
     print("Set page/inquiry scan and timeouts = 10 secs")
-    send_hci_command(dd, scanip)
-    send_hci_command(dd, setcto)
-    send_hci_command(dd, setpto)
+    sendhci('scanip', 0)  # SCAN_PAGE | SCAN_INQUIRY    
+    statusok(0, 'scanip')
+    sendhci('setcto', 0)  # connection timeout = 10 sec 
+    statusok(0, 'setcto')
+    sendhci('setpto', 0)  # page timeout = 10 sec
+    statusok(0, 'setpto')
 
     print("HCI Socket OK")
     return 1
 
-def send_hci_command(sock, command):
-    """ Sends an HCI command packet through the socket. """
-    try:
-        sock.send(command)
-    except OSError as e:
-        print(f"Failed to send HCI command: {e}")
+print("Initialization logic")
+if initflag == 0:
+    gpar.s = bytearray(PRBUFSZ)
+    instack = bytearray([INS_FREE] * INSTACKSIZE)
 
-# Example HCI command packets (these are placeholders, you should define them)
-btreset = struct.pack("<BHB", 0x01, 0x0C03, 0x00)  # Example reset command
-eventmask = struct.pack("<BHB", 0x01, 0x0C01, 0x08)  # Example event mask command
-lemask = struct.pack("<BHB", 0x01, 0x2001, 0x08)  # Example LE mask command
-scanip = struct.pack("<BHB", 0x01, 0x0C13, 0x00)  # Example scan enable command
-setcto = struct.pack("<BHB", 0x01, 0x0C1A, 0x10)  # Example connection timeout
-setpto = struct.pack("<BHB", 0x01, 0x0C16, 0x10)  # Example page timeout
+if not gpar.s or not instack:
+    print("Memory allocation failed")
+    exit(0)
 
-# Main flow:
-bluezdown()  # Close BlueZ first
-hcisock()    # Open the HCI socket and send commands
+gpar.maxpage = 0
+
+if initflag == 0:
+    gpar.devid = 0  # hcin assumed to be 0
+else:
+    if gpar.devid != 0:
+        print("Cannot change HCI device")
+        exit(0)
+
+gpar.blockflag = 0
+
+bluezdown()
+
+ndev = 0
+
+dev[0] = {'type': 'BTYPE_LO', 'meshindex': 1, 'node': 0, 'name': "not in devices.txt"}
+
+if initflag == 0:
+    if hcisock() == 0:
+        print(f"No root permission or Bluetooth (hci{gpar.devid}) is off or crashed")
+        print("Must run with root permission via sudo as follows:")
+        print("  sudo python3 btferret.py")
+        exit(0)
+

@@ -1811,12 +1811,12 @@ int pre_init_blue(int hcin)
     
   gpar.blockflag = 0;
 
-  register_serial(strtohex("FCF05AFD-67D8-4F41-83F5-7BEE22C03CDB",NULL),"My custom serial");  
+  // register_serial(strtohex("FCF05AFD-67D8-4F41-83F5-7BEE22C03CDB",NULL),"My custom serial");  
  
   if(initflag == 0)
     {   
     gpar.bluez = 1;   // assume bluez up
-    bluezdown();      // down
+    // bluezdown();      // down
     }
     
   errcount = 0;
@@ -1843,7 +1843,7 @@ int pre_init_blue(int hcin)
   dev[0]->node = 0;   // node not found    
   strcpy(dev[0]->name,"not in devices.txt");
   
-  clearins(0);   // initialise BT packet input stack 
+  //clearins(0);   // initialise BT packet input stack 
    
   if(initflag == 0)
     {
@@ -1856,6 +1856,8 @@ int pre_init_blue(int hcin)
       return(0);
       }
     }
+
+  return 0; //TEST
     
   gpar.lecap = 0;
   flag = 0;

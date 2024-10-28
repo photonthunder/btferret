@@ -26,7 +26,7 @@ class BLEServer:
       print("New Code")
       if (btfpy.Pre_init_blue(0) == 0):
         exit(0)
-
+      exit(0)  # TEST
       device_name = "My New Pi"
       if (btfpy.Set_device_name(device_name, len(device_name)) == 0):
         exit(0)
