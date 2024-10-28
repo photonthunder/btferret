@@ -1,142 +1,80 @@
 #!/usr/bin/env python3
 
 import socket
-import time
 import struct
-import fcntl
-import os
 
-# Constants
-PRBUFSZ = 1024
-INSTACKSIZE = 4096
-INS_FREE = 0
-INS_POP = 1
-INS_LOCK = 2
-INSHEADSIZE = 4
-NUMDEVS = 10
-BTPROTO_HCI = 1
-HCIDEVDOWN = 0x400448ca  # ioctl command to bring HCI device down
+# Define constants for socket communication
+HCI_DEVICE_ID = 0  # Typically 0 for the first Bluetooth adapter
+HCI_COMMAND_PKT = 0x01  # Command packet type for HCI commands
 
-class Gpar:
-    def __init__(self):
-        self.s = None
-        self.maxpage = 0
-        self.devid = 0
-        self.blockflag = 0
-        self.hci = -1
+# Define HCI opcodes (OGF and OCF)
+OGF_HOST_CTL = 0x03
+OGF_LE_CTL = 0x08
 
-gpar = Gpar()
+# Example HCI command opcodes
+OCF_SET_EVENT_MASK = 0x0001  # Set Event Mask
+OCF_LE_SET_EVENT_MASK = 0x0001  # LE Set Event Mask
+OCF_WRITE_SCAN_ENABLE = 0x001A  # Write Scan Enable (inquiry + page scan)
+OCF_WRITE_CONN_ACCEPT_TIMEOUT = 0x0016  # Set Connection Accept Timeout
+OCF_WRITE_PAGE_TIMEOUT = 0x0018  # Set Page Timeout
 
-dev = [None] * NUMDEVS
-instack = [INS_FREE] * INSTACKSIZE
-insdat = instack[INSHEADSIZE:]
-initflag = 0
+# Inquiry Scan + Page Scan
+SCAN_PAGE = 0x02
+SCAN_INQUIRY = 0x01
+SCAN_IP = SCAN_PAGE | SCAN_INQUIRY  # Enable both scans
 
-def sendhci(command, length):
-    pass  # Placeholder for sending HCI command
+# Timeout values (in slots, 1 slot = 0.625ms, so 10 seconds = 16000 slots)
+CONN_TIMEOUT_10_SEC = 16000
+PAGE_TIMEOUT_10_SEC = 16000
 
-def statusok(arg1, arg2):
-    pass  # Placeholder for checking status
+def send_hci_command(sock, ogf, ocf, params=b''):
+    """Function to send HCI command"""
+    opcode = (ogf << 10) | ocf
+    param_len = len(params)
+    cmd_hdr = struct.pack('<HB', opcode, param_len)
+    packet = struct.pack('<B', HCI_COMMAND_PKT) + cmd_hdr + params
+    sock.send(packet)
 
-def bluezdown():
+def status_ok(sock):
+    """Optional: Function to check status (can be expanded based on your needs)"""
+    pass  # Placeholder for status handling
 
-    print("Bluez down")
-    try:
-        # Create the Bluetooth socket
-        dd = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_RAW | socket.SOCK_CLOEXEC | socket.SOCK_NONBLOCK, BTPROTO_HCI)
-        
-        # Perform the ioctl call to bring the Bluetooth interface down
-        try:
-            fcntl.ioctl(dd, HCIDEVDOWN, gpar.devid)
-            retval = 1
-        except Exception as e:
-            print(f"Bluez down ioctl failed: {e}")
-        finally:
-            dd.close()
-
-    except socket.error as e:
-        print(f"Socket creation error: {e}")
-
-    time.sleep(1)
-    return retval
-
-def hcisock():
-    if gpar.hci > 0:
-        return 1
-
-    print("Open HCI user socket")
-    try:
-        dd = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_RAW | socket.SOCK_CLOEXEC | socket.SOCK_NONBLOCK, BTPROTO_HCI)
-
-    except socket.error as e:
-        print(f"Socket open error: {e}")
-        return 0
-
-    print("Bind to Bluetooth devid user channel")
+def main():
+    # Open an HCI socket
+    sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_RAW, socket.BTPROTO_HCI)
+    sock.bind((HCI_DEVICE_ID,))
     
-    sa = struct.pack("6B", 31, 0, gpar.devid & 0xFF, (gpar.devid >> 8) & 0xFF, 1, 0)
-
     try:
-        # dd.bind(sa)
-        dd.bind((0, 1))
-    except socket.error as e:
-        print(f"Bind failed: {e}")
-        dd.close()
-        return 0
+        # 1. Send eventmask HCI command (set the event mask)
+        eventmask = struct.pack('<Q', 0xFFFFFFFFFFFFFBFF)  # Example event mask
+        send_hci_command(sock, OGF_HOST_CTL, OCF_SET_EVENT_MASK, eventmask)
+        status_ok(sock)
 
-    gpar.hci = dd
+        # 2. Send lemask HCI command (set the LE event mask)
+        lemask = struct.pack('<Q', 0xFFFFFFFFFFFFFBFF)  # Example LE event mask
+        send_hci_command(sock, OGF_LE_CTL, OCF_LE_SET_EVENT_MASK, lemask)
+        status_ok(sock)
 
-    print("Reset")
-    sendhci('btreset', 0)
-    statusok(0, 'btreset')
+        # 3. Send scanip HCI command (set scan mode: inquiry + page scan)
+        scanip = struct.pack('<B', SCAN_IP)
+        send_hci_command(sock, OGF_HOST_CTL, OCF_WRITE_SCAN_ENABLE, scanip)
+        status_ok(sock)
 
-    print("Set event masks")
-    sendhci('eventmask', 0)
-    statusok(0, 'eventmask')
-    sendhci('lemask', 0)
-    statusok(0, 'lemask')
+        # 4. Send setcto HCI command (set connection timeout to 10 seconds)
+        setcto = struct.pack('<H', CONN_TIMEOUT_10_SEC)
+        send_hci_command(sock, OGF_HOST_CTL, OCF_WRITE_CONN_ACCEPT_TIMEOUT, setcto)
+        status_ok(sock)
 
-    print("Set page/inquiry scan and timeouts = 10 secs")
-    sendhci('scanip', 0)  # SCAN_PAGE | SCAN_INQUIRY    
-    statusok(0, 'scanip')
-    sendhci('setcto', 0)  # connection timeout = 10 sec 
-    statusok(0, 'setcto')
-    sendhci('setpto', 0)  # page timeout = 10 sec
-    statusok(0, 'setpto')
+        # 5. Send setpto HCI command (set page timeout to 10 seconds)
+        setpto = struct.pack('<H', PAGE_TIMEOUT_10_SEC)
+        send_hci_command(sock, OGF_HOST_CTL, OCF_WRITE_PAGE_TIMEOUT, setpto)
+        status_ok(sock)
 
-    print("HCI Socket OK")
-    return 1
+        print("All HCI commands sent successfully!")
+        
+    finally:
+        sock.close()
 
-print("Initialization logic")
-if initflag == 0:
-    gpar.s = bytearray(PRBUFSZ)
-    instack = bytearray([INS_FREE] * INSTACKSIZE)
-
-if not gpar.s or not instack:
-    print("Memory allocation failed")
-    exit(0)
-
-gpar.maxpage = 0
-
-if initflag == 0:
-    gpar.devid = 0  # hcin assumed to be 0
-else:
-    if gpar.devid != 0:
-        print("Cannot change HCI device")
-        exit(0)
-
-gpar.blockflag = 0
-
-bluezdown()
-
-ndev = 0
-
-dev[0] = {'type': 'BTYPE_LO', 'meshindex': 1, 'node': 0, 'name': "not in devices.txt"}
-
-if initflag == 0:
-    if hcisock() == 0:
-        print(f"No root permission or Bluetooth (hci{gpar.devid}) is off or crashed")
-        print("Must run with root permission via sudo as follows:")
-        print("  sudo python3 btferret.py")
-        exit(0)
+if __name__ == "__main__":
+    main()
 
