@@ -1,4 +1,5 @@
 build/lib.linux-aarch64-cpython-311/btfpy.cpython-311-aarch64-linux-gnu.so
 build/temp.linux-aarch64-cpython-311/btlib.o
 btfpy.so
-hciblepython/__pycache__/ble.cpython-311.pyc
+__pycache__/
+
