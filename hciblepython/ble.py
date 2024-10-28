@@ -85,7 +85,10 @@ def to_bits_u16 (byts, ind, start, num_bits):
 #    return bytes(reversed(byts))
 
 def from_u8(val):
-    return bytes ([val])
+    if val == None:
+        return bytes()
+    else:
+        return bytes ([val])
 
 def from_u16(val):
     v1 = val & 0xff
@@ -517,7 +520,7 @@ class BluetoothLEConnection:
     def reset(self):
         print(cmd_text, "BLE Reset")
         
-        packet = from_u8()
+        packet = from_u8(None)
         self.send_command(0x0C03, packet)
 
 
