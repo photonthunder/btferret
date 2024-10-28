@@ -66,6 +66,9 @@ class BLE(BluetoothLEConnection):
         scan_rsp_data = MY_SCAN_DATA
         adv_data = MY_ADV_DATA
 
+        self.wait_listen(1)
+        self.reset()
+        self.wait_listen(1)
         self.do_set_advertise_enable(False)
         self.wait_listen(1)
         self.do_set_advertising_parameters()
@@ -80,8 +83,8 @@ class BLE(BluetoothLEConnection):
 if __name__ == "__main__":
     ble = BLE(0)
     #ble.conn()
-    #ble.adv()
-    ble.test()
+    ble.adv()
+    #ble.test()
     
     print("DONE")
     

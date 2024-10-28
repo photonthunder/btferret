@@ -514,6 +514,12 @@ class BluetoothLEConnection:
     #
     ################################################################
 
+    def reset(self):
+        print(cmd_text, "BLE Reset")
+        
+        packet = from_u8()
+        self.send_command(0x0C03, packet)
+
 
     def do_set_advertising_parameters(self, adv_type=0x00, own_addr_type=0x00,
                                       peer_addr='11:22:33:44:55:66', peer_addr_type=0x00,
