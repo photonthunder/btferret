@@ -146,6 +146,9 @@ class BluetoothLEConnection:
         self.command_status = None
 
         self.local_board_address = None
+        self.hc_le_data_packet_length = None
+        self.hc_le_data_buffer = None
+        self.local_name = None
 
     def __del__(self):
         self.user_socket.close()
@@ -395,6 +398,7 @@ class BluetoothLEConnection:
         command_map = {
             0x0C01: ('General Event Mask Complete', None),
             0x0C03: ('Reset Complete', None),
+            0x0C13: ('Write Local Name Complete', None),
             0x0C16: ('Set Page Scan Interval and Window', None),
             0x0C18: ('Set Inquiry Interval and Window', None),
             0x0C1A: ('Set Page/Inquiry Scan Timeout Complete', None),
@@ -619,6 +623,16 @@ class BluetoothLEConnection:
         print(cmd_text, "Read LE Buffer Size")
         packet = from_u8(None)
         self.send_command(0x2002, packet)
+
+    def write_local_name(self, name):
+        self.local_name = name
+        print(cmd_text, "Write Local Name {}".format(name))
+        name_bytes = name.encode('utf-8')
+        if len(name_bytes) > 248:
+            raise ValueError("Name is too long, must be 248 bytes or less.")
+        packet = name_bytes.ljust(248, b'\x00')
+        self.send_command(0x0C13, packet)
+
     
 
 

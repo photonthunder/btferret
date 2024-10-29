@@ -30,6 +30,7 @@ class BLE(BluetoothLEConnection):
         self.wait_listen(0.1)
         self.read_le_buffer_size()
         self.wait_listen(0.1)
+        self.write_local_name("Super PI")
         self.wait_listen(0.1)
         self.wait_listen(0.1)
         self.wait_listen(0.1)
