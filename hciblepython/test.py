@@ -1,4 +1,5 @@
 from ble import *
+# sudo hcidump -x is a good troubleshooting command
 
 MY_SCAN_DATA = bytes.fromhex('09094d79424c45446576'  # 0x09  Complete Local Name
                             )
