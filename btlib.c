@@ -1868,6 +1868,7 @@ int pre_init_blue(int hcin)
     if(n >= 0 && insdatn[1] == locsup[PAKHEADSIZE+1] && insdatn[2] == locsup[PAKHEADSIZE+2])
       { 
       flag = 1;
+      VPRINT "insdatan[29] = %X:%X\n", insdatn[29], insdatn[30]);
       if((insdatn[29] & 0xA2) == 0xA2 && (insdatn[30] & 0x3E) == 0x3E)
         gpar.lecap = 1;  // LE capable
       }

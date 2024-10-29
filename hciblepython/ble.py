@@ -187,6 +187,10 @@ class BluetoothLEConnection:
         self.send(cmd)
         self.wait_complete(command, COMMAND_TIMEOUT)
 
+    def check_le_compatable(self, data):
+        if self.to_u8(data[])
+
+
     ################################################################
     #
     # Event handling routines
@@ -399,6 +403,7 @@ class BluetoothLEConnection:
             print('Set Inquiry Interval and Window', status_text)
         elif cmd == 0x1002:
             print("Read Local Supported Commands")
+            self.check_le_compatable(data)
         else:
             print('LE Unknown Command:', cmd, hex(cmd), status_text)
 
