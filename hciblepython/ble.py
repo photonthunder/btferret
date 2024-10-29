@@ -145,6 +145,8 @@ class BluetoothLEConnection:
         self.command_complete = None
         self.command_status = None
 
+        self.local_board_address = None
+
     def __del__(self):
         self.user_socket.close()
         return
@@ -188,7 +190,37 @@ class BluetoothLEConnection:
         self.wait_complete(command, COMMAND_TIMEOUT)
 
     def check_le_compatable(self, data):
-        if self.to_u8(data[])
+        # print("data[32] = {:X}, data[33] = {:X}".format(data[32], data[33]))
+        if (to_u8(data, 32) & 0xA2 == 0xA2) and (to_u8(data, 33) & 0x3E == 0x3E):
+            print("LE Compatable")
+        else:
+            print("Error: Not LE Compatable")
+            exit(0)
+
+    def board_address(self, data):
+        # The local board address is typically the last 6 bytes of the received data
+        if len(data) < 6:
+            self.local_board_address = None
+            print("Error: not enough data bytes")
+            return None  # Not enough data to extract address
+        
+        # Extract the last 6 bytes
+        self.local_board_address = data[-6:]
+        
+        # Format the address as a hex string, usually shown in reversed order (little-endian)
+        formatted_address = ':'.join(f'{byte:02X}' for byte in reversed(self.local_board_address))
+        print('Local Board Address:', formatted_address)
+        return formatted_address
+
+    def read_buffer_size(self, data):
+        self.hc_le_data_packet_length = to_u16(data, 7)
+        print("le data length = {}".format(self.hc_le_data_packet_length))
+        self.hc_le_data_buffer = to_u8(data, 9)
+        print("le data buffer = {}".format(self.hc_le_data_buffer))
+        
+
+
+
 
 
     ################################################################
@@ -358,6 +390,39 @@ class BluetoothLEConnection:
         handle = to_u16 (data, 4)
         reason = to_u8  (data, 6)
 
+    def handle_le_command(self, cmd, status_text, data=None):
+        # Define a dictionary to map command values to their corresponding messages or functions
+        command_map = {
+            0x0C01: ('General Event Mask Complete', None),
+            0x0C03: ('Reset Complete', None),
+            0x0C16: ('Set Page Scan Interval and Window', None),
+            0x0C18: ('Set Inquiry Interval and Window', None),
+            0x0C1A: ('Set Page/Inquiry Scan Timeout Complete', None),
+            0x1002: ('Read Local Supported Commands', 'check_le_compatable'),
+            0x1009: ('Read Local Board Address', 'board_address'),
+            0x2001: ('LE Event Mask Complete', None),
+            0x2002: ('LE Read Buffer Size', 'read_buffer_size'),
+            0x200b: ('LE Scan Parameters Set', None),
+            0x200c: ('LE Scan Enable Set', None),
+            0x2006: ('LE Advertising Parameters Set', None),
+            0x2008: ('LE Advertising Data Set', None),
+            0x2009: ('LE Scan Response Data Set', None),
+            0x200a: ('LE Advertise Enable Set', None),
+
+        }
+
+        # Check if the command exists in the map
+        if cmd in command_map:
+            message, function_name = command_map[cmd]
+            print(f'{message}: {status_text}')
+
+            # If there's a function to call, do so with data
+            if function_name and hasattr(self, function_name):
+                getattr(self, function_name)(data)
+        else:
+            print(f'LE Unknown Command: {cmd} ({hex(cmd)}), {status_text}')
+
+
     def on_hci_event_command_complete(self, data):
         # Specification v5.4  Vol 4 Part E 7.7.14 HCI Command Complete (p2177)
         #     [packet_type                                   1 octet]
@@ -376,36 +441,7 @@ class BluetoothLEConnection:
         status_text = "Success" if status == HCI_SUCCESS else "Failure"
         self.command_complete = cmd
         self.command_status =   status
-
-        if   cmd == 0x200b:                                       # LE Set Scan Paramaters
-            print('LE Scan Parameters Set:',status_text);
-        elif cmd == 0x200c:                                       # LE Set Scan Enable
-            print('LE Scan Enable Set:', status_text)
-        elif cmd == 0x2006:                                       # LE Set Advertising Parameters
-            print('LE Advertising Parameters Set:', status_text)
-        elif cmd == 0x2008:                                       # LE Set Advertising Data
-            print('LE Advertising Data Set:', status_text)
-        elif cmd == 0x2009:                                       # LE Set Scan Repsonse Data
-            print('LE Scan Response Data Set:', status_text)
-        elif cmd == 0x200a:                                       # LE Set Advertise Enable
-            print('LE Advertise Enable Set:', status_text)
-        elif cmd == 0x0C03:
-            print('Reset Complete:', status_text)
-        elif cmd == 0x0C01:
-            print('General Event Mask Complete:', status_text)
-        elif cmd == 0x2001:
-            print('LE Event Mask Complete:', status_text)
-        elif cmd == 0x0C1A:
-            print('Set Page/Inquiry Scan Timeout Complete', status_text)
-        elif cmd == 0x0C16:
-            print('Set Page Scan Interval and Window', status_text)
-        elif cmd == 0x0C18:
-            print('Set Inquiry Interval and Window', status_text)
-        elif cmd == 0x1002:
-            print("Read Local Supported Commands")
-            self.check_le_compatable(data)
-        else:
-            print('LE Unknown Command:', cmd, hex(cmd), status_text)
+        self.handle_le_command(cmd, status, data)
 
     def on_hci_event_command_status(self, data):
         # Specification v5.4  Vol 4 Part E 7.7.15 HCI_Command_Status (p2179)
@@ -573,6 +609,17 @@ class BluetoothLEConnection:
         print(cmd_text, "Read Local Supported Commands")
         packet = from_u8(None)
         self.send_command(0x1002, packet)
+
+    def read_local_board_address(self):
+        print(cmd_text, "Read Local Supported Commands")
+        packet = from_u8(None)
+        self.send_command(0x1009, packet)
+
+    def read_le_buffer_size(self):
+        print(cmd_text, "Read LE Buffer Size")
+        packet = from_u8(None)
+        self.send_command(0x2002, packet)
+    
 
 
     def do_set_advertising_parameters(self, adv_type=0x00, own_addr_type=0x00,
