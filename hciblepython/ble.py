@@ -12,6 +12,7 @@
 from time import sleep
 from hci_socket import *
 #from hci_uart import *
+from random import randint
 
 ### constants
 
@@ -406,6 +407,7 @@ class BluetoothLEConnection:
             0x1009: ('Read Local Board Address', 'board_address'),
             0x2001: ('LE Event Mask Complete', None),
             0x2002: ('LE Read Buffer Size', 'read_buffer_size'),
+            0x2005: ('LE Set Random Address', None),
             0x200b: ('LE Scan Parameters Set', None),
             0x200c: ('LE Scan Enable Set', None),
             0x2006: ('LE Advertising Parameters Set', None),
@@ -633,11 +635,15 @@ class BluetoothLEConnection:
         packet = name_bytes.ljust(248, b'\x00')
         self.send_command(0x0C13, packet)
 
-    
+    def set_random_address(self):
+        random_address = bytes([randint(0x00, 0xFF) for _ in range(6)])
+        random_address_str = ':'.join(f'{byte:02X}' for byte in reversed(random_address))
+        print("Generated Random Bluetooth Address: {}".format(random_address_str))
+        self.send_command(0x2005, random_address)
 
 
     def do_set_advertising_parameters(self, adv_type=0x00, own_addr_type=0x00,
-                                      peer_addr='11:22:33:44:55:66', peer_addr_type=0x00,
+                                      peer_addr='00:00:00:00:00:00', peer_addr_type=0x00,
                                       min_interval=0x00a0, max_interval=0x00a0, adv_channel_map=0x07,
                                       adv_filter_policy=0x00):
         # Specification v5.4  Vol 4 Part E 7.8.5 LE Set Advertising Parameters (p2350)
