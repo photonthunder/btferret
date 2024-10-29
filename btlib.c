@@ -1856,8 +1856,6 @@ int pre_init_blue(int hcin)
       return(0);
       }
     }
-
-  return 0; //TEST
     
   gpar.lecap = 0;
   flag = 0;

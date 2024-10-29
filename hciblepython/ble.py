@@ -152,12 +152,12 @@ class BluetoothLEConnection:
     ### helper functions calling BTUserSocket
 
     def send(self, data):
-        print("\n<<", "Data sent: ", as_hex(data))
+        print("<<", "Data sent: ", as_hex(data))
         self.user_socket.send_raw(data)
 
     def receive(self):
         data = self.user_socket.receive_raw()
-        print("\n>>", "Data received: ", as_hex(data))
+        print(">>", "Data received: ", as_hex(data))
         self.on_data(data)
         return data
 
@@ -366,7 +366,7 @@ class BluetoothLEConnection:
         # First return_parameters field is usually
         #     status                                         1 octet
 
-        print("Event: HCI Command Complete")
+        # print("Event: HCI Command Complete")
         cmd =    to_u16 (data, 4)
         status = to_u8  (data, 6)
         status_text = "Success" if status == HCI_SUCCESS else "Failure"
@@ -385,8 +385,22 @@ class BluetoothLEConnection:
             print('LE Scan Response Data Set:', status_text)
         elif cmd == 0x200a:                                       # LE Set Advertise Enable
             print('LE Advertise Enable Set:', status_text)
+        elif cmd == 0x0C03:
+            print('Reset Complete:', status_text)
+        elif cmd == 0x0C01:
+            print('General Event Mask Complete:', status_text)
+        elif cmd == 0x2001:
+            print('LE Event Mask Complete:', status_text)
+        elif cmd == 0x0C1A:
+            print('Set Page/Inquiry Scan Timeout Complete', status_text)
+        elif cmd == 0x0C16:
+            print('Set Page Scan Interval and Window', status_text)
+        elif cmd == 0x0C18:
+            print('Set Inquiry Interval and Window', status_text)
+        elif cmd == 0x1002:
+            print("Read Local Supported Commands")
         else:
-            print('LE Unknown Command:', hex(cmd), status_text)
+            print('LE Unknown Command:', cmd, hex(cmd), status_text)
 
     def on_hci_event_command_status(self, data):
         # Specification v5.4  Vol 4 Part E 7.7.15 HCI_Command_Status (p2179)
@@ -423,7 +437,7 @@ class BluetoothLEConnection:
         #     parameters                                     n octets
 
         event = to_u8(data, 1)         
-        print("HCI Event Packet:", hex(event))
+        # print("HCI Event Packet:", hex(event))
 
         if   event == 0x0f:                                   # Command Status
             self.on_hci_event_command_status(data)
@@ -497,7 +511,7 @@ class BluetoothLEConnection:
         #     packet_type                                    1 octet
 
         packet_type = to_u8(data, 0)
-        print("Packet type:", packet_type)
+        # print("Packet type:", packet_type)
 
         self.command_complete = None               # set to None and changed by Command Complete event
         self.command_status = None
@@ -522,6 +536,38 @@ class BluetoothLEConnection:
         
         packet = from_u8(None)
         self.send_command(0x0C03, packet)
+
+    def set_event_masks(self):
+        print(cmd_text, "General Event Mask")
+        # 8 byte event mask
+        packet = bytes([0xFF, 0xFF, 0xFB, 0xFF, 0x07, 0xF8, 0xBF, 0x3D])
+        self.send_command(0x0C01, packet)
+
+    def set_le_event_masks(self):
+        print(cmd_text, "LE Event Mask")
+        # 8 byte event mask
+        packet = bytes([0xFF, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+        self.send_command(0x2001, packet)
+
+    def set_inquiry_timeouts(self):
+        print(cmd_text, "Set Page/Inquiry Scan and Tmeouts (10 secs)")
+        packet = bytes([0x03])
+        self.send_command(0x0C1A, packet)
+
+    def set_page_scan_activity(self):
+        print(cmd_text, "Set Page Scan Interval and Window (10 secs)")
+        packet = bytes([0xA0, 0x3F])
+        self.send_command(0x0C16, packet)
+
+    def set_inquiry_scan_activity(self):
+        print(cmd_text, "Set Inquiry Scan Interval and Window (10 secs)")
+        packet = bytes([0x00, 0x40])
+        self.send_command(0x0C18, packet)
+
+    def read_local_commands(self):
+        print(cmd_text, "Read Local Supported Commands")
+        packet = from_u8(None)
+        self.send_command(0x1002, packet)
 
 
     def do_set_advertising_parameters(self, adv_type=0x00, own_addr_type=0x00,
