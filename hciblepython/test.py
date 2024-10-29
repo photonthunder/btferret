@@ -47,8 +47,35 @@ class BLE(BluetoothLEConnection):
 
         self.do_set_scan_response_data(scan_rsp_data)
         self.wait_listen(1)
-        # self.do_set_advertise_enable(True)
-        # self.wait_listen(50)
+        # self.get_extended_advertising()
+        # self.wait_listen(1)
+        self.set_random_address()
+        self.wait_listen(0.1)
+        self.do_set_advertising_parameters(
+            min_interval=0x0200, # 320 ms
+            max_interval=0x0200, # 320 ms
+            own_addr_type=0x01 # random address
+        )
+        self.wait_listen(0.1)
+        adv_data = bytes([  0x14, 0x08, 0xFF, 0x42, 0xC4, 0x00, 0x00, 0xC0, 0xDE, 0x99, 0x0A, 0x08,
+                            0x4D, 0x79, 0x20, 0x4E, 0x65, 0x77, 0x20, 0x50, 0x69, 0x00, 0x00, 0x00,
+                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+        ])
+        # Advertising data in byte array format
+        adv_data = bytes([
+            0x08,  # Length of manufacturer-specific data
+            0xFF,  # Manufacturer-specific data type
+            0x34, 0x12,  # Manufacturer ID (0x1234)
+            0x00, 0x00, 0xC0, 0xDE, 0x99, 0x02, 0x01, 0x06,  # Manufacturer data
+            0x0A,  # Length of complete local name
+            0x08,  # Complete local name type
+            0x4D, 0x79, 0x20, 0x4E, 0x65, 0x77, 0x20, 0x50, 0x69,  # "My New Pi"
+            0x00, 0x00, 0x00, 0x00  # Padding
+        ])
+        self.do_set_advertising_data(adv_data)
+        self.wait_listen(0.1)
+        self.do_set_advertise_enable(True)
+        self.wait_listen(50)
     
 if __name__ == "__main__":
     ble = BLE(0)

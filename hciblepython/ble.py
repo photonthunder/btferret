@@ -357,6 +357,14 @@ class BluetoothLEConnection:
         
         print("Handle: {} Features {}".format(handle, as_hex(features)))
 
+    def on_le_extended_advertising(self, data):
+        print("Read extended Advertising Complete")
+        
+        
+        
+        # print("Handle: {} Features {}".format(handle, as_hex(features)))
+
+
     def on_hci_meta_event(self, data):
         # Specification v5.4  Vol 4 Part E 7.7.65 LE Meta event (p2235)
         # Event_code = 0x3e
@@ -376,6 +384,8 @@ class BluetoothLEConnection:
             self.on_le_advertising_report(data)
         elif subevent_code == 0x04:                 # LE Read Remove Features Complete
             self.on_le_read_remote_features_complete(data)
+        elif subevent_code == 0x08:
+            self.on_le_extended_advertising(data)
         else:
             print("LE Meta Event: Unhandled:", hex(subevent_code))
 
@@ -414,6 +424,7 @@ class BluetoothLEConnection:
             0x2008: ('LE Advertising Data Set', None),
             0x2009: ('LE Scan Response Data Set', None),
             0x200a: ('LE Advertise Enable Set', None),
+            0x2025: ('LE Get Extended Advertising', None),
 
         }
 
@@ -640,6 +651,12 @@ class BluetoothLEConnection:
         random_address_str = ':'.join(f'{byte:02X}' for byte in reversed(random_address))
         print("Generated Random Bluetooth Address: {}".format(random_address_str))
         self.send_command(0x2005, random_address)
+
+    def get_extended_advertising(self):
+        print(cmd_text, "LE Get Extended Advertising")
+        packet = from_u8(None)
+        self.send_command(0x2025, packet)
+
 
 
     def do_set_advertising_parameters(self, adv_type=0x00, own_addr_type=0x00,
