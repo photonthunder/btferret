@@ -93,6 +93,20 @@ class BLE(BluetoothLEConnection):
         self.wait_listen(0.1)
         self.do_set_advertise_enable(True)
         self.wait_listen(50)
+
+        # Closing steps
+        self.do_set_advertise_enable(True)
+        self.wait_listen(0.1)
+        self.do_set_advertising_parameters(
+            min_interval=0x0200, # 320 ms
+            max_interval=0x0200, # 320 ms
+            own_addr_type=0x00 # turn off random address
+        )
+        self.wait_listen(0.1)
+        self.do_set_advertise_enable(False)
+        self.wait_listen(0.1)
+
+
     
 if __name__ == "__main__":
     ble = BLE(0)
