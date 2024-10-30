@@ -84,7 +84,7 @@ pserv[3].uuid = 11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:0:
 Service changed 2A05 enabled
 Set LE random address in Post
 < HCI OGF=08 OCF=05
-      0000  01 05 20 06 DA 66 0C A6 - 5C C8 
+      0000  01 05 20 06 89 A9 FD BB - CA EB 
 Check Status
 > Event 0E = 01 13 0C 00
       0000  04 0E 04 01 13 0C 00 
@@ -120,9 +120,9 @@ Get public keys
 > Event 0F = 00 01 25 20
       0000  04 0F 04 00 01 25 20 
 GOT local XY keys
-> Event 3E = 08 00 69 0D 8F CD 02 07 12 B6...
-      0000  04 3E 42 08 00 69 0D 8F - CD 02 07 12 B6 53 6B DA 
-      0010  03 6B 36 3D F3 C4 BD 8C - A8 F2 C8 2E 31 96 4A 05 
-      0020  AC 09 1E 0E 0A BA 2E EF - 01 6B 1C A2 AC 40 AD 2C 
-      0030  47 C5 2E 6C F5 D8 10 11 - 1A 6A A1 A4 09 46 8F 1D 
-      0040  CD 3F E0 AC 25 
+> Event 3E = 08 00 CB 3C 7E F8 97 52 55 2F...
+      0000  04 3E 42 08 00 CB 3C 7E - F8 97 52 55 2F B7 AE B6 
+      0010  81 6F D2 CB 53 0B AE 84 - 45 93 E0 81 88 2E A3 15 
+      0020  D2 08 27 E0 60 43 D0 C4 - E8 A5 BF 89 CB AA 8F 95 
+      0030  7B 49 9D F4 50 11 96 98 - C7 A7 BD 81 65 96 C4 D8 
+      0040  CC 0D 6B E3 B4 

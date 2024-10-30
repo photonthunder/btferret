@@ -709,8 +709,8 @@ class BluetoothLEConnection:
         print(cmd_text, "LE Set Advertising Data")
 
         pad = bytes(b'\x00' * (31-len(data)))
-        packet = from_u8 (len(data))
-        packet +=         data
+        # packet = from_u8 (len(data))
+        packet =         data
         packet +=         pad
         self.send_command(0x2008, packet)
 
@@ -730,8 +730,8 @@ class BluetoothLEConnection:
         print(cmd_text, "LE Set Scan Response Data")
         pad = bytes(b'\x00' * (31 - len(data)))
 
-        packet =  from_u8 (len(data))
-        packet +=         data
+        # packet =  from_u8 (len(data))
+        packet =         data
         packet +=         pad
         self.send_command(0x2009, packet)
 
