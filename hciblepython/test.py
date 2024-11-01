@@ -4,27 +4,26 @@ import termios
 import tty
 import time
 import select
+import threading
 
 class BLE(BluetoothLEConnection):
-    def get_key(self):
-        """Capture a single key press."""
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(fd)
-            ch = sys.stdin.read(1)
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-        return ch
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs) 
+        self.escape_pressed = False
+        self.old_settings = termios.tcgetattr(sys.stdin)
 
-    def run_until_escape(self):
-        print("Running... Press 'Esc' to stop.")
-        while True:
-            key = self.get_key()
+    def enable_raw_mode(self):
+        self.old_settings = termios.tcgetattr(sys.stdin)
+        tty.setcbreak(sys.stdin.fileno())
+
+    def restore_terminal(self):
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.old_settings)
+
+    def check_key_press(self):
+        if select.select([sys.stdin], [], [], 0)[0]:
+            key = sys.stdin.read(1)
             if key == '\x1b':  # Escape key (ASCII code)
-                print("\nEscape key pressed. Exiting...")
-                break
-            self.wait_listen(0.1)
+                self.escape_pressed = True
 
     def adv(self):
         self.reset()
@@ -118,7 +117,13 @@ class BLE(BluetoothLEConnection):
         self.do_set_advertise_enable(True)
         self.wait_listen(0.1)
 
-        self.run_until_escape()
+        try:
+            print("Press ESC and then Enter to terminate the program...")
+            while self.escape_pressed == False:
+                self.check_key_press()
+                self.wait_listen(0.1)
+        finally:
+            self.restore_terminal()
 
         # Closing steps
         self.do_set_advertise_enable(True)
