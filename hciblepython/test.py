@@ -1,7 +1,31 @@
 from ble import *
-# sudo hcidump -x is a good troubleshooting command
+import sys
+import termios
+import tty
+import time
+import select
 
 class BLE(BluetoothLEConnection):
+    def get_key(self):
+        """Capture a single key press."""
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            ch = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch
+
+    def run_until_escape(self):
+        print("Running... Press 'Esc' to stop.")
+        while True:
+            key = self.get_key()
+            if key == '\x1b':  # Escape key (ASCII code)
+                print("\nEscape key pressed. Exiting...")
+                break
+            self.wait_listen(0.1)
+
     def adv(self):
         self.reset()
         self.wait_listen(0.5)
@@ -62,7 +86,7 @@ class BLE(BluetoothLEConnection):
 
         self.do_set_scan_response_data(scan_rsp_data)
         self.wait_listen(1)
-        self.get_extended_advertising()
+        self.read_local_public_key()
         self.wait_listen(1)
         self.set_random_address()
         self.wait_listen(0.1)
@@ -92,11 +116,13 @@ class BLE(BluetoothLEConnection):
         self.do_set_advertising_data(adv_data)
         self.wait_listen(0.1)
         self.do_set_advertise_enable(True)
-        self.wait_listen(50)
+        self.wait_listen(0.1)
+
+        self.run_until_escape()
 
         # Closing steps
         self.do_set_advertise_enable(True)
-        self.wait_listen(0.1)
+        self.wait_listen(0.5)
         self.do_set_advertising_parameters(
             min_interval=0x0200, # 320 ms
             max_interval=0x0200, # 320 ms

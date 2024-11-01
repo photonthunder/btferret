@@ -16,7 +16,7 @@ from random import randint
 
 ### constants
 
-COMMAND_TIMEOUT = 1
+COMMAND_TIMEOUT = 0.1
 DATA_TIMEOUT = 10
 
 #gap_adv_type =  ['ADV_IND', 'ADV_DIRECT_IND', 'ADV_SCAN_IND', 'ADV_NONCONN_IND', 'SCAN_RSP']
@@ -36,8 +36,9 @@ ATT_CID = 0x0004
 SCAN_TYPE_ACTIVE  = 0x01
 FILTER_POLICY_NO_WHITELIST = 0x00
 
-cmd_text = "\n<< Command:"
-att_text = "\n<< LE Command: "
+cmd_text = "\nCommand:"
+att_text = "\nATT:"
+event_text = "Event:"
 
 
 ################################################################
@@ -158,12 +159,12 @@ class BluetoothLEConnection:
     ### helper functions calling BTUserSocket
 
     def send(self, data):
-        print("<<", "Data sent: ", as_hex(data))
+        print("<<", as_hex(data))
         self.user_socket.send_raw(data)
 
     def receive(self):
         data = self.user_socket.receive_raw()
-        print(">>", "Data received: ", as_hex(data))
+        print(">>", as_hex(data))
         self.on_data(data)
         return data
 
@@ -357,12 +358,19 @@ class BluetoothLEConnection:
         
         print("Handle: {} Features {}".format(handle, as_hex(features)))
 
-    def on_le_extended_advertising(self, data):
-        print("Read extended Advertising Complete")
-        
-        
-        
-        # print("Handle: {} Features {}".format(handle, as_hex(features)))
+    def on_le_data_length_change(self, data):
+        handle = to_u16(data, 4)
+        max_tx_octets = to_u16(data, 6) # 0x001B to 0x00FB
+        max_tx_time = to_u16(data, 8) # 0x0148 to 0x4290
+        max_rx_octets = to_u16(data, 10) # 0x001B to 0x00FB
+        max_rx_time = to_u16(data, 12) # 0x0148 to 0x4290
+        print("Data length changed for 0x{:X}".format(handle))
+
+    def on_le_read_local_public_key(self, data):
+        status = to_u8(data, 4)
+        key_x_coordinate = to_data(data, 5, 37)  # 32 octets
+        key_y_coordinate = to_data(data, 37, 69) # 32 octets
+        print(event_text, "Read Local Public Key Complete")
 
 
     def on_hci_meta_event(self, data):
@@ -375,17 +383,19 @@ class BluetoothLEConnection:
         #     data                                           n octets
 
         subevent_code = to_u8(data, 3)
-        print("Event: LE Meta event: ", hex(subevent_code))
+        # print(event_text, "LE Meta event: ", hex(subevent_code))
         if   subevent_code == 0x01:                 # LE Connection Complete
             self.on_le_connection_complete(data)
-        elif subevent_code == 0x03:                 # LE Connection Update Complete
-            self.on_le_update_complete(data)
         elif subevent_code == 0x02:                 # LE Advertising Report
             self.on_le_advertising_report(data)
+        elif subevent_code == 0x03:                 # LE Connection Update Complete
+            self.on_le_update_complete(data)
         elif subevent_code == 0x04:                 # LE Read Remove Features Complete
             self.on_le_read_remote_features_complete(data)
+        elif subevent_code == 0x07:           
+            self.on_le_data_length_change(data)
         elif subevent_code == 0x08:
-            self.on_le_extended_advertising(data)
+            self.on_le_read_local_public_key(data)
         else:
             print("LE Meta Event: Unhandled:", hex(subevent_code))
 
@@ -399,10 +409,13 @@ class BluetoothLEConnection:
         #     connection_handle                              2 octets
         #     reason                                         1 octet
 
-        print("Event: HCI Disconnection Complete")
+        
         status = to_u8  (data, 3)
         handle = to_u16 (data, 4)
         reason = to_u8  (data, 6)
+        print("HCI Disconnection Complete, Handle = 0x{:X}".format(handle))
+        if reason != 0 or status != 0:
+            print("Error: Disconnection Not successful!!!")
 
     def handle_le_command(self, cmd, status_text, data=None):
         # Define a dictionary to map command values to their corresponding messages or functions
@@ -423,7 +436,7 @@ class BluetoothLEConnection:
             0x2006: ('LE Advertising Parameters Set', None),
             0x2008: ('LE Advertising Data Set', None),
             0x2009: ('LE Scan Response Data Set', None),
-            0x200a: ('LE Advertise Enable Set', None),
+            0x200a: ('LE Advertising Set', None),
             0x2025: ('LE Get Extended Advertising', None),
 
         }
@@ -431,13 +444,13 @@ class BluetoothLEConnection:
         # Check if the command exists in the map
         if cmd in command_map:
             message, function_name = command_map[cmd]
-            print(f'{message}: {status_text}')
+            print(event_text, "{}: {}".format(message, status_text))
 
             # If there's a function to call, do so with data
             if function_name and hasattr(self, function_name):
                 getattr(self, function_name)(data)
         else:
-            print(f'LE Unknown Command: {cmd} ({hex(cmd)}), {status_text}')
+            print(f'Unknown Event: {cmd} ({hex(cmd)}), {status_text}')
 
 
     def on_hci_event_command_complete(self, data):
@@ -452,7 +465,7 @@ class BluetoothLEConnection:
         # First return_parameters field is usually
         #     status                                         1 octet
 
-        # print("Event: HCI Command Complete")
+        # print(event_text, "HCI Command Complete")
         cmd =    to_u16 (data, 4)
         status = to_u8  (data, 6)
         status_text = "Success" if status == HCI_SUCCESS else "Failure"
@@ -470,11 +483,13 @@ class BluetoothLEConnection:
         #     num_hci_command_packets                        1 octet
         #     command_opcode                                 2 octets
 
-        print("Event: HCI Command Status")
+        # print(event_text, "HCI Command Status")
         status = to_u8  (data, 3)
         opcode = to_u16 (data, 5)
-
-        print("Opcode: {:02x} status: {:02x}".format(opcode, status))
+        if opcode == 0x2025:
+            print(event_text, "Local Public Key Command Complete")
+        else:
+            print(event_text, "Unknown Opcode: {:02x} status: {:02x}".format(opcode, status))
 
     def on_hci_event_number_of_completed_packets(self, data):
         # Specification v5.4  Vol 4 Part E 7.7.19 HCI Number Of Completed Packets (p2184)
@@ -485,7 +500,10 @@ class BluetoothLEConnection:
         #     connection handle[i]                           2n octets
         #     num completed packets[i]                       2n octets
 
-        print("Event: HCI Number Of Completed Packets")
+        print(event_text, "HCI Number Of Completed Packets")
+
+    def on_hci_event_vendor_specific (self, data):
+        print(event_text, "Vendor Specific")
 
     def on_hci_event(self, data):
         # Specification v5.4  Vol 4 Part E 5.4.4 HCI Event Packet (p1804)
@@ -495,7 +513,7 @@ class BluetoothLEConnection:
         #     parameters                                     n octets
 
         event = to_u8(data, 1)         
-        # print("HCI Event Packet:", hex(event))
+        # print("\nHCI Event Packet:", hex(event))
 
         if   event == 0x0f:                                   # Command Status
             self.on_hci_event_command_status(data)
@@ -507,8 +525,10 @@ class BluetoothLEConnection:
             self.on_hci_event_command_complete(data)
         elif event == 0x13:                                   # Number of Completed Packets
             self.on_hci_event_number_of_completed_packets(data)
+        elif event == 0xFF:                         
+            self.on_hci_event_vendor_specific(data)
         else:
-            print("HCI Event: Unhandled", hex(event))
+            print(event_text, "Unhandled", hex(event))
 
 
     def on_acl_event(self, data):
@@ -524,7 +544,7 @@ class BluetoothLEConnection:
         #     channel                                       2 octets
         #     data                                          n octets
 
-        print("ACL Packet")
+        # print("ACL Packet")
 
         handle = to_bits_u16(data, 1, 0, 12)
         pb =     to_bits_u16(data, 1, 12, 2)
@@ -541,7 +561,7 @@ class BluetoothLEConnection:
             full_packet = length - size == 4
 
             print("Channel: {} Length: {} Data size: {} Full packet? {}".format(channel, length, size, full_packet))
-            print("ACL packet:    ", as_hex(acl_data))
+            # print("ACL packet:    ", as_hex(acl_data))
 
             self.acl_total_length = size
             self.acl_packet =       acl_data
@@ -628,7 +648,7 @@ class BluetoothLEConnection:
         self.send_command(0x1002, packet)
 
     def read_local_board_address(self):
-        print(cmd_text, "Read Local Supported Commands")
+        print(cmd_text, "Read Local Board Address")
         packet = from_u8(None)
         self.send_command(0x1009, packet)
 
@@ -649,11 +669,11 @@ class BluetoothLEConnection:
     def set_random_address(self):
         random_address = bytes([randint(0x00, 0xFF) for _ in range(6)])
         random_address_str = ':'.join(f'{byte:02X}' for byte in reversed(random_address))
-        print("Generated Random Bluetooth Address: {}".format(random_address_str))
+        print(cmd_text, "Generated Random Bluetooth Address: {}".format(random_address_str))
         self.send_command(0x2005, random_address)
 
-    def get_extended_advertising(self):
-        print(cmd_text, "LE Get Extended Advertising")
+    def read_local_public_key(self):
+        print(cmd_text, "Read Local Public Key")
         packet = from_u8(None)
         self.send_command(0x2025, packet)
 
@@ -747,8 +767,10 @@ class BluetoothLEConnection:
         # Response:
         #     HCI Command Complete                          0x0e  0x200a
         #     HCI LE Connection Complete                    0x3e  0x01      (in some cases)
-
-        print(cmd_text, "LE Set Advertising Enable")
+        if enabled:
+            print(cmd_text, "LE Set Advertising: Enabled")
+        else:
+            print(cmd_text, "LE Set Advertising: Disabled")
         
         packet = from_u8(0x01 if enabled else 0x00)
         self.send_command(0x200a, packet)

@@ -47,7 +47,6 @@ Read local supported commands
       0020  F7 FF FF 7F F8 FF FF FF - FF 07 08 00 00 00 00 00 
       0030  08 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
       0040  00 00 00 00 00 00 00 
-insdatan[29] = F7:FF
 Read local board address
 < HCI OGF=04 OCF=09
       0000  01 09 10 00 
@@ -89,7 +88,7 @@ Start Post Init Blue
 Service changed 2A05 enabled
 Set LE random address in Post
 < HCI OGF=08 OCF=05
-      0000  01 05 20 06 DA 66 0C A6 - 5C C8 
+      0000  01 05 20 06 09 50 60 FF - 3D D6 
 Check Status
 > Event 0E = 01 13 0C 00
       0000  04 0E 04 01 13 0C 00 
@@ -125,12 +124,12 @@ Get public keys
 > Event 0F = 00 01 25 20
       0000  04 0F 04 00 01 25 20 
 GOT local XY keys
-> Event 3E = 08 00 69 0D 8F CD 02 07 12 B6...
-      0000  04 3E 42 08 00 69 0D 8F - CD 02 07 12 B6 53 6B DA 
-      0010  03 6B 36 3D F3 C4 BD 8C - A8 F2 C8 2E 31 96 4A 05 
-      0020  AC 09 1E 0E 0A BA 2E EF - 01 6B 1C A2 AC 40 AD 2C 
-      0030  47 C5 2E 6C F5 D8 10 11 - 1A 6A A1 A4 09 46 8F 1D 
-      0040  CD 3F E0 AC 25 
+> Event 3E = 08 00 07 56 83 22 6E 93 5D 2B...
+      0000  04 3E 42 08 00 07 56 83 - 22 6E 93 5D 2B D3 8B DF 
+      0010  01 01 DF 67 20 AD 75 AB - 0D 0B A5 09 9C A4 74 C3 
+      0020  23 9D 16 BC 2B CF 80 1B - A9 0B EA 32 E3 4C 6E 93 
+      0030  8A 4F 27 4D 8E 67 E4 F3 - CF B1 87 D3 10 52 A7 10 
+      0040  D2 79 E5 9A 81 
 Init Blue Complete
 All screen output saved to bleserver_bug.txt file
 Set LE random address
@@ -155,6 +154,338 @@ Advertising as D3:56:DB:04:32:A7 My New Pi
       0000  04 0E 04 01 08 20 00 
 > Event 0E = 01 0A 20 00
       0000  04 0E 04 01 0A 20 00 
+Key code 87
+Key code 101
+Key code 114
+Key code 116
+Key code 121
+Set MTU
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 02
+      0000  02 40 00 07 00 03 00 04 - 00 02 F4 00 
+< HCI OGF=08 OCF=0A
+      0000  01 0A 20 01 01 
+> Event 3E = 01 00 40 00 01 01 64 D6 F9 64...
+      0000  04 3E 13 01 00 40 00 01 - 01 64 D6 F9 64 9A 4C 18 
+      0010  00 00 00 48 00 01 
+> Event FF = 55 00 00 40 00
+      0000  04 FF 05 55 00 00 40 00 
+> Event 0E = 01 0A 20 00
+      0000  04 0E 04 01 0A 20 00 
+4C:9A:64:F9:D6:64 has connected
+< HCI OGF=08 OCF=0A
+      0000  01 0A 20 01 01 
+Set larger data length
+  Set [4][5] handle 40 00
+< HCI OGF=08 OCF=22
+      0000  01 22 20 06 40 00 FB 00 - 00 08 
+> Event 0E = 01 0A 20 0C
+      0000  04 0E 04 01 0A 20 0C 
+> Event 0E = 01 22 20 00 40 00
+      0000  04 0E 06 01 22 20 00 40 - 00 
+> Event 3E = 07 40 00 F2 00 00 08 FB 00 48...
+      0000  04 3E 0B 07 40 00 F2 00 - 00 08 FB 00 48 08 
+4C:9A:64:F9:D6:64 data length change T F2 R FB
+> CHANNEL 0004 Opcode = 03
+      0000  02 40 20 07 00 03 00 04 - 00 03 F4 00 
+GOT LE server opcode 03 from 4C:9A:64:F9:D6:64
+> CHANNEL 0004 Opcode = 10
+      0000  02 40 20 0B 00 07 00 04 - 00 10 01 00 FF FF 00 28 
+GOT LE server opcode 10 from 4C:9A:64:F9:D6:64
+Read attribute info for handles 0001 to FFFF and
+  UUID 2800
+SEND reply opcode 11 for handle 0003
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 11
+      0000  02 40 00 0C 00 08 00 04 - 00 11 06 03 00 07 00 00 
+      0010  18 
+> CHANNEL 0004 Opcode = 10
+      0000  02 40 20 0B 00 07 00 04 - 00 10 08 00 FF FF 00 28 
+GOT LE server opcode 10 from 4C:9A:64:F9:D6:64
+Read attribute info for handles 0008 to FFFF and
+  UUID 2800
+SEND reply opcode 11 for handle 0008
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 11
+      0000  02 40 00 0C 00 08 00 04 - 00 11 06 08 00 0B 00 01 
+      0010  18 
+> Event 13 = 01 40 00 02 00
+      0000  04 13 05 01 40 00 02 00 
+> CHANNEL 0004 Opcode = 10
+      0000  02 40 20 0B 00 07 00 04 - 00 10 0C 00 FF FF 00 28 
+GOT LE server opcode 10 from 4C:9A:64:F9:D6:64
+Read attribute info for handles 000C to FFFF and
+  UUID 2800
+SEND reply opcode 11 for handle 000C
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 11
+      0000  02 40 00 0C 00 08 00 04 - 00 11 06 0C 00 0E 00 0A 
+      0010  18 
+> CHANNEL 0004 Opcode = 10
+      0000  02 40 20 0B 00 07 00 04 - 00 10 0F 00 FF FF 00 28 
+GOT LE server opcode 10 from 4C:9A:64:F9:D6:64
+Read attribute info for handles 000F to FFFF and
+  UUID 2800
+SEND reply opcode 11 for handle 000F
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 11
+      0000  02 40 00 1A 00 16 00 04 - 00 11 14 0F 00 FF FF 00 
+      0010  FF EE DD CC BB AA 99 88 - 77 66 55 44 33 22 11 
+> Event 13 = 01 40 00 02 00
+      0000  04 13 05 01 40 00 02 00 
+> CHANNEL 0004 Opcode = 08
+      0000  02 40 20 0B 00 07 00 04 - 00 08 08 00 0B 00 03 28 
+GOT LE server opcode 08 from 4C:9A:64:F9:D6:64
+Read attribute info for handles 0008 to 000B and
+  UUID 2803
+SEND reply opcode 09 for handle 0009
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 09
+      0000  02 40 00 0D 00 09 00 04 - 00 09 07 09 00 20 0A 00 
+      0010  05 2A 
+> CHANNEL 0004 Opcode = 04
+      0000  02 40 20 09 00 05 00 04 - 00 04 0B 00 0B 00 
+GOT LE server opcode 04 from 4C:9A:64:F9:D6:64
+Read attribute info for handles 000B to 000B
+SEND reply opcode 05 for handle 000B
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 05
+      0000  02 40 00 0A 00 06 00 04 - 00 05 01 0B 00 02 29 
+> Event 13 = 01 40 00 02 00
+      0000  04 13 05 01 40 00 02 00 
+> CHANNEL 0004 Opcode = 12
+      0000  02 40 20 09 00 05 00 04 - 00 12 0B 00 02 00 
+GOT LE server opcode 12 from 4C:9A:64:F9:D6:64
+Service Changed notify enable
+Send acknowledgement
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 13
+      0000  02 40 00 05 00 01 00 04 - 00 13 
+> CHANNEL 0004 Opcode = 08
+      0000  02 40 20 0B 00 07 00 04 - 00 08 0C 00 0E 00 03 28 
+GOT LE server opcode 08 from 4C:9A:64:F9:D6:64
+Read attribute info for handles 000C to 000E and
+  UUID 2803
+SEND reply opcode 09 for handle 000D
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 09
+      0000  02 40 00 0D 00 09 00 04 - 00 09 07 0D 00 02 0E 00 
+      0010  50 2A 
+> Event 13 = 01 40 00 02 00
+      0000  04 13 05 01 40 00 02 00 
+> CHANNEL 0004 Opcode = 08
+      0000  02 40 20 0B 00 07 00 04 - 00 08 0F 00 FF FF 03 28 
+GOT LE server opcode 08 from 4C:9A:64:F9:D6:64
+Read attribute info for handles 000F to FFFF and
+  UUID 2803
+SEND reply opcode 09 for handle 0010
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 09
+      0000  02 40 00 0D 00 09 00 04 - 00 09 07 10 00 06 11 00 
+      0010  CD AB 
+> CHANNEL 0004 Opcode = 08
+      0000  02 40 20 0B 00 07 00 04 - 00 08 12 00 FF FF 03 28 
+GOT LE server opcode 08 from 4C:9A:64:F9:D6:64
+Read attribute info for handles 0012 to FFFF and
+  UUID 2803
+SEND reply opcode 09 for handle 0012
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 09
+      0000  02 40 00 0D 00 09 00 04 - 00 09 07 12 00 16 13 00 
+      0010  EF CD 
+> Event 13 = 01 40 00 02 00
+      0000  04 13 05 01 40 00 02 00 
+> CHANNEL 0004 Opcode = 08
+      0000  02 40 20 0B 00 07 00 04 - 00 08 14 00 FF FF 03 28 
+GOT LE server opcode 08 from 4C:9A:64:F9:D6:64
+Read attribute info for handles 0014 to FFFF and
+  UUID 2803
+SEND reply opcode 09 for handle 0015
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 09
+      0000  02 40 00 0D 00 09 00 04 - 00 09 07 15 00 12 16 00 
+      0010  AF DE 
+> CHANNEL 0004 Opcode = 08
+      0000  02 40 20 0B 00 07 00 04 - 00 08 17 00 FF FF 03 28 
+GOT LE server opcode 08 from 4C:9A:64:F9:D6:64
+Read attribute info for handles 0017 to FFFF and
+  UUID 2803
+SEND reply opcode 09 for handle 0018
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 09
+      0000  02 40 00 0D 00 09 00 04 - 00 09 07 18 00 12 19 00 
+      0010  BA DC 
+> Event 13 = 01 40 00 02 00
+      0000  04 13 05 01 40 00 02 00 
+> CHANNEL 0004 Opcode = 08
+      0000  02 40 20 0B 00 07 00 04 - 00 08 1A 00 FF FF 03 28 
+GOT LE server opcode 08 from 4C:9A:64:F9:D6:64
+Read attribute info for handles 001A to FFFF and
+  UUID 2803
+Attribute/UUID not found
+SEND error code 0A
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 01
+      0000  02 40 00 09 00 05 00 04 - 00 01 08 1A 00 0A 
+> CHANNEL 0004 Opcode = 0A
+      0000  02 40 20 07 00 03 00 04 - 00 0A 0E 00 
+GOT LE server opcode 0A from 4C:9A:64:F9:D6:64
+SEND characteristic PnP ID
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 0B
+      0000  02 40 00 0C 00 08 00 04 - 00 0B 00 00 00 00 00 00 
+      0010  00 
+> Event 13 = 01 40 00 02 00
+      0000  04 13 05 01 40 00 02 00 
+> CHANNEL 0004 Opcode = 0A
+      0000  02 40 20 07 00 03 00 04 - 00 0A 11 00 
+GOT LE server opcode 0A from 4C:9A:64:F9:D6:64
+SEND characteristic Control??6?6?6r
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 0B
+      0000  02 40 00 0A 00 06 00 04 - 00 0B 45 4E 54 45 52 
+> CHANNEL 0004 Opcode = 04
+      0000  02 40 20 09 00 05 00 04 - 00 04 14 00 14 00 
+GOT LE server opcode 04 from 4C:9A:64:F9:D6:64
+Read attribute info for handles 0014 to 0014
+SEND reply opcode 05 for handle 0014
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 05
+      0000  02 40 00 0A 00 06 00 04 - 00 05 01 14 00 02 29 
+> Event 13 = 01 40 00 02 00
+      0000  04 13 05 01 40 00 02 00 
+> CHANNEL 0004 Opcode = 12
+      0000  02 40 20 09 00 05 00 04 - 00 12 14 00 01 00 
+GOT LE server opcode 12 from 4C:9A:64:F9:D6:64
+Counter notify enable
+Send acknowledgement
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 13
+      0000  02 40 00 05 00 01 00 04 - 00 13 
+> CHANNEL 0004 Opcode = 0A
+      0000  02 40 20 07 00 03 00 04 - 00 0A 13 00 
+GOT LE server opcode 0A from 4C:9A:64:F9:D6:64
+SEND characteristic Counter
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 0B
+      0000  02 40 00 06 00 02 00 04 - 00 0B 2D 
+> Event 13 = 01 40 00 02 00
+      0000  04 13 05 01 40 00 02 00 
+> CHANNEL 0004 Opcode = 04
+      0000  02 40 20 09 00 05 00 04 - 00 04 17 00 17 00 
+GOT LE server opcode 04 from 4C:9A:64:F9:D6:64
+Read attribute info for handles 0017 to 0017
+SEND reply opcode 05 for handle 0017
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 05
+      0000  02 40 00 0A 00 06 00 04 - 00 05 01 17 00 02 29 
+> CHANNEL 0004 Opcode = 12
+      0000  02 40 20 09 00 05 00 04 - 00 12 17 00 01 00 
+GOT LE server opcode 12 from 4C:9A:64:F9:D6:64
+Data notify enable
+Send acknowledgement
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 13
+      0000  02 40 00 05 00 01 00 04 - 00 13 
+> Event 13 = 01 40 00 02 00
+      0000  04 13 05 01 40 00 02 00 
+> CHANNEL 0004 Opcode = 0A
+      0000  02 40 20 07 00 03 00 04 - 00 0A 16 00 
+GOT LE server opcode 0A from 4C:9A:64:F9:D6:64
+SEND characteristic Data
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 0B
+      0000  02 40 00 06 00 02 00 04 - 00 0B EF 
+> CHANNEL 0004 Opcode = 04
+      0000  02 40 20 09 00 05 00 04 - 00 04 1A 00 FF FF 
+GOT LE server opcode 04 from 4C:9A:64:F9:D6:64
+Read attribute info for handles 001A to FFFF
+SEND reply opcode 05 for handle 001A
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 05
+      0000  02 40 00 0A 00 06 00 04 - 00 05 01 1A 00 02 29 
+> Event 13 = 01 40 00 02 00
+      0000  04 13 05 01 40 00 02 00 
+> CHANNEL 0004 Opcode = 04
+      0000  02 40 20 09 00 05 00 04 - 00 04 1B 00 FF FF 
+GOT LE server opcode 04 from 4C:9A:64:F9:D6:64
+Read attribute info for handles 001B to FFFF
+Attribute not found
+SEND error code 0A
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 01
+      0000  02 40 00 09 00 05 00 04 - 00 01 04 1B 00 0A 
+> CHANNEL 0004 Opcode = 12
+      0000  02 40 20 09 00 05 00 04 - 00 12 1A 00 01 00 
+GOT LE server opcode 12 from 4C:9A:64:F9:D6:64
+Response??? notify enable
+Send acknowledgement
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 13
+      0000  02 40 00 05 00 01 00 04 - 00 13 
+> Event 13 = 01 40 00 02 00
+      0000  04 13 05 01 40 00 02 00 
+> CHANNEL 0004 Opcode = 0A
+      0000  02 40 20 07 00 03 00 04 - 00 0A 19 00 
+GOT LE server opcode 0A from 4C:9A:64:F9:D6:64
+SEND characteristic Response???
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 0B
+      0000  02 40 00 0D 00 09 00 04 - 00 0B 00 00 00 00 00 00 
+      0010  00 00 
+> CHANNEL 0004 Opcode = 0A
+      0000  02 40 20 07 00 03 00 04 - 00 0A 14 00 
+GOT LE server opcode 0A from 4C:9A:64:F9:D6:64
+SEND notify status for characteristic Counter
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 0B
+      0000  02 40 00 07 00 03 00 04 - 00 0B 01 00 
+> Event 13 = 01 40 00 02 00
+      0000  04 13 05 01 40 00 02 00 
+> CHANNEL 0004 Opcode = 0A
+      0000  02 40 20 07 00 03 00 04 - 00 0A 17 00 
+GOT LE server opcode 0A from 4C:9A:64:F9:D6:64
+SEND notify status for characteristic Data
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 0B
+      0000  02 40 00 07 00 03 00 04 - 00 0B 01 00 
+> CHANNEL 0004 Opcode = 0A
+      0000  02 40 20 07 00 03 00 04 - 00 0A 1A 00 
+GOT LE server opcode 0A from 4C:9A:64:F9:D6:64
+SEND notify status for characteristic Response???
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 0B
+      0000  02 40 00 07 00 03 00 04 - 00 0B 01 00 
+> Event 13 = 01 40 00 02 00
+      0000  04 13 05 01 40 00 02 00 
+> Event 13 = 01 40 00 01 00
+      0000  04 13 05 01 40 00 01 00 
+Send Counter notification to 4C:9A:64:F9:D6:64
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 1B
+      0000  02 40 00 08 00 04 00 04 - 00 1B 13 00 05 
+Send Data notification to 4C:9A:64:F9:D6:64
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 1B
+      0000  02 40 00 08 00 04 00 04 - 00 1B 16 00 2B 
+> Event 13 = 01 40 00 02 00
+      0000  04 13 05 01 40 00 02 00 
+> CHANNEL 0004 Opcode = 08
+      0000  02 40 20 0B 00 07 00 04 - 00 08 03 00 07 00 00 2A 
+GOT LE server opcode 08 from 4C:9A:64:F9:D6:64
+Read attribute info for handles 0003 to 0007 and
+  UUID 2A00
+SEND reply opcode 09 for handle 0005
+  Set [1][2] handle 40 00
+< CHANNEL 0004 Opcode = 09
+      0000  02 40 00 11 00 0D 00 04 - 00 09 0B 05 00 4D 79 20 
+      0010  4E 65 77 20 50 69 
+> Event 13 = 01 40 00 01 00
+      0000  04 13 05 01 40 00 01 00 
+4C:9A:64:F9:D6:64 has disconnected
+> Event 05 = 00 40 00 13
+      0000  04 05 04 00 40 00 13 
+4C:9A:64:F9:D6:64 has disconnected
 Key press stop server...
 < HCI OGF=08 OCF=0A
       0000  01 0A 20 01 01 

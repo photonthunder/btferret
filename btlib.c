@@ -3939,6 +3939,7 @@ int le_server(int(*callback)(int clientnode,int operation,int cticn),int timerds
   PyObject *pycallback;
 #endif
 
+  // VPRINT "le_server called\n");
   if(gpar.serveractive != 0)
     {
     NPRINT "Cannot start a second server\n");
@@ -8899,7 +8900,7 @@ void leserver(int ndevice,int count,unsigned char *dat)
   int size,uuidtype,aflag,xflag,acticn,ahandle,psn,datcount;
   unsigned char cmd[2],*s,*data,errcode,buf[32];
   struct cticdata *cp;
-
+  // NPRINT "leserver called\n");
   
   VPRINT "GOT LE server opcode %02X from %s\n",dat[0],dev[ndevice]->name); 
   flushprint();
