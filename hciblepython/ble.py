@@ -164,7 +164,7 @@ class BluetoothLEConnection:
 
     def receive(self):
         data = self.user_socket.receive_raw()
-        print(">>", as_hex(data))
+        print("\n>>", as_hex(data))
         self.on_data(data)
         return data
 
@@ -413,9 +413,15 @@ class BluetoothLEConnection:
         status = to_u8  (data, 3)
         handle = to_u16 (data, 4)
         reason = to_u8  (data, 6)
-        print("HCI Disconnection Complete, Handle = 0x{:X}".format(handle))
-        if reason != 0 or status != 0:
+        if status == 0:
+            print("HCI Disconnection Complete, Handle = 0x{:X}".format(handle))
+        else:
             print("Error: Disconnection Not successful!!!")
+        if reason == 0x13:
+            print("Remote User terminated Connection")
+        else:
+            print("Disconnect Reason: 0x{:X}".format(reason))
+        
 
     def handle_le_command(self, cmd, status_text, data=None):
         # Define a dictionary to map command values to their corresponding messages or functions
@@ -529,11 +535,6 @@ class BluetoothLEConnection:
             self.on_hci_event_vendor_specific(data)
         else:
             print(event_text, "Unhandled", hex(event))
-
-
-    def on_acl_event(self, data):
-        print("ACL data:      ", as_hex(data))
-
 
     def on_acl_packet(self, data):
         # Specification v5.4  Vol 4 Part E 5.4.2 HCI ACL Packet (p1801)
@@ -909,7 +910,7 @@ class BluetoothLEConnection:
     # ACL commands
     #
     
-    def do_att_exchange_mtu_req(self, mtu_size = 517):
+    def do_att_exchange_mtu_req(self, mtu_size = 244):
         # Specification v5.4  Vol 3 Part F 3.4.2.1 ATT_EXCHANGE_MTU_REQ (p1416)
         # ATT Opcode 0x02
         #     [packet_type                                  1 octet]
@@ -997,4 +998,41 @@ class BluetoothLEConnection:
         cmd = make_acl(self.handle, len(packet)) + packet
         self.send(cmd)
 
+    def do_att_exchange_mtu_rsp(self, mtu_size = 244):
+        print(att_text, "EXCHANGE MTU RSP")
 
+        packet =  from_u8  (0x03)      
+        packet += from_u16 (mtu_size) 
+        
+        cmd = make_acl(self.handle, len(packet)) + packet
+        self.send(cmd)
+
+    def do_att_group_type_rsp(self, mtu):
+        print(att_text, "GROUP TYPE RSP")
+
+        packet =  from_u8  (0x11)    
+        packet +=   
+        packet += from_u16 (mtu_size) 
+        
+        cmd = make_acl(self.handle, len(packet)) + packet
+        self.send(cmd)
+
+
+    def on_acl_event(self, data):
+        print("ACL data:      ", as_hex(data))
+        att_opcode = to_u8(data, 0)
+        if att_opcode == 0x02:
+            print("Exchange MTU REQ")
+            self.client_rx_mtu = to_u16(data, 1)
+            self.do_att_exchange_mtu_rsp()
+        elif att_opcode == 0x03:
+            print("Exchange MTU RES")
+            self.server_rx_mtu = to_u16(data, 1)
+        elif att_opcode == 0x10:
+            print("Read by Group Type Response")
+            self.start_handle = to_u16(data, 1)
+            self.end_handle = to_u16(data, 3)
+            self.primary_service = to_u16(data, 5)
+            if self.primary_service == 0x2800:
+                print("Get primary services for handles 0x{:X} to 0x{:X}".format(self.start_handle, self.end_handle))
+                self.
