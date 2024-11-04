@@ -112,6 +112,11 @@ def from_uuid(val):
 def from_data(val):
     return bytes(val)
 
+def get_primary_service_byte_length(val):
+    cleaned_uuid = re.sub(r'[^0-9a-fA-F]', '', val)
+    return len(cleaned_uuid)/2
+
+
 
 ################################################################
 #
@@ -1028,6 +1033,7 @@ class BluetoothLEConnection:
             print("Service handle 0x{:X} larger than request max 0x{:X}, truncating".format(end_handle, return_end_handle))
             return_end_handle = end_handle
         primary_service = handle_range[2]
+        att_length = 4 + get_primary_service_byte_length(primary_service)
         packet += from_u8(att_length)  
         packet += from_u16(return_start_handle)
         packet += from_u16(return_end_handle)
