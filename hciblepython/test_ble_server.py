@@ -1,4 +1,5 @@
 from ble import *
+from test_gatt_server import GattServer
 import sys
 import termios
 import tty
@@ -8,7 +9,12 @@ import threading
 
 class BLE(BluetoothLEConnection):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs) 
+        test_gatt_server = GattServer()
+        super().__init__(gatt_server=test_gatt_server, *args, **kwargs) 
+        if self.gatt_server == None:
+            print("self.gatt_sever == None")
+            exit(0)
+
         self.escape_pressed = False
         self.old_settings = termios.tcgetattr(sys.stdin)
 

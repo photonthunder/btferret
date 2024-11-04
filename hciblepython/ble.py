@@ -100,6 +100,15 @@ def from_u16(val):
 def from_addr(val):
     return bytes(reversed(bytes.fromhex(val.replace(':', ''))))
 
+def from_uuid(val):
+    cleaned_uuid = re.sub(r'[^0-9a-fA-F]', '', val)
+    if len(cleaned_uuid) != 32 or len(cleaned_uuid) != 2:
+        raise ValueError("Invalid UUID length, must be 128-bit (32 hex characters).")
+    byte_pairs = [cleaned_uuid[i:i+2] for i in range(0, len(cleaned_uuid), 2)]
+    little_endian_bytes = byte_pairs[::-1]
+    little_endian_bytes = [int(byte, 16) for byte in little_endian_bytes]
+    return little_endian_bytes
+
 def from_data(val):
     return bytes(val)
 
@@ -134,9 +143,10 @@ def make_cmd(cmd, length):
 
 class BluetoothLEConnection:
 
-    def __init__(self, dev_id=0):
+    def __init__(self, dev_id=0, gatt_server=None):
         self.handle = 64
         self.user_socket = HCI(dev_id)
+        self.gatt_server = gatt_server
 
         # ACL packet being constructed
         self.acl_packet = None
@@ -1007,13 +1017,21 @@ class BluetoothLEConnection:
         cmd = make_acl(self.handle, len(packet)) + packet
         self.send(cmd)
 
-    def do_att_group_type_rsp(self, mtu):
+    def do_att_group_type_rsp(self, start_handle, end_handle):
         print(att_text, "GROUP TYPE RSP")
 
         packet =  from_u8  (0x11)    
-        packet +=   
-        packet += from_u16 (mtu_size) 
-        
+        handle_range = self.gatt_server.get_service_handle_range(start_handle)
+        return_start_handle = handle_range[0]
+        return_end_handle = handle_range[1]
+        if end_handle < return_end_handle:
+            print("Service handle 0x{:X} larger than request max 0x{:X}, truncating".format(end_handle, return_end_handle))
+            return_end_handle = end_handle
+        primary_service = handle_range[2]
+        packet += from_u8(att_length)  
+        packet += from_u16(return_start_handle)
+        packet += from_u16(return_end_handle)
+        packet += from_uuid(primary_service)
         cmd = make_acl(self.handle, len(packet)) + packet
         self.send(cmd)
 
@@ -1030,9 +1048,9 @@ class BluetoothLEConnection:
             self.server_rx_mtu = to_u16(data, 1)
         elif att_opcode == 0x10:
             print("Read by Group Type Response")
-            self.start_handle = to_u16(data, 1)
-            self.end_handle = to_u16(data, 3)
-            self.primary_service = to_u16(data, 5)
-            if self.primary_service == 0x2800:
-                print("Get primary services for handles 0x{:X} to 0x{:X}".format(self.start_handle, self.end_handle))
-                self.
+            start_handle = to_u16(data, 1)
+            end_handle = to_u16(data, 3)
+            primary_service_request = to_u16(data, 5)
+            if primary_service_request == 0x2800:
+                print("Get primary services for handles 0x{:X} to 0x{:X}".format(start_handle, end_handle))
+                self.do_att_group_type_rsp(start_handle, end_handle)
