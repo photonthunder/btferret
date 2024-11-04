@@ -13,6 +13,7 @@ from time import sleep
 from hci_socket import *
 #from hci_uart import *
 from random import randint
+import re
 
 ### constants
 
@@ -100,21 +101,8 @@ def from_u16(val):
 def from_addr(val):
     return bytes(reversed(bytes.fromhex(val.replace(':', ''))))
 
-def from_uuid(val):
-    cleaned_uuid = re.sub(r'[^0-9a-fA-F]', '', val)
-    if len(cleaned_uuid) != 32 or len(cleaned_uuid) != 2:
-        raise ValueError("Invalid UUID length, must be 128-bit (32 hex characters).")
-    byte_pairs = [cleaned_uuid[i:i+2] for i in range(0, len(cleaned_uuid), 2)]
-    little_endian_bytes = byte_pairs[::-1]
-    little_endian_bytes = [int(byte, 16) for byte in little_endian_bytes]
-    return little_endian_bytes
-
 def from_data(val):
     return bytes(val)
-
-def get_primary_service_byte_length(val):
-    cleaned_uuid = re.sub(r'[^0-9a-fA-F]', '', val)
-    return len(cleaned_uuid)/2
 
 
 
@@ -521,7 +509,7 @@ class BluetoothLEConnection:
         #     connection handle[i]                           2n octets
         #     num completed packets[i]                       2n octets
 
-        print(event_text, "HCI Number Of Completed Packets")
+        print(event_text, "HCI Number Of Completed Packets = {}".format(to_u16(data, len(data) - 2)))
 
     def on_hci_event_vendor_specific (self, data):
         print(event_text, "Vendor Specific")
@@ -925,6 +913,17 @@ class BluetoothLEConnection:
     # ACL commands
     #
     
+    def do_att_error_rsp(self, request_opcode, handle, error_code):
+        print(att_text, "Not Found RSP")
+
+        packet =  from_u8(0x01) 
+        packet += from_u8(request_opcode)     
+        packet += from_u16(handle) 
+        packet += from_u8(error_code)
+        
+        cmd = make_acl(self.handle, len(packet)) + packet
+        self.send(cmd)
+
     def do_att_exchange_mtu_req(self, mtu_size = 244):
         # Specification v5.4  Vol 3 Part F 3.4.2.1 ATT_EXCHANGE_MTU_REQ (p1416)
         # ATT Opcode 0x02
@@ -940,6 +939,15 @@ class BluetoothLEConnection:
 
         packet =  from_u8  (0x02)           # ATT opcode ATT_EXCHANGE_MTU_REQ
         packet += from_u16 (mtu_size)       # MTU size requested
+        
+        cmd = make_acl(self.handle, len(packet)) + packet
+        self.send(cmd)
+
+    def do_att_exchange_mtu_rsp(self, mtu_size = 244):
+        print(att_text, "EXCHANGE MTU RSP")
+
+        packet =  from_u8  (0x03)      
+        packet += from_u16 (mtu_size) 
         
         cmd = make_acl(self.handle, len(packet)) + packet
         self.send(cmd)
@@ -992,6 +1000,16 @@ class BluetoothLEConnection:
         cmd = make_acl(self.handle, len(packet)) + packet
         self.send(cmd)
 
+    def do_att_read_by_type_rsp(self, start_handle, end_handle, char_type):
+        print(att_text, "ATT READ BY TYPE RSP")
+        handle, data = self.gatt_server.read_char(start_handle, end_handle, char_type)
+        
+        packet =  from_u8  (0x09)               # ATT opcode ATT_READ_BY_TYPE_REQ
+        packet += from_u16 (handle)
+        packet += data        
+               
+        cmd = make_acl(self.handle, len(packet)) + packet
+        self.send(cmd)
 
     def do_att_read_req(self, handle):
         # Specification v5.4  Vol 3 Part F 3.4.4.1 ATT_READ_REQ (p1425)
@@ -1013,15 +1031,6 @@ class BluetoothLEConnection:
         cmd = make_acl(self.handle, len(packet)) + packet
         self.send(cmd)
 
-    def do_att_exchange_mtu_rsp(self, mtu_size = 244):
-        print(att_text, "EXCHANGE MTU RSP")
-
-        packet =  from_u8  (0x03)      
-        packet += from_u16 (mtu_size) 
-        
-        cmd = make_acl(self.handle, len(packet)) + packet
-        self.send(cmd)
-
     def do_att_group_type_rsp(self, start_handle, end_handle):
         print(att_text, "GROUP TYPE RSP")
 
@@ -1029,15 +1038,20 @@ class BluetoothLEConnection:
         handle_range = self.gatt_server.get_service_handle_range(start_handle)
         return_start_handle = handle_range[0]
         return_end_handle = handle_range[1]
+        if return_start_handle == None or return_end_handle == None:
+            print("No handles found in Database starting at 0x{:X}".format(start_handle))
+            self.do_att_error_rsp(0x10, start_handle, 0x0A)  # 0x0A = Attribute not found
+            return
+        print("Handles 0x{:X} 0x{:X}".format(return_start_handle, return_end_handle))
         if end_handle < return_end_handle:
             print("Service handle 0x{:X} larger than request max 0x{:X}, truncating".format(end_handle, return_end_handle))
             return_end_handle = end_handle
         primary_service = handle_range[2]
-        att_length = 4 + get_primary_service_byte_length(primary_service)
+        att_length = 4 + self.gatt_server.get_uuid_byte_length(primary_service)
         packet += from_u8(att_length)  
         packet += from_u16(return_start_handle)
         packet += from_u16(return_end_handle)
-        packet += from_uuid(primary_service)
+        packet += self.gatt_server.uuid_to_bytes(primary_service)
         cmd = make_acl(self.handle, len(packet)) + packet
         self.send(cmd)
 
@@ -1047,11 +1061,17 @@ class BluetoothLEConnection:
         att_opcode = to_u8(data, 0)
         if att_opcode == 0x02:
             print("Exchange MTU REQ")
-            self.client_rx_mtu = to_u16(data, 1)
-            self.do_att_exchange_mtu_rsp()
+            client_rx_mtu = to_u16(data, 1)
+            do_att_exchange_mtu_rsp()
         elif att_opcode == 0x03:
             print("Exchange MTU RES")
-            self.server_rx_mtu = to_u16(data, 1)
+            server_rx_mtu = to_u16(data, 1)
+        elif att_opcode == 0x08:
+            print("Read by Type Request")
+            start_handle = to_U16(data, 1)
+            end_handle = to_U16(data, 3)
+            char_type = to_U16(data, 5)
+            self.do_att_read_by_type_rsp(start_handle, end_handle, char_type)
         elif att_opcode == 0x10:
             print("Read by Group Type Response")
             start_handle = to_u16(data, 1)

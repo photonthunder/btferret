@@ -1,4 +1,5 @@
- 
+import re 
+
 class GattServer:
     def __init__(self):
         self.gatt_table = None
@@ -35,6 +36,20 @@ class GattServer:
             0x0016: {"type": "characteristic_value", "uuid": "DCBA", "value": "Response Data"},  # Response characteristic
         }
 
+    def get_uuid_byte_length(self, uuid):
+        cleaned_uuid = re.sub(r'[^0-9a-fA-F]', '', uuid)
+        return int(len(cleaned_uuid)/2)
+
+    def uuid_to_bytes(self, uuid):
+        cleaned_uuid = re.sub(r'[^0-9a-fA-F]', '', uuid)
+        length_uuid = len(cleaned_uuid)
+        if length_uuid != 32 and length_uuid != 4:
+            raise ValueError("Invalid UUID length {}, must be 128-bit (32 hex characters).".format(length_uuid))
+        byte_pairs = [cleaned_uuid[i:i+2] for i in range(0, len(cleaned_uuid), 2)]
+        little_endian_bytes = byte_pairs[::-1]
+        little_endian_bytes = bytes(int(byte, 16) for byte in little_endian_bytes)
+        return little_endian_bytes
+
     def add_service(self, handle, service_type, uuid, value=None):
         self.gatt_table[handle] = {"type": service_type, "uuid": uuid, "value": value}
 
@@ -64,7 +79,16 @@ class GattServer:
                 last_handle = handle
         
         if first_handle is None:
-            return f"No primary service found starting at handle 0x{start_handle:X}."
+            print("No primary service found starting at handle 0x{:X}.".format(start_handle))
+            return None, None, ""
         
         # Return the first and last handle of the found service
         return (first_handle, last_handle, primary_service)
+
+
+if __name__ == "__main__":
+    gatt_server = GattServer()
+    first, last, primary = gatt_server.get_service_handle_range(0x000C)
+    print("First Handle = 0x{:X}, Second Handle = 0x{:X}, Primary = {}", first, last, primary)
+    print(gatt_server.get_uuid_byte_length(primary))
+    print(gatt_server.uuid_to_bytes("11223344-5566-7788-99AA-BBCCDDEEFF00"))
