@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # BLE library using HCI commands and events
 #
 # Uses Bluez on Linux
@@ -1081,7 +1083,11 @@ class BluetoothLEConnection:
             print("Read by Group Type Response")
             start_handle = to_u16(data, 1)
             end_handle = to_u16(data, 3)
-            primary_service_request = to_u16(data, 5)
-            if primary_service_request == 0x2800:
+            gatt_attribute_type = to_u16(data, 5)
+            if gatt_attribute_type == 0x2800:
                 print("Get primary services for handles 0x{:X} to 0x{:X}".format(start_handle, end_handle))
                 self.do_att_group_type_rsp(start_handle, end_handle)
+            elif gatt_attribute_type == 0x2801:
+                print "Secondary Service Not Currently Implemented"
+            elif gatt_attribute_type == 0x2803
+                print("Get Characteristics for handles 0x{:X} to 0x{:X}".format(start_handle, end_handle))
