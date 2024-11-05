@@ -13,6 +13,7 @@ from time import sleep
 from hci_socket import *
 #from hci_uart import *
 from random import randint
+from ble_helper import ATTErrorCode
 
 ### constants
 
@@ -372,8 +373,14 @@ class BluetoothLEConnection:
         status = to_u8(data, 4)
         key_x_coordinate = to_data(data, 5, 37)  # 32 octets
         key_y_coordinate = to_data(data, 37, 69) # 32 octets
-        print(event_text, "Read Local Public Key Complete")
+        print("Read Local Public Key Complete")
 
+    def on_le_update_complete(self, data):
+        status = to_u8(data, 4)
+        handle = to_u16(data, 5)
+        connection_interval = to_u16(data, 7)
+        supervision_timeout = to_u16(data, 9)
+        print("Connection Update Complete")
 
     def on_hci_meta_event(self, data):
         # Specification v5.4  Vol 4 Part E 7.7.65 LE Meta event (p2235)
@@ -913,7 +920,7 @@ class BluetoothLEConnection:
     #
     
     def do_att_error_rsp(self, request_opcode, handle, error_code):
-        print(att_text, "Not Found RSP")
+        print(att_text, "Error RSP")
 
         packet =  from_u8(0x01) 
         packet += from_u8(request_opcode)     
@@ -934,7 +941,7 @@ class BluetoothLEConnection:
         #     opcode                                        1 octet
         #     client receive mtu size                       2 octets
 
-        print(att_text, "ATT EXCHANGE MTU REQ")
+        print(att_text, "EXCHANGE MTU REQ")
 
         packet =  from_u8  (0x02)           # ATT opcode ATT_EXCHANGE_MTU_REQ
         packet += from_u16 (mtu_size)       # MTU size requested
@@ -965,7 +972,7 @@ class BluetoothLEConnection:
         #     starting handle                               2 octets
         #     ending handle                                 2 octets
 
-        print(att_text, "ATT FIND INFORMATION REQ")
+        print(att_text, "FIND INFORMATION REQ")
         
         packet =  from_u8  (0x04)          # ATT opcode ATT_FIND_INFORMATION_REQ
         packet += from_u16 (start_handle)
@@ -989,7 +996,7 @@ class BluetoothLEConnection:
         #     ending handle                                 2 octets
         #     attribute type (UUID)                         2 or 16 octets
 
-        print(att_text, "ATT READ BY TYPE REQ")
+        print(att_text, "READ BY TYPE REQ")
         
         packet =  from_u8  (0x08)               # ATT opcode ATT_READ_BY_TYPE_REQ
         packet += from_u16 (start_handle)
@@ -1000,16 +1007,24 @@ class BluetoothLEConnection:
         self.send(cmd)
 
     def do_att_read_by_type_rsp(self, start_handle, end_handle, uuid):
-        print(att_text, "ATT READ BY TYPE RSP")
-        handle, data = self.gatt_server.read_uuid_value(start_handle, end_handle, uuid)
-        if handle == None:
-            print("No match {} found bewtween 0x{:X} and 0x{:X}".format(uuid, start_handle, end_handle))
-            self.do_att_error_rsp(0x10, start_handle, 0x0A)  # 0x0A = Attribute not found
-            return
+        print(att_text, "READ BY TYPE RSP")
 
-        packet =  from_u8  (0x09)
-        packet += from_u16 (handle)
-        packet += data        
+        if uuid == 0x2803:
+            # property_byte
+            # value_handle
+            # char_uuid
+            pass
+        
+        else:
+            handle, data = self.gatt_server.read_uuid_value(start_handle, end_handle, uuid)
+            if handle == None:
+                print("No match {} found bewtween 0x{:X} and 0x{:X}".format(uuid, start_handle, end_handle))
+                self.do_att_error_rsp(0x10, start_handle, ATTErrorCode.ATTRIBUTE_NOT_FOUND) 
+                return
+            packet =  from_u8  (0x09)
+            packet += from_u8(3 + len(data))
+            packet += from_u16 (handle)
+            packet += data        
                
         cmd = make_acl(self.handle, len(packet)) + packet
         self.send(cmd)
@@ -1034,27 +1049,33 @@ class BluetoothLEConnection:
         cmd = make_acl(self.handle, len(packet)) + packet
         self.send(cmd)
 
-    def do_att_group_type_rsp(self, start_handle, end_handle):
+    def do_att_group_type_rsp(self, gatt_uuid, start_handle, end_handle):
         print(att_text, "GROUP TYPE RSP")
-
         packet =  from_u8  (0x11)    
-        handle_range = self.gatt_server.get_service_handle_range(start_handle)
-        return_start_handle = handle_range[0]
-        return_end_handle = handle_range[1]
-        if return_start_handle == None or return_end_handle == None:
-            print("No handles found starting at 0x{:X}".format(start_handle))
-            self.do_att_error_rsp(0x10, start_handle, 0x0A)  # 0x0A = Attribute not found
+        if gatt_uuid == 0x2800:
+            print("Get primary services for handles 0x{:X} to 0x{:X}".format(start_handle, end_handle))
+            handle_range = self.gatt_server.get_service_handle_range(start_handle)
+            return_start_handle = handle_range[0]
+            return_end_handle = handle_range[1]
+            if return_start_handle == None or return_end_handle == None:
+                print("No handles found starting at 0x{:X}".format(start_handle))
+                self.do_att_error_rsp(0x10, start_handle, ATTErrorCode.ATTRIBUTE_NOT_FOUND)
+                return
+            print("Handles 0x{:X} 0x{:X}".format(return_start_handle, return_end_handle))
+            if end_handle < return_end_handle:
+                print("Service handle 0x{:X} larger than request max 0x{:X}, truncating".format(end_handle, return_end_handle))
+                return_end_handle = end_handle
+            primary_service = handle_range[2]
+            att_length = 4 + self.gatt_server.get_uuid_byte_length(primary_service)
+            packet += from_u8(att_length)  
+            packet += from_u16(return_start_handle)
+            packet += from_u16(return_end_handle)
+            packet += self.gatt_server.uuid_string_to_bytes(primary_service)    
+        else:
+            print("GATT Attribute 0x{:X} Not Implemented".format(gatt_uuid))
+            self.do_att_error_rsp(0x10, start_handle, ATTErrorCode.INVALID_HANDLE)
             return
-        print("Handles 0x{:X} 0x{:X}".format(return_start_handle, return_end_handle))
-        if end_handle < return_end_handle:
-            print("Service handle 0x{:X} larger than request max 0x{:X}, truncating".format(end_handle, return_end_handle))
-            return_end_handle = end_handle
-        primary_service = handle_range[2]
-        att_length = 4 + self.gatt_server.get_uuid_byte_length(primary_service)
-        packet += from_u8(att_length)  
-        packet += from_u16(return_start_handle)
-        packet += from_u16(return_end_handle)
-        packet += self.gatt_server.uuid_string_to_bytes(primary_service)
+
         cmd = make_acl(self.handle, len(packet)) + packet
         self.send(cmd)
 
@@ -1081,11 +1102,8 @@ class BluetoothLEConnection:
             start_handle = to_u16(data, 1)
             end_handle = to_u16(data, 3)
             gatt_attribute_type = to_u16(data, 5)
-            if gatt_attribute_type == 0x2800:
-                print("Get primary services for handles 0x{:X} to 0x{:X}".format(start_handle, end_handle))
-                self.do_att_group_type_rsp(start_handle, end_handle)
-            elif gatt_attribute_type == 0x2801:
-                print("Secondary Service Not Currently Implemented")
-                self.do_att_error_rsp(0x10, start_handle, 0x0A)  # 0x0A = Attribute not found
-            elif gatt_attribute_type == 0x2803:
-                print("Get Characteristics for handles 0x{:X} to 0x{:X}".format(start_handle, end_handle))
+            if len(data[5:]) > 2:
+                print("Erroneous GATT Attribute {}".format(gatt_attribute_type))
+                self.do_att_error_rsp(0x10, start_handle, ATTErrorCode.ATTRIBUTE_NOT_FOUND)
+            else:
+                self.do_att_group_type_rsp(gatt_attribute_type, start_handle, end_handle)
