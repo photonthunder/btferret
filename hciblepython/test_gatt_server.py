@@ -40,7 +40,7 @@ class GattServer:
         cleaned_uuid = re.sub(r'[^0-9a-fA-F]', '', uuid)
         return int(len(cleaned_uuid)/2)
 
-    def uuid_to_bytes(self, uuid):
+    def uuid_string_to_bytes(self, uuid):
         cleaned_uuid = re.sub(r'[^0-9a-fA-F]', '', uuid)
         length_uuid = len(cleaned_uuid)
         if length_uuid != 32 and length_uuid != 4:
@@ -49,6 +49,33 @@ class GattServer:
         little_endian_bytes = byte_pairs[::-1]
         little_endian_bytes = bytes(int(byte, 16) for byte in little_endian_bytes)
         return little_endian_bytes
+
+    def uuid_bytes_to_string(self, uuid_bytes):
+        if len(uuid_bytes) == 2:
+            # Convert 2-byte UUID to a 4-character hex string
+            return f"{uuid_bytes[1]:02X}{uuid_bytes[0]:02X}"
+
+        elif len(uuid_bytes) == 16:
+            # Reverse the bytes and convert 16-byte UUID to string format with dashes
+            reversed_uuid_bytes = uuid_bytes[::-1]
+            uuid_str = ''.join(f"{b:02X}" for b in reversed_uuid_bytes)
+            return f"{uuid_str[0:8]}-{uuid_str[8:12]}-{uuid_str[12:16]}-{uuid_str[16:20]}-{uuid_str[20:32]}"
+
+        else:
+            raise ValueError("Invalid UUID length. UUID must be either 2 or 16 bytes.")
+
+    def read_uuid_value(self, start_handle, end_handle, target_uuid):     
+        for handle in range(start_handle, end_handle + 1):
+            if handle in self.gatt_table:
+                uuid = self.gatt_table[handle].get("uuid")
+                # print(uuid, target_uuid)
+                if uuid == target_uuid:
+                    value = self.gatt_table[handle].get("value")
+                    if value == None:
+                        continue
+                    # print(value)
+                    return handle, value.encode('utf-8')
+        return None, None
 
     def add_service(self, handle, service_type, uuid, value=None):
         self.gatt_table[handle] = {"type": service_type, "uuid": uuid, "value": value}
@@ -61,28 +88,19 @@ class GattServer:
         
         for handle in sorted(self.gatt_table.keys()):
             if handle < start_handle:
-                continue  # Skip handles until we reach the start handle
-            
+                continue 
             attribute = self.gatt_table[handle]
-            
             if attribute["type"] == "primary_service":
                 if in_service:
-                    # If we find a new primary service, return the last handle of the previous service
                     return (first_handle, last_handle, primary_service)
-                # Start of a new service
                 first_handle = handle
                 primary_service = attribute["uuid"]
                 in_service = True
-            
             if in_service:
-                # Update the last handle as we iterate through the service
                 last_handle = handle
-        
         if first_handle is None:
             print("No primary service found starting at handle 0x{:X}.".format(start_handle))
             return None, None, ""
-        
-        # Return the first and last handle of the found service
         return (first_handle, last_handle, primary_service)
 
 
@@ -91,4 +109,10 @@ if __name__ == "__main__":
     first, last, primary = gatt_server.get_service_handle_range(0x000C)
     print("First Handle = 0x{:X}, Second Handle = 0x{:X}, Primary = {}", first, last, primary)
     print(gatt_server.get_uuid_byte_length(primary))
-    print(gatt_server.uuid_to_bytes("11223344-5566-7788-99AA-BBCCDDEEFF00"))
+    uuid_bytes = gatt_server.uuid_string_to_bytes("2A50")
+    print(uuid_bytes)
+    print (gatt_server.uuid_bytes_to_string(uuid_bytes))
+    uuid_bytes = gatt_server.uuid_string_to_bytes("11223344-5566-7788-99AA-BBCCDDEEFF00")
+    print(uuid_bytes)
+    print (gatt_server.uuid_bytes_to_string(uuid_bytes))
+    print(gatt_server.read_uuid_value(0x0003, 0x007, "2A00"))
