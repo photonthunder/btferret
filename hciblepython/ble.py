@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # BLE library using HCI commands and events
 #
 # Uses Bluez on Linux
@@ -1088,6 +1086,7 @@ class BluetoothLEConnection:
                 print("Get primary services for handles 0x{:X} to 0x{:X}".format(start_handle, end_handle))
                 self.do_att_group_type_rsp(start_handle, end_handle)
             elif gatt_attribute_type == 0x2801:
-                print "Secondary Service Not Currently Implemented"
-            elif gatt_attribute_type == 0x2803
+                print("Secondary Service Not Currently Implemented")
+                self.do_att_error_rsp(0x10, start_handle, 0x0A)  # 0x0A = Attribute not found
+            elif gatt_attribute_type == 0x2803:
                 print("Get Characteristics for handles 0x{:X} to 0x{:X}".format(start_handle, end_handle))

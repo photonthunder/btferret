@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from ble import *
 from test_gatt_server import GattServer
 import sys
