@@ -13,7 +13,6 @@ from time import sleep
 from hci_socket import *
 #from hci_uart import *
 from random import randint
-import re
 
 ### constants
 

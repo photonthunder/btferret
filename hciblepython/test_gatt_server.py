@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import re 
-
 class GattServer:
     def __init__(self):
         self.gatt_table = None
@@ -39,11 +37,11 @@ class GattServer:
         }
 
     def get_uuid_byte_length(self, uuid):
-        cleaned_uuid = re.sub(r'[^0-9a-fA-F]', '', uuid)
+        cleaned_uuid = uuid.replace('-', '')
         return int(len(cleaned_uuid)/2)
 
     def uuid_string_to_bytes(self, uuid):
-        cleaned_uuid = re.sub(r'[^0-9a-fA-F]', '', uuid)
+        cleaned_uuid = uuid.replace('-', '')
         length_uuid = len(cleaned_uuid)
         if length_uuid != 32 and length_uuid != 4:
             raise ValueError("Invalid UUID length {}, must be 128-bit (32 hex characters).".format(length_uuid))
@@ -109,7 +107,7 @@ class GattServer:
 if __name__ == "__main__":
     gatt_server = GattServer()
     first, last, primary = gatt_server.get_service_handle_range(0x000C)
-    print("First Handle = 0x{:X}, Second Handle = 0x{:X}, Primary = {}", first, last, primary)
+    print("First Handle = 0x{:X}, Second Handle = 0x{:X}, Primary = {}".format(first, last, primary))
     print(gatt_server.get_uuid_byte_length(primary))
     uuid_bytes = gatt_server.uuid_string_to_bytes("2A50")
     print(uuid_bytes)
