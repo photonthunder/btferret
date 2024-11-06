@@ -1010,10 +1010,7 @@ class BluetoothLEConnection:
         print(att_text, "READ BY TYPE RSP")
 
         if uuid == 0x2803:
-            # property_byte
-            # value_handle
-            # char_uuid
-            pass
+            property_byte, value_handle, char_uuid = self.gatt_server.read_char_uuid_value(start_handle, end_handle)
         
         else:
             handle, data = self.gatt_server.read_uuid_value(start_handle, end_handle, uuid)

@@ -7,34 +7,57 @@ class GattServer:
 
     def getTestTable(self):
         self.gatt_table = {
-            # Primary Service: Generic Access (0x1800)
+            # Generic Access Service (0x1800)
             0x0003: {"type": "primary_service", "uuid": "1800", "value": None},
-            0x0004: {"type": "characteristic_declaration", "uuid": "2A00", "properties": "read", "value_handle": 0x0003},
+            0x0004: {"type": "characteristic_declaration", "uuid": "2A00", "properties": "read", "value_handle": 0x0005},
             0x0005: {"type": "characteristic_value", "uuid": "2A00", "value": "MyDevice"},  # Device Name
-            0x0006: {"type": "characteristic_declaration", "uuid": "2A01", "properties": "read", "value_handle": 0x0005},
+            0x0006: {"type": "characteristic_declaration", "uuid": "2A01", "properties": "read", "value_handle": 0x0007},
             0x0007: {"type": "characteristic_value", "uuid": "2A01", "value": "0000"},  # Appearance
 
-            # Primary Service: Generic Attribute (0x1801)
+            # Generic Attribute Service (0x1801)
             0x0008: {"type": "primary_service", "uuid": "1801", "value": None},
-            0x0009: {"type": "characteristic_declaration", "uuid": "2A05", "properties": "indicate", "value_handle": 0x0008},
+            0x0009: {"type": "characteristic_declaration", "uuid": "2A05", "properties": "indicate", "value_handle": 0x000A},
             0x000A: {"type": "characteristic_value", "uuid": "2A05", "value": None},  # Service Changed
+            0x000B: {"type": "descriptor", "uuid": "2902", "value": None},
 
-            # Primary Service: Device Information (0x180A)
-            0x000B: {"type": "primary_service", "uuid": "180A", "value": None},
-            0x000C: {"type": "characteristic_declaration", "uuid": "2A50", "properties": "read", "value_handle": 0x000B},
-            0x000D: {"type": "characteristic_value", "uuid": "2A50", "value": "1234-5678-9012"},  # PnP ID
+            # Device Information Service (0x180A)
+            0x000C: {"type": "primary_service", "uuid": "180A", "value": None},
+            0x000D: {"type": "characteristic_declaration", "uuid": "2A50", "properties": "read", "value_handle": 0x000E},
+            0x000E: {"type": "characteristic_value", "uuid": "2A50", "value": "1234-5678-9012"},  # PnP ID
 
             # Custom Service (11223344-5566-7788-99AA-BBCCDDEEFF00)
-            0x000E: {"type": "primary_service", "uuid": "11223344-5566-7788-99AA-BBCCDDEEFF00", "value": None},
-            0x000F: {"type": "characteristic_declaration", "uuid": "ABCD", "properties": "read|write", "value_handle": 0x000E},
-            0x0010: {"type": "characteristic_value", "uuid": "ABCD", "value": "Initial Control"},  # Control characteristic
-            0x0011: {"type": "characteristic_declaration", "uuid": "CDEF", "properties": "read|notify", "value_handle": 0x0010},
-            0x0012: {"type": "characteristic_value", "uuid": "CDEF", "value": "Counter Data"},  # Counter characteristic
-            0x0013: {"type": "characteristic_declaration", "uuid": "DEAF", "properties": "read|notify", "value_handle": 0x0012},
-            0x0014: {"type": "characteristic_value", "uuid": "DEAF", "value": "Sensor Data"},  # Data characteristic
-            0x0015: {"type": "characteristic_declaration", "uuid": "DCBA", "properties": "read|notify", "value_handle": 0x0014},
-            0x0016: {"type": "characteristic_value", "uuid": "DCBA", "value": "Response Data"},  # Response characteristic
+            0x000F: {"type": "primary_service", "uuid": "11223344-5566-7788-99AA-BBCCDDEEFF00", "value": None},
+            0x0010: {"type": "characteristic_declaration", "uuid": "ABCD", "properties": "read|write", "value_handle": 0x0011},
+            0x0011: {"type": "characteristic_value", "uuid": "ABCD", "value": "Initial Control"},  # Control characteristic
+            0x0012: {"type": "characteristic_declaration", "uuid": "CDEF", "properties": "read|notify", "value_handle": 0x0013},
+            0x0013: {"type": "characteristic_value", "uuid": "CDEF", "value": "Counter Data"},  # Counter characteristic
+            0x0014: {"type": "descriptor", "uuid": "2902", "value": None},
+            0x0015: {"type": "characteristic_declaration", "uuid": "DEAF", "properties": "read|notify", "value_handle": 0x0016},
+            0x0016: {"type": "characteristic_value", "uuid": "DEAF", "value": "Sensor Data"},  # Data characteristic
+            0x0017: {"type": "descriptor", "uuid": "2902", "value": None},
+            0x0018: {"type": "characteristic_declaration", "uuid": "DCBA", "properties": "read|notify", "value_handle": 0x0019},
+            0x0019: {"type": "characteristic_value", "uuid": "DCBA", "value": "Response Data"},  # Response characteristic
+            0x001A: {"type": "descriptor", "uuid": "2902", "value": None},
         }
+
+    def char_prop_to_byte(self, properties):
+        prop_flags = {
+            "broadcast": 0x01,
+            "read": 0x02,
+            "write_without_response": 0x04,
+            "write": 0x08,
+            "notify": 0x10,
+            "indicate": 0x20,
+            "authenticated_signed_writes": 0x40,
+            "extended_properties": 0x80,
+        }
+
+        prop_byte = 0x00
+        for prop in properties.split():
+            if prop in prop_flags:
+                prop_byte |= prop_flags[prop]
+
+        return prop_byte
 
     def get_uuid_byte_length(self, uuid):
         cleaned_uuid = uuid.replace('-', '')
@@ -77,6 +100,21 @@ class GattServer:
                     return handle, value.encode('utf-8')
         return None, None
 
+    def read_char_uuid_value(self, start_handle, end_handle):
+        characteristics = []
+
+        for handle, attr in self.gatt_table.items():
+            if start_handle <= handle <= end_handle and attr["type"] == "characteristic_declaration":
+                print(handle, attr)
+                properties = attr.get("properties")
+                prop_byte = self.char_prop_to_byte(properties)
+                value_handle = attr.get("value_handle")
+                uuid = attr.get("uuid")
+                uuid_bytes = self.uuid_string_to_bytes(uuid)
+                characteristics.append((prop_byte, value_handle, uuid_bytes))
+        return characteristics
+
+
     def add_service(self, handle, service_type, uuid, value=None):
         self.gatt_table[handle] = {"type": service_type, "uuid": uuid, "value": value}
 
@@ -116,3 +154,4 @@ if __name__ == "__main__":
     print(uuid_bytes)
     print (gatt_server.uuid_bytes_to_string(uuid_bytes))
     print(gatt_server.read_uuid_value(0x0003, 0x007, "2A00"))
+    print(gatt_server.read_char_uuid_value(0x000E, 0x0016))
