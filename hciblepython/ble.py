@@ -1141,6 +1141,10 @@ class BluetoothLEConnection:
             self.do_att_read_by_type_rsp(start_handle, end_handle, uuid)
         elif att_opcode == 0x09:
             print("Read by Type RSP (0x09) - should not get from client")
+        elif att_opcode == 0x0A:
+            start_handle = to_u16(data, 1)
+            print(att_req_text, "READ (0x{:02X})".format(att_opcode))
+
           
         elif att_opcode == 0x10:
             start_handle = to_u16(data, 1)
