@@ -167,7 +167,7 @@ class GattServer:
                     print("End of Handles")
                     last_handle = 0xFFFF
         if first_handle is None:
-            print("No primary service found starting at handle 0x{:X}.".format(start_handle))
+            print("No primary service found starting at handle 0x{:04X}.".format(start_handle))
             return None, None, ""
         return (first_handle, last_handle, primary_service)
 
@@ -175,7 +175,7 @@ class GattServer:
 if __name__ == "__main__":
     gatt_server = GattServer()
     first, last, primary = gatt_server.get_service_handle_range(0x000C)
-    print("First Handle = 0x{:X}, Second Handle = 0x{:X}, Primary = {}".format(first, last, primary))
+    print("First Handle = 0x{:04X}, Second Handle = 0x{:04X}, Primary = {}".format(first, last, primary))
     print(gatt_server.get_uuid_byte_length(primary))
     uuid_bytes = gatt_server.uuid_string_to_bytes("2A50")
     print(uuid_bytes)
