@@ -1037,16 +1037,16 @@ class BluetoothLEConnection:
             else:
                 len_char_item = len(char_decl)
                 packet += from_u8(7) 
-                for idx, char_item in enumerate(char_decl):
-                    handle, prop_byte, value_handle, char_uuid = char_item
-                    # print("Handle 0x{:X}:".format(handle))
-                    packet += from_u16(handle)
-                    # print("Property Byte: 0x{:X}".format(prop_byte))
-                    packet += from_u8(prop_byte)
-                    # print("Value Handle: 0x{:X}".format(value_handle))
-                    packet += from_u16(value_handle)
-                    # print("UUID Bytes: {}".format(char_uuid))
-                    packet += char_uuid
+                # for idx, char_item in enumerate(char_decl):
+                handle, prop_byte, value_handle, char_uuid = char_decl
+                # print("Handle 0x{:X}:".format(handle))
+                packet += from_u16(handle)
+                # print("Property Byte: 0x{:X}".format(prop_byte))
+                packet += from_u8(prop_byte)
+                # print("Value Handle: 0x{:X}".format(value_handle))
+                packet += from_u16(value_handle)
+                # print("UUID Bytes: {}".format(char_uuid))
+                packet += char_uuid
         
         else:
             handle, data = self.gatt_server.read_uuid_value(start_handle, end_handle, uuid)
@@ -1117,21 +1117,21 @@ class BluetoothLEConnection:
         print("ACL data:      ", as_hex(data))
         att_opcode = to_u8(data, 0)
         if att_opcode == 0x02:
-            print(att_rsp_text, "Exchange MTU (0x{:X})".format(att_opcode))
+            print(att_req_text, "Exchange MTU (0x{:X})".format(att_opcode))
             client_rx_mtu = to_u16(data, 1)
             self.do_att_exchange_mtu_rsp()
         elif att_opcode == 0x03:
             print("Warning: Exchange MTU RSP (0x03) - should not get from client")
             # server_rx_mtu = to_u16(data, 1)
         elif att_opcode == 0x04:
-            print(att_rsp_text, "Find Information (0x{:X})".format(att_opcode))
+            print(att_req_text, "Find Information (0x{:X})".format(att_opcode))
             start_handle = to_u16(data, 1)
             end_handle = to_u16(data, 3)
             self.do_att_find_information_rsp(start_handle, end_handle)
         elif att_opcode == 0x05:
             print("Warning: Find Information RSP (0x05) - should not get from client")      
         elif att_opcode == 0x06:
-            print(att_rsp_text, "Find by Type Value (0x{:X})".format(att_opcode))
+            print(att_req_text, "Find by Type Value (0x{:X})".format(att_opcode))
             start_handle = to_u16(data, 1)
             end_handle = to_u16(data, 3)
             att_uuid = to_u16(data, 5)
@@ -1142,7 +1142,7 @@ class BluetoothLEConnection:
             start_handle = to_u16(data, 1)
             end_handle = to_u16(data, 3)
             uuid = self.gatt_server.uuid_bytes_to_string(data[5:])
-            print(att_rsp_text, "Read by Type (0x{:X}), UUID = {}".format(att_opcode, uuid))
+            print(att_req_text, "Read by Type (0x{:X}), UUID = {}".format(att_opcode, uuid))
             self.do_att_read_by_type_rsp(start_handle, end_handle, uuid)
         elif att_opcode == 0x09:
             print("Read by Type RSP (0x09) - should not get from client")  
@@ -1150,7 +1150,7 @@ class BluetoothLEConnection:
             start_handle = to_u16(data, 1)
             end_handle = to_u16(data, 3)
             uuid = self.gatt_server.uuid_bytes_to_string(data[5:])
-            print(att_rsp_text, "Read by Group Request (0x{:X}), UUID = {}".format(att_opcode, uuid))
+            print(att_req_text, "Read by Group Request (0x{:X}), UUID = {}".format(att_opcode, uuid))
             self.do_att_group_type_rsp(uuid, start_handle, end_handle)
         elif att_opcode == 0x11:
             print("Warning: Read by Group RSP (0x11) - should not get from client")  

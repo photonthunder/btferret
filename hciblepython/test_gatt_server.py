@@ -136,7 +136,9 @@ class GattServer:
                 value_handle = attr.get("value_handle")
                 uuid = attr.get("uuid")
                 uuid_bytes = self.uuid_string_to_bytes(uuid)
-                characteristics.append((handle, prop_byte, value_handle, uuid_bytes))
+                #characteristics.append((handle, prop_byte, value_handle, uuid_bytes))
+                characteristics = [handle, prop_byte, value_handle, uuid_bytes]
+                break
         return characteristics
 
 
@@ -180,7 +182,8 @@ if __name__ == "__main__":
     print (gatt_server.uuid_bytes_to_string(uuid_bytes))
     uuid_bytes = gatt_server.uuid_string_to_bytes("11223344-5566-7788-99AA-BBCCDDEEFF00")
     print(uuid_bytes)
+    print(gatt_server.find_information(0x0010, 0x001A))
     print (gatt_server.uuid_bytes_to_string(uuid_bytes))
     print(gatt_server.read_uuid_value(0x0003, 0x007, "2A00"))
-    print(gatt_server.read_char_uuid_value(0x0008, 0x000B))
-    print(gatt_server.find_information(0x0010, 0x001A))
+    print(gatt_server.read_char_uuid_value(0x000F, 0xFFFF))
+    
