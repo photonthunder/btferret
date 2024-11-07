@@ -87,6 +87,33 @@ class GattServer:
         else:
             raise ValueError("Invalid UUID length. UUID must be either 2 or 16 bytes.")
 
+    def find_information(self, start_handle, end_handle):
+        uuid_format = None
+        handle_uuid = []
+        for handle in range(start_handle, end_handle + 1):
+            if handle in self.gatt_table:
+                uuid = self.gatt_table[handle].get("uuid")
+                uuid_byte = self.uuid_string_to_bytes(uuid)
+                len_uuid_byte = len(uuid_byte)
+                if uuid_format == None:
+                    if len_uuid_byte == 2:
+                        uuid_format = 0x01
+                    elif len_uuid_byte == 16:
+                        uuid_format = 0x02
+                    else:
+                        raise ValueError("Invalid UUID length {}".format(len_uuid_byte))
+                    handle_uuid.append([handle, uuid_byte])
+                else:
+                    if len_uuid_byte == 2 and uuid_format == 0x01:
+                        handle_uuid.append([handle, uuid_byte])
+                    elif len_uuid_byte == 16 and uuid_format == 0x02:
+                        handle_uuid.append([handle, uuid_byte])
+                    else:
+                        print("Can't send UUID of different length in find information packet")
+                        return uuid_format, handle_uuid
+        return uuid_format, handle_uuid
+
+
     def read_uuid_value(self, start_handle, end_handle, target_uuid):     
         for handle in range(start_handle, end_handle + 1):
             if handle in self.gatt_table:
@@ -102,16 +129,14 @@ class GattServer:
 
     def read_char_uuid_value(self, start_handle, end_handle):
         characteristics = []
-
         for handle, attr in self.gatt_table.items():
             if start_handle <= handle <= end_handle and attr["type"] == "characteristic_declaration":
-                print(handle, attr)
                 properties = attr.get("properties")
                 prop_byte = self.char_prop_to_byte(properties)
                 value_handle = attr.get("value_handle")
                 uuid = attr.get("uuid")
                 uuid_bytes = self.uuid_string_to_bytes(uuid)
-                characteristics.append((prop_byte, value_handle, uuid_bytes))
+                characteristics.append((handle, prop_byte, value_handle, uuid_bytes))
         return characteristics
 
 
@@ -123,7 +148,7 @@ class GattServer:
         last_handle = None
         primary_service = None
         in_service = False
-        
+        max_handle = max(sorted(self.gatt_table.keys()))
         for handle in sorted(self.gatt_table.keys()):
             if handle < start_handle:
                 continue 
@@ -136,6 +161,9 @@ class GattServer:
                 in_service = True
             if in_service:
                 last_handle = handle
+                if last_handle == max_handle:
+                    print("End of Handles")
+                    last_handle = 0xFFFF
         if first_handle is None:
             print("No primary service found starting at handle 0x{:X}.".format(start_handle))
             return None, None, ""
@@ -154,4 +182,5 @@ if __name__ == "__main__":
     print(uuid_bytes)
     print (gatt_server.uuid_bytes_to_string(uuid_bytes))
     print(gatt_server.read_uuid_value(0x0003, 0x007, "2A00"))
-    print(gatt_server.read_char_uuid_value(0x000E, 0x0016))
+    print(gatt_server.read_char_uuid_value(0x0008, 0x000B))
+    print(gatt_server.find_information(0x0010, 0x001A))
