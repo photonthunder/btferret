@@ -176,7 +176,7 @@ class BluetoothLEConnection:
         return self.user_socket.readable()
 
     def wait_listen(self, timeout = DATA_TIMEOUT):
-        quanta = 0.01
+        quanta = 0.001
         timer = timeout
         while timer > 0:
             timer -= quanta

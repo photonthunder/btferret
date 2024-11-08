@@ -1974,11 +1974,11 @@ int post_init_blue(void)
       sendhci(hidadvert,0);
       statusok(0,hidadvert);
       }
-    VPRINT "Get public keys\n");
-    sendhci(keypair,0);
-    readhci(0,IN_AUTOEND,0,2000,0);
-    n = findhci(IN_AUTOEND,0,INS_POP);
-    }
+    // VPRINT "Get public keys\n");
+    // sendhci(keypair,0);
+    // readhci(0,IN_AUTOEND,0,2000,0);
+    // n = findhci(IN_AUTOEND,0,INS_POP);
+     }
 
   flushprint();  
   return(1);  

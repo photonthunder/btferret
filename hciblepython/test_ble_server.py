@@ -9,6 +9,8 @@ import time
 import select
 import threading
 
+WAIT_TIME = 0.005
+
 class BLE(BluetoothLEConnection):
     def __init__(self, *args, **kwargs):
         test_gatt_server = GattServer()
@@ -35,32 +37,36 @@ class BLE(BluetoothLEConnection):
 
     def adv(self):
         self.reset()
-        self.wait_listen(0.5)
+        self.wait_listen(5 * WAIT_TIME)
         self.set_event_masks()
-        self.wait_listen(0.1)
+        self.wait_listen(WAIT_TIME)
         self.set_le_event_masks()
-        self.wait_listen(0.1)
+        self.wait_listen(WAIT_TIME)
         self.set_inquiry_timeouts()
-        self.wait_listen(0.1)
+        self.wait_listen(WAIT_TIME)
         self.set_page_scan_activity()
-        self.wait_listen(0.1)
+        self.wait_listen(WAIT_TIME)
         self.set_inquiry_scan_activity()
-        self.wait_listen(0.1)
+        self.wait_listen(WAIT_TIME)
         self.read_local_commands()
-        self.wait_listen(0.1)
+        self.wait_listen(WAIT_TIME)
         self.read_local_board_address()
-        self.wait_listen(0.1)
+        self.wait_listen(WAIT_TIME)
         self.read_le_buffer_size()
-        self.wait_listen(0.1)
+        self.wait_listen(WAIT_TIME)
         self.write_local_name(self.gatt_server.device_name)
-        self.wait_listen(0.1)
+        self.wait_listen(WAIT_TIME)
+
+        self.do_set_advertise_enable(True)
+        self.wait_listen(WAIT_TIME)
+
         self.set_random_address()
-        self.wait_listen(0.1)
+        self.wait_listen(WAIT_TIME)
         self.do_set_advertising_parameters(
             min_interval=0x0200, # 320 ms
             max_interval=0x0200, # 320 ms
         )
-        self.wait_listen(0.1)
+        self.wait_listen(WAIT_TIME)
         adv_data = bytes([
             0x14,  # Total Data Length
             0x08,  # Length of manufacturer-specific data
@@ -74,7 +80,7 @@ class BLE(BluetoothLEConnection):
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  # Padding
         ])
         self.do_set_advertising_data(adv_data)
-        self.wait_listen(0.1)
+        self.wait_listen(WAIT_TIME)
         scan_rsp_data = bytes([
             0x0B,  # Length of Complete Local Name
             0x09,  # Complete Local Name Type
@@ -90,17 +96,17 @@ class BLE(BluetoothLEConnection):
         ])
 
         self.do_set_scan_response_data(scan_rsp_data)
-        self.wait_listen(0.1)
-        self.read_local_public_key()
-        self.wait_listen(0.1)
+        self.wait_listen(WAIT_TIME)
+        # self.read_local_public_key()
+        self.wait_listen(WAIT_TIME)
         self.set_random_address()
-        #self.wait_listen(0.1)
+        self.wait_listen(WAIT_TIME)
         self.do_set_advertising_parameters(
             min_interval=0x0200, # 320 ms
             max_interval=0x0200, # 320 ms
             own_addr_type=0x01 # random address
         )
-        #self.wait_listen(0.1)
+        self.wait_listen(WAIT_TIME)
         # Advertising data in byte array format
         adv_data = bytes([
             0x17,  # Total Data Length
@@ -120,29 +126,29 @@ class BLE(BluetoothLEConnection):
             0x00, 0x00, 0x00, 0x00,   # Padding
         ])
         self.do_set_advertising_data(adv_data)
-        #self.wait_listen(0.1)
+        self.wait_listen(WAIT_TIME)
         self.do_set_advertise_enable(True)
-        self.wait_listen(0.1)
+        self.wait_listen(WAIT_TIME)
 
         try:
             print("Press ESC and then Enter to terminate the program...")
             while self.escape_pressed == False:
                 self.check_key_press()
-                self.wait_listen(0.1)
+                self.wait_listen(WAIT_TIME)
         finally:
             self.restore_terminal()
 
         # Closing steps
         self.do_set_advertise_enable(True)
-        self.wait_listen(0.5)
+        self.wait_listen(5 * WAIT_TIME)
         self.do_set_advertising_parameters(
             min_interval=0x0200, # 320 ms
             max_interval=0x0200, # 320 ms
             own_addr_type=0x00 # turn off random address
         )
-        self.wait_listen(0.1)
+        self.wait_listen(WAIT_TIME)
         self.do_set_advertise_enable(False)
-        self.wait_listen(0.1)
+        self.wait_listen(WAIT_TIME)
 
 
     

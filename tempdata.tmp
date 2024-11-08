@@ -495,3 +495,498 @@ Key press stop server...
 < HCI OGF=08 OCF=0A
       0000  01 0A 20 01 00 
 HCI closed
+
+
+
+
+
+New Code
+Initialising...
+Bluez down
+Open HCI user socket
+Open BTPROTO socket
+Bind to Bluetooth devid user channel
+Reset
+< HCI OGF=03 OCF=03
+      0000  01 03 0C 00 
+> Event 0E = 01 03 0C 00
+      0000  04 0E 04 01 03 0C 00 
+STATUS OK
+Set event masks
+< HCI OGF=03 OCF=01
+      0000  01 01 0C 08 FF FF FB FF - 07 F8 BF 3D 
+> Event 0E = 01 01 0C 00
+      0000  04 0E 04 01 01 0C 00 
+STATUS OK
+< HCI OGF=08 OCF=01
+      0000  01 01 20 08 FF 05 00 00 - 00 00 00 00 
+> Event 0E = 01 01 20 00
+      0000  04 0E 04 01 01 20 00 
+STATUS OK
+Set page/inquiry scan and timeouts = 10 secs
+< HCI OGF=03 OCF=1A
+      0000  01 1A 0C 01 03 
+> Event 0E = 01 1A 0C 00
+      0000  04 0E 04 01 1A 0C 00 
+STATUS OK
+< HCI OGF=03 OCF=16
+      0000  01 16 0C 02 A0 3F 
+> Event 0E = 01 16 0C 00
+      0000  04 0E 04 01 16 0C 00 
+STATUS OK
+< HCI OGF=03 OCF=18
+      0000  01 18 0C 02 00 40 
+> Event 0E = 01 18 0C 00
+      0000  04 0E 04 01 18 0C 00 
+STATUS OK
+HCI Socket OK
+Read local supported commands
+< HCI OGF=04 OCF=02
+      0000  01 02 10 00 
+> Event 0E = 01 02 10 00 FF FF FF 03 CC FF...
+      0000  04 0E 44 01 02 10 00 FF - FF FF 03 CC FF EF FF FF 
+      0010  FF EC 1F F2 0F E8 FE 3F - F7 8F FF 1C 00 04 00 61 
+      0020  F7 FF FF 7F F8 FF FF FF - FF 07 08 00 00 00 00 00 
+      0030  08 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      0040  00 00 00 00 00 00 00 
+Read local board address
+< HCI OGF=04 OCF=09
+      0000  01 09 10 00 
+> Event 0E = 01 09 10 00 B7 C8 3D 67 CF 2C
+      0000  04 0E 0A 01 09 10 00 B7 - C8 3D 67 CF 2C 
+Local Board Address = 2C:CF:67:3D:C8:B7:
+< HCI OGF=08 OCF=02
+      0000  01 02 20 00 
+> Event 0E = 01 02 20 00 FB 00 07
+      0000  04 0E 07 01 02 20 00 FB - 00 07 
+< HCI OGF=03 OCF=13
+      0000  01 13 0C F8 4D 79 20 4E - 65 77 20 50 69 00 00 00 
+      0010  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      0020  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      0030  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      0040  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      0050  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      0060  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      0070  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      0080  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      0090  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      00A0  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      00B0  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      00C0  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      00D0  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      00E0  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      00F0  00 00 00 00 00 00 00 00 - 00 00 00 00 
+Start Character addition
+Set up Primary Service 0
+Set up Primary Service 1
+Set up Primary Service 2
+Set up Primary Service 3
+Done Adding Characteristics
+pserv[0].uuid = 18:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:
+pserv[1].uuid = 18:1:0:0:0:0:0:0:0:0:0:0:0:0:0:0:
+pserv[2].uuid = 18:A:0:0:0:0:0:0:0:0:0:0:0:0:0:0:
+pserv[3].uuid = 11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:0:
+Start Post Init Blue
+Service changed 2A05 enabled
+Set LE random address in Post
+< HCI OGF=08 OCF=05
+      0000  01 05 20 06 F6 38 81 15 - 9C CB 
+Check Status
+> Event 0E = 01 13 0C 00
+      0000  04 0E 04 01 13 0C 00 
+> Event 0E = 01 05 20 00
+      0000  04 0E 04 01 05 20 00 
+STATUS OK
+Set LE advertising parameters
+< HCI OGF=08 OCF=06
+      0000  01 06 20 0F 00 02 00 02 - 00 00 00 00 00 00 00 00 
+      0010  00 07 00 
+> Event 0E = 01 06 20 00
+      0000  04 0E 04 01 06 20 00 
+STATUS OK
+Set LE advertising data with device name
+< HCI OGF=08 OCF=08
+      0000  01 08 20 20 14 08 FF 42 - C4 00 00 C0 DE 99 0A 08 
+      0010  4D 79 20 4E 65 77 20 50 - 69 00 00 00 00 00 00 00 
+      0020  00 00 00 00 
+> Event 0E = 01 08 20 00
+      0000  04 0E 04 01 08 20 00 
+STATUS OK
+Test Scan Response Data
+< HCI OGF=08 OCF=09
+      0000  01 09 20 20 0B 09 4D 79 - 20 42 4C 45 20 44 65 76 
+      0010  12 FF AA BB CC DD EE FF - 11 22 33 44 55 66 77 88 
+      0020  99 00 00 00 
+> Event 0E = 01 09 20 00
+      0000  04 0E 04 01 09 20 00 
+STATUS OK
+Get public keys
+< HCI OGF=08 OCF=25
+      0000  01 25 20 00 
+> Event 0F = 00 01 25 20
+      0000  04 0F 04 00 01 25 20 
+GOT local XY keys
+> Event 3E = 08 00 26 53 B3 21 DF FC E6 90...
+      0000  04 3E 42 08 00 26 53 B3 - 21 DF FC E6 90 A5 89 0F 
+      0010  DB FD 27 80 88 4B 52 81 - 9B 4D 57 0B DF 74 22 9E 
+      0020  88 65 4B 8F C8 22 A1 0F - 38 E6 2F 99 82 1B 37 BA 
+      0030  C3 14 6B 85 F4 91 35 0F - 96 5B 97 F7 7B B8 D9 F3 
+      0040  C7 A8 DA C9 BF 
+Init Blue Complete
+All screen output saved to bleserver_bug.txt file
+Set LE random address
+< HCI OGF=08 OCF=05
+      0000  01 05 20 06 A7 32 04 DB - 56 D3 
+< HCI OGF=08 OCF=06
+      0000  01 06 20 0F 00 02 00 02 - 00 01 00 00 00 00 00 00 
+      0010  00 07 00 
+< HCI OGF=08 OCF=08
+      0000  01 08 20 20 17 08 FF 34 - 12 00 00 C0 DE 99 02 01 
+      0010  06 0A 08 4D 79 20 4E 65 - 77 20 50 69 00 00 00 00 
+      0020  00 00 00 00 
+< HCI OGF=08 OCF=0A
+      0000  01 0A 20 01 01 
+Listening for LE clients to connect (ESC=stop server)
+Advertising as D3:56:DB:04:32:A7 My New Pi
+> Event 0E = 01 05 20 00
+      0000  04 0E 04 01 05 20 00 
+> Event 0E = 01 06 20 00
+      0000  04 0E 04 01 06 20 00 
+> Event 0E = 01 08 20 00
+      0000  04 0E 04 01 08 20 00 
+> Event 0E = 01 0A 20 00
+      0000  04 0E 04 01 0A 20 00 
+
+New Code
+Initialising...
+Bluez down
+Open HCI user socket
+Open BTPROTO socket
+Bind to Bluetooth devid user channel
+Reset
+< HCI OGF=03 OCF=03
+      0000  01 03 0C 00 
+> Event 0E = 01 03 0C 00
+      0000  04 0E 04 01 03 0C 00 
+STATUS OK
+Set event masks
+< HCI OGF=03 OCF=01
+      0000  01 01 0C 08 FF FF FB FF - 07 F8 BF 3D 
+> Event 0E = 01 01 0C 00
+      0000  04 0E 04 01 01 0C 00 
+STATUS OK
+< HCI OGF=08 OCF=01
+      0000  01 01 20 08 FF 05 00 00 - 00 00 00 00 
+> Event 0E = 01 01 20 00
+      0000  04 0E 04 01 01 20 00 
+STATUS OK
+Set page/inquiry scan and timeouts = 10 secs
+< HCI OGF=03 OCF=1A
+      0000  01 1A 0C 01 03 
+> Event 0E = 01 1A 0C 00
+      0000  04 0E 04 01 1A 0C 00 
+STATUS OK
+< HCI OGF=03 OCF=16
+      0000  01 16 0C 02 A0 3F 
+> Event 0E = 01 16 0C 00
+      0000  04 0E 04 01 16 0C 00 
+STATUS OK
+< HCI OGF=03 OCF=18
+      0000  01 18 0C 02 00 40 
+> Event 0E = 01 18 0C 00
+      0000  04 0E 04 01 18 0C 00 
+STATUS OK
+HCI Socket OK
+Read local supported commands
+< HCI OGF=04 OCF=02
+      0000  01 02 10 00 
+> Event 0E = 01 02 10 00 FF FF FF 03 CC FF...
+      0000  04 0E 44 01 02 10 00 FF - FF FF 03 CC FF EF FF FF 
+      0010  FF EC 1F F2 0F E8 FE 3F - F7 8F FF 1C 00 04 00 61 
+      0020  F7 FF FF 7F F8 FF FF FF - FF 07 08 00 00 00 00 00 
+      0030  08 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      0040  00 00 00 00 00 00 00 
+Read local board address
+< HCI OGF=04 OCF=09
+      0000  01 09 10 00 
+> Event 0E = 01 09 10 00 B7 C8 3D 67 CF 2C
+      0000  04 0E 0A 01 09 10 00 B7 - C8 3D 67 CF 2C 
+Local Board Address = 2C:CF:67:3D:C8:B7:
+< HCI OGF=08 OCF=02
+      0000  01 02 20 00 
+> Event 0E = 01 02 20 00 FB 00 07
+      0000  04 0E 07 01 02 20 00 FB - 00 07 
+< HCI OGF=03 OCF=13
+      0000  01 13 0C F8 4D 79 20 4E - 65 77 20 50 69 00 00 00 
+      0010  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      0020  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      0030  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      0040  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      0050  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      0060  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      0070  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      0080  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      0090  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      00A0  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      00B0  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      00C0  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      00D0  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      00E0  00 00 00 00 00 00 00 00 - 00 00 00 00 00 00 00 00 
+      00F0  00 00 00 00 00 00 00 00 - 00 00 00 00 
+Start Character addition
+Set up Primary Service 0
+Set up Primary Service 1
+Set up Primary Service 2
+Set up Primary Service 3
+Done Adding Characteristics
+pserv[0].uuid = 18:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:
+pserv[1].uuid = 18:1:0:0:0:0:0:0:0:0:0:0:0:0:0:0:
+pserv[2].uuid = 18:A:0:0:0:0:0:0:0:0:0:0:0:0:0:0:
+pserv[3].uuid = 11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:0:
+Start Post Init Blue
+Service changed 2A05 enabled
+Set LE random address in Post
+< HCI OGF=08 OCF=05
+      0000  01 05 20 06 10 2B D4 3C - 3A EE 
+Check Status
+> Event 0E = 01 13 0C 00
+      0000  04 0E 04 01 13 0C 00 
+> Event 0E = 01 05 20 00
+      0000  04 0E 04 01 05 20 00 
+STATUS OK
+Set LE advertising parameters
+< HCI OGF=08 OCF=06
+      0000  01 06 20 0F 00 02 00 02 - 00 00 00 00 00 00 00 00 
+      0010  00 07 00 
+> Event 0E = 01 06 20 00
+      0000  04 0E 04 01 06 20 00 
+STATUS OK
+Set LE advertising data with device name
+< HCI OGF=08 OCF=08
+      0000  01 08 20 20 14 08 FF 42 - C4 00 00 C0 DE 99 0A 08 
+      0010  4D 79 20 4E 65 77 20 50 - 69 00 00 00 00 00 00 00 
+      0020  00 00 00 00 
+> Event 0E = 01 08 20 00
+      0000  04 0E 04 01 08 20 00 
+STATUS OK
+Test Scan Response Data
+< HCI OGF=08 OCF=09
+      0000  01 09 20 20 0B 09 4D 79 - 20 42 4C 45 20 44 65 76 
+      0010  12 FF AA BB CC DD EE FF - 11 22 33 44 55 66 77 88 
+      0020  99 00 00 00 
+> Event 0E = 01 09 20 00
+      0000  04 0E 04 01 09 20 00 
+STATUS OK
+Init Blue Complete
+All screen output saved to bleserver_bug.txt file
+Set LE random address
+< HCI OGF=08 OCF=05
+      0000  01 05 20 06 A7 32 04 DB - 56 D3 
+< HCI OGF=08 OCF=06
+      0000  01 06 20 0F 00 02 00 02 - 00 01 00 00 00 00 00 00 
+      0010  00 07 00 
+< HCI OGF=08 OCF=08
+      0000  01 08 20 20 17 08 FF 34 - 12 00 00 C0 DE 99 02 01 
+      0010  06 0A 08 4D 79 20 4E 65 - 77 20 50 69 00 00 00 00 
+      0020  00 00 00 00 
+< HCI OGF=08 OCF=0A
+      0000  01 0A 20 01 01 
+Listening for LE clients to connect (ESC=stop server)
+Advertising as D3:56:DB:04:32:A7 My New Pi
+> Event 0E = 01 05 20 00
+      0000  04 0E 04 01 05 20 00 
+> Event 0E = 01 06 20 00
+      0000  04 0E 04 01 06 20 00 
+> Event 0E = 01 08 20 00
+      0000  04 0E 04 01 08 20 00 
+> Event 0E = 01 0A 20 00
+      0000  04 0E 04 01 0A 20 00 
+
+
+
+
+< HCI Command: Reset (0x03|0x0003) plen 0
+> HCI Event: Command Complete (0x0e) plen 4
+    Reset (0x03|0x0003) ncmd 1
+    status 0x00
+< HCI Command: Set Event Mask (0x03|0x0001) plen 8
+    Mask: 0xfffffbff07f8bf3d
+> HCI Event: Command Complete (0x0e) plen 4
+    Set Event Mask (0x03|0x0001) ncmd 1
+    status 0x00
+< HCI Command: LE Set Event Mask (0x08|0x0001) plen 8
+    mask 0xff05000000000000 (Reserved)
+> HCI Event: Command Complete (0x0e) plen 4
+    LE Set Event Mask (0x08|0x0001) ncmd 1
+    status 0x00
+< HCI Command: Write Scan Enable (0x03|0x001a) plen 1
+    enable 3
+> HCI Event: Command Complete (0x0e) plen 4
+    Write Scan Enable (0x03|0x001a) ncmd 1
+    status 0x00
+< HCI Command: Write Connection Accept Timeout (0x03|0x0016) plen 2
+    timeout 16288
+> HCI Event: Command Complete (0x0e) plen 4
+    Write Connection Accept Timeout (0x03|0x0016) ncmd 1
+    status 0x00
+< HCI Command: Write Page Timeout (0x03|0x0018) plen 2
+    timeout 16384
+> HCI Event: Command Complete (0x0e) plen 4
+    Write Page Timeout (0x03|0x0018) ncmd 1
+    status 0x00
+< HCI Command: Read Local Supported Commands (0x04|0x0002) plen 0
+> HCI Event: Command Complete (0x0e) plen 68
+    Read Local Supported Commands (0x04|0x0002) ncmd 1
+    status 0x00
+    Commands: ffffff03ccffefffffffec1ff20fe8fe3ff78fff1c00040061f7ffff7ff8ffff
+              ffff0708000000000008
+< HCI Command: Read BD ADDR (0x04|0x0009) plen 0
+> HCI Event: Command Complete (0x0e) plen 10
+    Read BD ADDR (0x04|0x0009) ncmd 1
+    status 0x00 bdaddr 2C:CF:67:3D:C8:B7
+< HCI Command: LE Read Buffer Size (0x08|0x0002) plen 0
+> HCI Event: Command Complete (0x0e) plen 7
+    LE Read Buffer Size (0x08|0x0002) ncmd 1
+    status 0x00 pktlen 0x00fb maxpkt 0x07
+< HCI Command: Write Local Name (0x03|0x0013) plen 248
+    name 'My New Pi'
+> HCI Event: Command Complete (0x0e) plen 4
+    Write Local Name (0x03|0x0013) ncmd 1
+    status 0x00
+< HCI Command: LE Set Random Address (0x08|0x0005) plen 6
+    bdaddr 78:03:24:F4:C0:D5
+> HCI Event: Command Complete (0x0e) plen 4
+    LE Set Random Address (0x08|0x0005) ncmd 1
+    status 0x00
+< HCI Command: LE Set Advertising Parameters (0x08|0x0006) plen 15
+    min 320.000ms, max 320.000ms
+    type 0x00 (ADV_IND - Connectable undirected advertising) ownbdaddr 0x00 (Public)
+    directbdaddr 0x00 (Public) 00:00:00:00:00:00
+    channelmap 0x07 filterpolicy 0x00 (Allow scan from any, connection from any)
+> HCI Event: Command Complete (0x0e) plen 4
+    LE Set Advertising Parameters (0x08|0x0006) ncmd 1
+    status 0x00
+< HCI Command: LE Set Advertising Data (0x08|0x0008) plen 32
+> HCI Event: Command Complete (0x0e) plen 4
+    LE Set Advertising Data (0x08|0x0008) ncmd 1
+    status 0x00
+< HCI Command: LE Set Scan Response Data (0x08|0x0009) plen 32
+> HCI Event: Command Complete (0x0e) plen 4
+    LE Set Scan Response Data (0x08|0x0009) ncmd 1
+    status 0x00
+< HCI Command: LE Set Random Address (0x08|0x0005) plen 6
+    bdaddr 21:22:7C:D5:71:2B
+< HCI Command: LE Set Advertising Parameters (0x08|0x0006) plen 15
+    min 320.000ms, max 320.000ms
+    type 0x00 (ADV_IND - Connectable undirected advertising) ownbdaddr 0x01 (Random)
+    directbdaddr 0x00 (Public) 00:00:00:00:00:00
+    channelmap 0x07 filterpolicy 0x00 (Allow scan from any, connection from any)
+< HCI Command: LE Set Advertising Data (0x08|0x0008) plen 31
+< HCI Command: LE Set Advertise Enable (0x08|0x000a) plen 1
+> HCI Event: Command Complete (0x0e) plen 4
+    LE Set Random Address (0x08|0x0005) ncmd 1
+    status 0x00
+> HCI Event: Command Complete (0x0e) plen 4
+    LE Set Advertising Parameters (0x08|0x0006) ncmd 1
+    status 0x00
+> HCI Event: Command Complete (0x0e) plen 4
+    LE Set Advertising Data (0x08|0x0008) ncmd 1
+    status 0x00
+> HCI Event: Command Complete (0x0e) plen 4
+    LE Set Advertise Enable (0x08|0x000a) ncmd 1
+    status 0x00
+
+
+
+
+
+< HCI Command: Reset (0x03|0x0003) plen 0
+> HCI Event: Command Complete (0x0e) plen 4
+    Reset (0x03|0x0003) ncmd 1
+    status 0x00
+< HCI Command: Set Event Mask (0x03|0x0001) plen 8
+    Mask: 0xfffffbff07f8bf3d
+> HCI Event: Command Complete (0x0e) plen 4
+    Set Event Mask (0x03|0x0001) ncmd 1
+    status 0x00
+< HCI Command: LE Set Event Mask (0x08|0x0001) plen 8
+    mask 0xff05000000000000 (Reserved)
+> HCI Event: Command Complete (0x0e) plen 4
+    LE Set Event Mask (0x08|0x0001) ncmd 1
+    status 0x00
+< HCI Command: Write Scan Enable (0x03|0x001a) plen 1
+    enable 3
+> HCI Event: Command Complete (0x0e) plen 4
+    Write Scan Enable (0x03|0x001a) ncmd 1
+    status 0x00
+< HCI Command: Write Connection Accept Timeout (0x03|0x0016) plen 2
+    timeout 16288
+> HCI Event: Command Complete (0x0e) plen 4
+    Write Connection Accept Timeout (0x03|0x0016) ncmd 1
+    status 0x00
+< HCI Command: Write Page Timeout (0x03|0x0018) plen 2
+    timeout 16384
+> HCI Event: Command Complete (0x0e) plen 4
+    Write Page Timeout (0x03|0x0018) ncmd 1
+    status 0x00
+< HCI Command: Read Local Supported Commands (0x04|0x0002) plen 0
+> HCI Event: Command Complete (0x0e) plen 68
+    Read Local Supported Commands (0x04|0x0002) ncmd 1
+    status 0x00
+    Commands: ffffff03ccffefffffffec1ff20fe8fe3ff78fff1c00040061f7ffff7ff8ffff
+              ffff0708000000000008
+< HCI Command: Read BD ADDR (0x04|0x0009) plen 0
+> HCI Event: Command Complete (0x0e) plen 10
+    Read BD ADDR (0x04|0x0009) ncmd 1
+    status 0x00 bdaddr 2C:CF:67:3D:C8:B7
+< HCI Command: LE Read Buffer Size (0x08|0x0002) plen 0
+> HCI Event: Command Complete (0x0e) plen 7
+    LE Read Buffer Size (0x08|0x0002) ncmd 1
+    status 0x00 pktlen 0x00fb maxpkt 0x07
+< HCI Command: Write Local Name (0x03|0x0013) plen 248
+    name 'My New Pi'
+> HCI Event: Command Complete (0x0e) plen 4
+    Write Local Name (0x03|0x0013) ncmd 1
+    status 0x00
+< HCI Command: LE Set Random Address (0x08|0x0005) plen 6
+    bdaddr EE:3A:3C:D4:2B:10
+> HCI Event: Command Complete (0x0e) plen 4
+    LE Set Random Address (0x08|0x0005) ncmd 1
+    status 0x00
+< HCI Command: LE Set Advertising Parameters (0x08|0x0006) plen 15
+    min 320.000ms, max 320.000ms
+    type 0x00 (ADV_IND - Connectable undirected advertising) ownbdaddr 0x00 (Public)
+    directbdaddr 0x00 (Public) 00:00:00:00:00:00
+    channelmap 0x07 filterpolicy 0x00 (Allow scan from any, connection from any)
+> HCI Event: Command Complete (0x0e) plen 4
+    LE Set Advertising Parameters (0x08|0x0006) ncmd 1
+    status 0x00
+< HCI Command: LE Set Advertising Data (0x08|0x0008) plen 32
+> HCI Event: Command Complete (0x0e) plen 4
+    LE Set Advertising Data (0x08|0x0008) ncmd 1
+    status 0x00
+< HCI Command: LE Set Scan Response Data (0x08|0x0009) plen 32
+> HCI Event: Command Complete (0x0e) plen 4
+    LE Set Scan Response Data (0x08|0x0009) ncmd 1
+    status 0x00
+< HCI Command: LE Set Random Address (0x08|0x0005) plen 6
+    bdaddr D3:56:DB:04:32:A7
+> HCI Event: Command Complete (0x0e) plen 4
+    LE Set Random Address (0x08|0x0005) ncmd 1
+    status 0x00
+< HCI Command: LE Set Advertising Parameters (0x08|0x0006) plen 15
+    min 320.000ms, max 320.000ms
+    type 0x00 (ADV_IND - Connectable undirected advertising) ownbdaddr 0x01 (Random)
+    directbdaddr 0x00 (Public) 00:00:00:00:00:00
+    channelmap 0x07 filterpolicy 0x00 (Allow scan from any, connection from any)
+> HCI Event: Command Complete (0x0e) plen 4
+    LE Set Advertising Parameters (0x08|0x0006) ncmd 1
+    status 0x00
+< HCI Command: LE Set Advertising Data (0x08|0x0008) plen 32
+> HCI Event: Command Complete (0x0e) plen 4
+    LE Set Advertising Data (0x08|0x0008) ncmd 1
+    status 0x00
+< HCI Command: LE Set Advertise Enable (0x08|0x000a) plen 1
+> HCI Event: Command Complete (0x0e) plen 4
+    LE Set Advertise Enable (0x08|0x000a) ncmd 1
+    status 0x00

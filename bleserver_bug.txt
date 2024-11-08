@@ -83,7 +83,7 @@ pserv[3].uuid = 11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:0:
 Service changed 2A05 enabled
 Set LE random address in Post
 < HCI OGF=08 OCF=05
-      0000  01 05 20 06 6C 52 55 CB - A0 CE 
+      0000  01 05 20 06 10 2B D4 3C - 3A EE 
 Check Status
 > Event 0E = 01 13 0C 00
       0000  04 0E 04 01 13 0C 00 
