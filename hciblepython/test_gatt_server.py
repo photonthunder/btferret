@@ -3,14 +3,16 @@
 class GattServer:
     def __init__(self):
         self.gatt_table = None
+        self.device_name = None
         self.getTestTable()
 
     def getTestTable(self):
+        self.device_name = "My Other Pi"
         self.gatt_table = {
             # Generic Access Service (0x1800)
             0x0003: {"type": "primary_service", "uuid": "1800", "value": None},
             0x0004: {"type": "characteristic_declaration", "uuid": "2A00", "properties": "read", "value_handle": 0x0005},
-            0x0005: {"type": "characteristic_value", "uuid": "2A00", "value": "MyDevice"},  # Device Name
+            0x0005: {"type": "characteristic_value", "uuid": "2A00", "value": self.device_name},  # Device Name
             0x0006: {"type": "characteristic_declaration", "uuid": "2A01", "properties": "read", "value_handle": 0x0007},
             0x0007: {"type": "characteristic_value", "uuid": "2A01", "value": "0000"},  # Appearance
 
@@ -39,6 +41,9 @@ class GattServer:
             0x0019: {"type": "characteristic_value", "uuid": "DCBA", "value": "Response Data"},  # Response characteristic
             0x001A: {"type": "descriptor", "uuid": "2902", "value": None},
         }
+
+    def get_device_name(self):
+        return self.device_name.encode('utf-8')
 
     def char_prop_to_byte(self, properties):
         prop_flags = {
