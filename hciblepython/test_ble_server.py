@@ -57,8 +57,8 @@ class BLE(BluetoothLEConnection):
         self.write_local_name(self.gatt_server.device_name)
         self.wait_listen(WAIT_TIME)
 
-        self.do_set_advertise_enable(True)
-        self.wait_listen(WAIT_TIME)
+        # self.do_set_advertise_enable(False)
+        # self.wait_listen(WAIT_TIME)
 
         self.set_random_address()
         self.wait_listen(WAIT_TIME)
@@ -98,7 +98,7 @@ class BLE(BluetoothLEConnection):
         self.do_set_scan_response_data(scan_rsp_data)
         self.wait_listen(WAIT_TIME)
         # self.read_local_public_key()
-        self.wait_listen(WAIT_TIME)
+        # self.wait_listen(WAIT_TIME)
         self.set_random_address()
         self.wait_listen(WAIT_TIME)
         self.do_set_advertising_parameters(
@@ -112,7 +112,8 @@ class BLE(BluetoothLEConnection):
             0x17,  # Total Data Length
             0x08,  # Length of manufacturer-specific data
             0xFF,  # Manufacturer-specific data type
-            0x34, 0x12,  # Manufacturer ID (0x1234)
+            # 0x42, 0xC4,  # Manufacturer ID (0xC442)
+            0x34, 0x12,  # Manufacturer ID (0xC442)
             0x00, 0x00, 0xC0, 0xDE, 0x99, # Manufacturer data
             0x02, # Length of Bluetooth Flags
             0x01, # Bluetooth Flags Type
@@ -120,13 +121,15 @@ class BLE(BluetoothLEConnection):
                     # Bit 1 (0x02): LE General Discoverable Mode (this is set).
                     # Bit 2 (0x04): BR/EDR Not Supported (this is set).
             0x0A,  # Length of complete local name
-            0x0B,  # Complete local name type
+            0x08,  # Complete local name type
             # 0x4D, 0x79, 0x20, 0x4F, 0x74, 0x68, 0x65, 0x72, 0x20, 0x50, 0x69,  # "My Other Pi"
             0x4D, 0x79, 0x20, 0x4E, 0x65, 0x77, 0x20, 0x50, 0x69,  # "My New Pi"
-            0x00, 0x00, 0x00, 0x00,   # Padding
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  # Padding
         ])
         self.do_set_advertising_data(adv_data)
         self.wait_listen(WAIT_TIME)
+
+        
         self.do_set_advertise_enable(True)
         self.wait_listen(WAIT_TIME)
 
