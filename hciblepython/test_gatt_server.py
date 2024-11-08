@@ -7,7 +7,7 @@ class GattServer:
         self.getTestTable()
 
     def getTestTable(self):
-        self.device_name = "My Other Pi"
+        self.device_name = "My New Pi"
         self.gatt_table = {
             # Generic Access Service (0x1800)
             0x0003: {"type": "primary_service", "uuid": "1800", "value": None},

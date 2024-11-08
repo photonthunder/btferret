@@ -130,15 +130,15 @@ class HCI():
     
  
 ###
-    def send_command(self, cmd):
-        opcode = cmd.opcode
-        self._socket.send(bytes(cmd))
-        while True:
-            r = self._socket.recv(MTU)
-            if r.type == 0x04 and r.code == 0xe and r.opcode == opcode:
-                if r.status != 0:
-                    raise BluetoothCommandError("Command %x failed with %x" % (opcode, r.status))  # noqa: E501
-                return r
+    # def send_command(self, cmd):
+    #     opcode = cmd.opcode
+    #     self._socket.send(bytes(cmd))
+    #     while True:
+    #         r = self._socket.recv(MTU)
+    #         if r.type == 0x04 and r.code == 0xe and r.opcode == opcode:
+    #             if r.status != 0:
+    #                 raise BluetoothCommandError("Command %x failed with %x" % (opcode, r.status))  # noqa: E501
+    #             return r
 ###                
 
 

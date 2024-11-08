@@ -193,10 +193,11 @@ class BluetoothLEConnection:
                 a = self.receive()
             sleep(quanta)
 
-    def send_command(self, command, packet):
+    def send_command(self, command, packet, wait = False):
         cmd = make_cmd(command, len(packet)) + packet
         self.send(cmd)
-        self.wait_complete(command, COMMAND_TIMEOUT)
+        if wait == True:
+            self.wait_complete(command, COMMAND_TIMEOUT)
 
     def check_le_compatable(self, data):
         if (to_u8(data, 32) & 0xA2 == 0xA2) and (to_u8(data, 33) & 0x3E == 0x3E):
