@@ -990,7 +990,7 @@ class BluetoothLEConnection:
             self.do_att_error_rsp(0x10, start_handle, ATTErrorCode.ATTRIBUTE_NOT_FOUND) 
             return
         packet =  from_u8(0x05)
-        packet += from_u16(uuid_format)
+        packet += from_u8(uuid_format)
         for each_handle_uuid in handle_uuid:
             handle, uuid = each_handle_uuid
             packet += from_u16(start_handle)
@@ -1108,6 +1108,11 @@ class BluetoothLEConnection:
         cmd = make_acl(self.handle, len(packet)) + packet
         self.send(cmd)
 
+    def do_att_write_rsp(self, handle, value)
+        self.gatt_server.write_char_value(handle, value)
+        packet =  from_u8(0x13)   
+        cmd = make_acl(self.handle, len(packet)) + packet
+        self.send(cmd)
 
     def on_acl_event(self, data):
         print("ACL data:      ", as_hex(data))
@@ -1145,8 +1150,9 @@ class BluetoothLEConnection:
         elif att_opcode == 0x0A:
             start_handle = to_u16(data, 1)
             print(att_req_text, "READ (0x{:02X})".format(att_opcode))
-
-          
+            print("Error: Still need to add this function")
+        elif att_opcode == 0x0B:
+            print("Warning Read RSP (0x0B) - should not get from client")
         elif att_opcode == 0x10:
             start_handle = to_u16(data, 1)
             end_handle = to_u16(data, 3)
@@ -1154,6 +1160,14 @@ class BluetoothLEConnection:
             print(att_req_text, "Read by Group Request (0x{:02X}), UUID = {}".format(att_opcode, uuid))
             self.do_att_group_type_rsp(uuid, start_handle, end_handle)
         elif att_opcode == 0x11:
-            print("Warning: Read by Group RSP (0x11) - should not get from client")  
+            print("Warning: Read by Group RSP (0x11) - should not get from client") 
+        elif att_opcode == 0x12:
+            handle = to_u16(data, 1)
+            value = data[3:]
+            print(att_req_text, "Write Request handle = 0x{:04X}, value = {}".format(handle, value))
+            self.do_att_write_rsp(handle, value)
+        elif att_opcode == 0x13:
+            print("Warning: Write RSP (0x13) - should not get from client") 
+
         else:
             print("Warning: ATT Opcode 0x{:02X} Unknown".format(att_opcode))

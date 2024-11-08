@@ -7,7 +7,22 @@ class GattServer:
         self.getTestTable()
 
     def getTestTable(self):
-        self.device_name = "My New Pi"
+        self.device_name = "My  Pi"
+        self.prop_flags = {
+            "broadcast": 0x01,
+            "read": 0x02,
+            "write_without_response": 0x04,
+            "write": 0x08,
+            "notify": 0x10,
+            "indicate": 0x20,
+            "authenticated_signed_writes": 0x40,
+            "extended_properties": 0x80,
+        }
+        self.cccd = {  # Client Characteristic Configuration Descriptor
+            "disable": 0x0000,
+            "notifictions": 0x0001,
+            "indications": 0x0002
+        }
         self.gatt_table = {
             # Generic Access Service (0x1800)
             0x0003: {"type": "primary_service", "uuid": "1800", "value": None},
@@ -46,23 +61,31 @@ class GattServer:
         return self.device_name.encode('utf-8')
 
     def char_prop_to_byte(self, properties):
-        prop_flags = {
-            "broadcast": 0x01,
-            "read": 0x02,
-            "write_without_response": 0x04,
-            "write": 0x08,
-            "notify": 0x10,
-            "indicate": 0x20,
-            "authenticated_signed_writes": 0x40,
-            "extended_properties": 0x80,
-        }
-
         prop_byte = 0x00
         for prop in properties.split():
-            if prop in prop_flags:
-                prop_byte |= prop_flags[prop]
-
+            if prop in self.prop_flags:
+                prop_byte |= self.prop_flags[prop]
         return prop_byte
+
+    def set_cccd(self, handle, value):
+        if value not in self.cccd.values():
+            raise ValueError("Invalid value for CCCD. Use 0x0001 for notifications, 0x0002 for indications, or 0x0000 to disable.")
+        value_string = None
+        for key, val in self.cccd.items():
+            if val == value:
+                value_string = key
+                break
+        if handle in self.gatt_table:
+            entry = self.gatt_table[handle]
+            if entry.get('type') == 'descriptor' and entry.get('uuid') == '2902':
+                entry['value'] = value_string
+                print(f"Updated CCCD at handle 0x{handle:04X}: {value_string}")
+            else:
+                print(f"Handle 0x{handle:04X} is not a valid CCCD descriptor (0x2902).")
+        else:
+            print(f"Handle 0x{handle:04X} not found in gatt_table.")
+        
+
 
     def get_uuid_byte_length(self, uuid):
         cleaned_uuid = uuid.replace('-', '')
