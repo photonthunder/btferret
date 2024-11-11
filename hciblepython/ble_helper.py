@@ -1,4 +1,5 @@
 from enum import IntEnum
+from enum import Enum
 
 class ATTErrorCode(IntEnum):
     INVALID_HANDLE = 0x01  # The attribute handle given was not valid on this server.
@@ -98,6 +99,18 @@ class BLEErrorCode(IntEnum):
     PACKET_TOO_LONG = 0x45
     TOO_LATE = 0x46
     TOO_EARLY = 0x47
+
+class GATTAttributes(Enum):
+    PRIMARY_SERVICE = "2800"
+    SECONDARY_SERVICE = "2801"
+    INCLUDE = "2802"
+    CHARACTERISTIC = "2803"
+    CHARACTERISTIC_EXT_PROPERTIES = "2900"
+    CHARACTERISTIC_USER_DESC = "2901"
+    CLIENT_CHAR_CONFIG = "2902"
+    SERVER_CHAR_CONFIG = "2903"
+    CHARACTERISTIC_PRESENTATION_FORMAT = "2904"
+    CHARACTERISTIC_AGGREGATE_FORMAT = "2905"
 
 # class BLECharacteristics(IntEnum):
 #     Here are the key characteristics typically found in the Device Information Service (0x180A):

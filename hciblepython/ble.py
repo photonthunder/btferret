@@ -14,6 +14,7 @@ from hci_socket import *
 #from hci_uart import *
 from random import randint
 from ble_helper import ATTErrorCode
+from ble_helper import GATTAttributes  
 
 ### constants
 
@@ -1028,7 +1029,7 @@ class BluetoothLEConnection:
     def do_att_read_by_type_rsp(self, start_handle, end_handle, uuid):
         print(att_rsp_text, "READ BY TYPE (0x09)")
         packet =  from_u8  (0x09)
-        if uuid == "2803":
+        if uuid == GATTAttributes.CHARACTERISTIC.value:
             char_decl = self.gatt_server.read_char_uuid_value(start_handle, end_handle)
             if not char_decl:
                 print("No Characteristic Decleration between 0x{:04X} and 0x{:04X}".format(start_handle, end_handle))
@@ -1081,7 +1082,7 @@ class BluetoothLEConnection:
     def do_att_group_type_rsp(self, gatt_uuid, start_handle, end_handle):
         print(att_rsp_text, "GROUP TYPE (0x11)")
         packet =  from_u8  (0x11)    
-        if gatt_uuid == "2800":
+        if gatt_uuid == GATTAttributes.PRIMARY_SERVICE.value:
             print("Get primary services for handles 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
             handle_range = self.gatt_server.get_service_handle_range(start_handle)
             return_start_handle = handle_range[0]
@@ -1108,7 +1109,7 @@ class BluetoothLEConnection:
         cmd = make_acl(self.handle, len(packet)) + packet
         self.send(cmd)
 
-    def do_att_write_rsp(self, handle, value)
+    def do_att_write_rsp(self, handle, value):
         self.gatt_server.write_char_value(handle, value)
         packet =  from_u8(0x13)   
         cmd = make_acl(self.handle, len(packet)) + packet
