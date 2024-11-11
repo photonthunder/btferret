@@ -7,6 +7,29 @@ class GattServer:
         self.device_name = None
         self.getTestTable()
 
+    def create_pnp_id(self, vendor_id_source = 0x01, vendor_id = 0x1234, product_id = 0x0203, product_version = 0x0001):
+        # vendor_id_source = 0x01   # Bluetooth SIG
+        # vendor_id = 0x1234        # Any value you want since we are not official
+        # product_id = 0x0203       # Product ID
+        # product_version = 0x0001  # Product Version
+
+        if not (0 <= vendor_id_source <= 0xFF):
+            raise ValueError("Vendor ID Source must be a 1-byte value (0-255).")
+        if not (0 <= vendor_id <= 0xFFFF):
+            raise ValueError("Vendor ID must be a 2-byte value (0-65535).")
+        if not (0 <= product_id <= 0xFFFF):
+            raise ValueError("Product ID must be a 2-byte value (0-65535).")
+        if not (0 <= product_version <= 0xFFFF):
+            raise ValueError("Product Version must be a 2-byte value (0-65535).")
+        
+        pnp_id = bytes([
+            vendor_id_source,                              # 1 byte for Vendor ID Source
+            vendor_id & 0xFF, (vendor_id >> 8) & 0xFF,     # 2 bytes for Vendor ID (little-endian)
+            product_id & 0xFF, (product_id >> 8) & 0xFF,   # 2 bytes for Product ID (little-endian)
+            product_version & 0xFF, (product_version >> 8) & 0xFF  # 2 bytes for Product Version (little-endian)
+        ])
+        return pnp_id
+
     def getTestTable(self):
         self.device_name = "My  Pi"
         self.prop_flags = {
@@ -19,6 +42,7 @@ class GattServer:
             "authenticated_signed_writes": 0x40,
             "extended_properties": 0x80,
         }
+
         self.perm_flags = {
             "read": 0x01,
             "write": 0x02,
@@ -29,12 +53,24 @@ class GattServer:
             "Authorization Required": 0x40,
 
         }
+
         self.cccd = {  # Client Characteristic Configuration Descriptor
             "disabled": 0x0000,
             "notifictions": 0x0001,
             "indications": 0x0002
         }
+
+        self.value_type {
+            "int": 0x01,
+            "string": 0x02,
+            "bytes": 0x04
+        }
+
         self.max_value_length = 247 # Bytes
+
+        self.pnp_id = self.create_pnp_id()
+
+        self.appearance = 0x0080 # Generic Computer (0x0080)
 
         # GATT Table
         # All Values are setup as strings except handles
@@ -54,9 +90,9 @@ class GattServer:
             # Generic Access Service (0x1800)
             0x0003: {"type": "primary_service", "uuid": "1800"},
             0x0004: {"type": "characteristic_declaration", "uuid": "2A00", "properties": "read", "constant": "True", "value_handle": 0x0005},
-            0x0005: {"type": "characteristic_value", "uuid": "2A00", "value": self.device_name},  # Device Name
+            0x0005: {"type": "characteristic_value", "uuid": "2A00", "value": self.device_name},  # Device Name (string)
             0x0006: {"type": "characteristic_declaration", "uuid": "2A01", "properties": "read", "constant": "True", "value_handle": 0x0007},
-            0x0007: {"type": "characteristic_value", "uuid": "2A01", "value": "0000"},  # Appearance
+            0x0007: {"type": "characteristic_value", "uuid": "2A01", "value": self.appearance},  # Appearance
 
             # Generic Attribute Service (0x1801)
             0x0008: {"type": "primary_service", "uuid": "1801"},
@@ -67,7 +103,7 @@ class GattServer:
             # Device Information Service (0x180A)
             0x000C: {"type": "primary_service", "uuid": "180A"},
             0x000D: {"type": "characteristic_declaration", "uuid": "2A50", "properties": "read", "value_handle": 0x000E},
-            0x000E: {"type": "characteristic_value", "uuid": "2A50", "value": "1234-5678-9012"},  # PnP ID
+            0x000E: {"type": "characteristic_value", "uuid": "2A50", "value": self.pnp_id},  # PnP ID
 
             # Custom Service (11223344-5566-7788-99AA-BBCCDDEEFF00)
             0x000F: {"type": "primary_service", "uuid": "11223344-5566-7788-99AA-BBCCDDEEFF00"},
