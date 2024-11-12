@@ -11,11 +11,17 @@ class ByteHelper:
     def as_printable(byts):
         return ''.join('{:c}'.format(a) if (a >= 32 and a <= 126) else '.' for a in byts) 
 
+    def to_u32(byts, ind):
+        return byts[ind] | (byts [ind+1] << 8) | (byts [ind+2] << 16) | (byts [ind+3] << 24)
+
     def to_u16 (byts, ind):
         return byts[ind] | (byts [ind+1] << 8)
 
     def to_u8 (byts, ind):
         return byts[ind]
+
+    def to_string(byts):
+        return byts.decode('utf-8')
 
     def to_addr(byts, ind):
         return as_addr(bytes(reversed(byts [ind: ind+6])))
@@ -39,9 +45,19 @@ class ByteHelper:
             return bytes ([val])
 
     def from_u16(val):
-        v1 = val & 0xff
+        v1 = val & 0xFF
         v2 = val >> 8
         return bytes([v1]) + bytes([v2])
+
+    def from_u32(val):
+        v1 = val & 0xFF
+        v2 = (val >> 8) & 0xFF
+        v3 = (val >> 16) & 0xFF
+        v4 = (val >> 24) & 0xFF
+        return bytes([v1]) + bytes([v2]) + bytes([v3]) + bytes([v4])
+
+    def from_string(val):
+        return val.encode("utf-8")
 
     def from_addr(val):
         return bytes(reversed(bytes.fromhex(val.replace(':', ''))))
