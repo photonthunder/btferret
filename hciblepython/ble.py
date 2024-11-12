@@ -14,6 +14,7 @@ from hci_socket import *
 #from hci_uart import *
 from random import randint
 from ble_helper import ATTErrorCode
+from ble_helper import ByteHelper
 from ble_helper import GATTAttributes  
 
 ### constants
@@ -43,71 +44,6 @@ att_rsp_text = "\nATT RSP:"
 att_req_text = "ATT REQ:"
 event_text = "Event:"
 
-
-################################################################
-#
-# Formatting routines
-#
-################################################################
-def as_addr (byts):
-    return ':'.join('{:02x}'.format (a) for a in byts)
-
-def as_hex (byts):
-    return ' '.join('{:02x}'.format (a) for a in byts)
-
-def as_printable(byts):
-    return ''.join('{:c}'.format(a) if (a >= 32 and a <= 126) else '.' for a in byts) 
-
-
-################################################################
-#
-# Data parsing routines
-#
-################################################################
-
-def to_u16 (byts, ind):
-    return byts[ind] | (byts [ind+1] << 8)
-
-def to_u8 (byts, ind):
-    return byts[ind]
-
-def to_addr(byts, ind):
-    return as_addr(bytes(reversed(byts [ind: ind+6])))
-
-def to_data(byts, ind, length):
-    return byts[ind: ind + length]
-
-def to_data_rest(byts, ind):
-    return byts[ind:]
-
-def to_bits_u16 (byts, ind, start, num_bits):
-    val = to_u16(byts, ind)
-    val = val >> start
-    mask = (1 << num_bits) - 1
-    return val & mask
-
-#def reverse_addr(byts) :
-#    return bytes(reversed(byts))
-
-def from_u8(val):
-    if val == None:
-        return bytes()
-    else:
-        return bytes ([val])
-
-def from_u16(val):
-    v1 = val & 0xff
-    v2 = val >> 8
-    return bytes([v1]) + bytes([v2])
-
-def from_addr(val):
-    return bytes(reversed(bytes.fromhex(val.replace(':', ''))))
-
-def from_data(val):
-    return bytes(val)
-
-
-
 ################################################################
 #
 # Make the ACL and HCI command headers
@@ -115,17 +51,17 @@ def from_data(val):
 ################################################################
 
 def make_acl(handle, length):
-    header =  from_u8 (0x02)       # hci command prefix for ACL
-    header += from_u16(handle)     # hci handle
-    header += from_u16(length + 4) # hci packet length
-    header += from_u16(length)     # l2cap length
-    header += from_u16(ATT_CID)    # channel for ATT - 4 for BLE
+    header =  ByteHelper.from_u8 (0x02)       # hci command prefix for ACL
+    header += ByteHelper.from_u16(handle)     # hci handle
+    header += ByteHelper.from_u16(length + 4) # hci packet length
+    header += ByteHelper.from_u16(length)     # l2cap length
+    header += ByteHelper.from_u16(ATT_CID)    # channel for ATT - 4 for BLE
     return header
 
 def make_cmd(cmd, length):
-    header =  from_u8 (0x01)       # hci command prefix
-    header += from_u16(cmd)        # hci command
-    header += from_u8 (length)     # hci packet length
+    header =  ByteHelper.from_u8 (0x01)       # hci command prefix
+    header += ByteHelper.from_u16(cmd)        # hci command
+    header += ByteHelper.from_u8 (length)     # hci packet length
     return header
 
 ################################################################
@@ -164,12 +100,12 @@ class BluetoothLEConnection:
     ### helper functions calling BTUserSocket
 
     def send(self, data):
-        print("<<", as_hex(data))
+        print("<<", ByteHelper.as_hex(data))
         self.user_socket.send_raw(data)
 
     def receive(self):
         data = self.user_socket.receive_raw()
-        print("\n>>", as_hex(data))
+        print("\n>>", ByteHelper.as_hex(data))
         self.on_data(data)
         return data
 
@@ -201,7 +137,7 @@ class BluetoothLEConnection:
             self.wait_complete(command, COMMAND_TIMEOUT)
 
     def check_le_compatable(self, data):
-        if (to_u8(data, 32) & 0xA2 == 0xA2) and (to_u8(data, 33) & 0x3E == 0x3E):
+        if (ByteHelper.to_u8(data, 32) & 0xA2 == 0xA2) and (ByteHelper.to_u8(data, 33) & 0x3E == 0x3E):
             print("LE Compatable")
         else:
             print("Error: Not LE Compatable")
@@ -223,9 +159,9 @@ class BluetoothLEConnection:
         return formatted_address
 
     def read_buffer_size(self, data):
-        self.hc_le_data_packet_length = to_u16(data, 7)
+        self.hc_le_data_packet_length = ByteHelper.to_u16(data, 7)
         print("le data length = {}".format(self.hc_le_data_packet_length))
-        self.hc_le_data_buffer = to_u8(data, 9)
+        self.hc_le_data_buffer = ByteHelper.to_u8(data, 9)
         print("le data buffer = {}".format(self.hc_le_data_buffer))
         
 
@@ -266,9 +202,9 @@ class BluetoothLEConnection:
         #     supervision_timeout                            2 octets
         #     central_clock_accuracy                         1 octet
       
-        status = to_u8(data, 4)
-        handle = to_u16(data, 5)
-        address = to_addr(data, 9)
+        status = ByteHelper.to_u8(data, 4)
+        handle = ByteHelper.to_u16(data, 5)
+        address = ByteHelper.to_addr(data, 9)
         
         self.handle = handle         # save this for other commands to use
         print("Event: LE Connection Complete")
@@ -291,28 +227,28 @@ class BluetoothLEConnection:
         #         rssi[i]                                    1 octet
         
         # These lines double the report to test for num_reports = 2
-        # num_reports = to_u8       (data, 4)
-        # reports =     to_data_rest(data, 5)
-        # data = data[0:4] + from_u8(2) + reports + reports
+        # num_reports = ByteHelper.to_u8       (data, 4)
+        # reports =     ByteHelper.ByteHelper.to_data_rest(data, 5)
+        # data = data[0:4] + ByteHelper.from_u8(2) + reports + reports
 
-        num_reports = to_u8       (data, 4)
-        reports =     to_data_rest(data, 5)                  # the actual 'reports'
+        num_reports = ByteHelper.to_u8       (data, 4)
+        reports =     ByteHelper.ByteHelper.to_data_rest(data, 5)                  # the actual 'reports'
         
         report_offset = 0                                    # start of this entry in 'reports'
         for rep in range(0, num_reports):
-            address =     to_addr (reports, report_offset+2)
-            data_len =    to_u8   (reports, report_offset+8)
-            report_data = to_data (reports, report_offset+9, data_len)
-            rssi =        to_u8   (reports, report_offset+9+data_len)
+            address =     ByteHelper.to_addr (reports, report_offset+2)
+            data_len =    ByteHelper.to_u8   (reports, report_offset+8)
+            report_data = ByteHelper.to_data (reports, report_offset+9, data_len)
+            rssi =        ByteHelper.to_u8   (reports, report_offset+9+data_len)
             
             print("Address: {}      RSSI: {}".format(address, rssi))
             i = 0
             while i < data_len:
-                entry_len = to_u8(report_data, i) 
+                entry_len = ByteHelper.to_u8(report_data, i) 
                 if entry_len > 0:
-                    typ = to_u8  (report_data, i+1)
-                    dat = to_data(report_data, i+2, entry_len-1)
-                    print("Length: {:3} Type: {:02x}  Data: {}      {}".format(entry_len, typ, as_hex(dat), as_printable(dat)))
+                    typ = ByteHelper.to_u8  (report_data, i+1)
+                    dat = ByteHelper.to_data(report_data, i+2, entry_len-1)
+                    print("Length: {:3} Type: {:02x}  Data: {}      {}".format(entry_len, typ, ByteHelper.as_hex(dat), ByteHelper.as_printable(dat)))
                     i += entry_len
                 i += 1
             report_offset += data_len+10                     # move on to next entry
@@ -331,11 +267,11 @@ class BluetoothLEConnection:
         #     peripheral_latency                             2 octets
         #     supervision_timeout                            2 octets
 
-        status =   to_u8(data, 4)
-        handle =   to_u16(data, 5)
-        interval = to_u16(data, 7)
-        latency = to_u16(data, 9)
-        timeout =  to_u16(data, 11)
+        status =   ByteHelper.to_u8(data, 4)
+        handle =   ByteHelper.to_u16(data, 5)
+        interval = ByteHelper.to_u16(data, 7)
+        latency = ByteHelper.to_u16(data, 9)
+        timeout =  ByteHelper.to_u16(data, 11)
         
         print("LE Connection Update Complete")
         print("Handle: {:04x} Status: {02x}".format(handle, status))
@@ -358,30 +294,30 @@ class BluetoothLEConnection:
 
         print("Read Remote Features Complete")
         
-        handle = to_u16(data, 5)
-        features = to_data_rest(data, 7)
+        handle = ByteHelper.to_u16(data, 5)
+        features = ByteHelper.ByteHelper.to_data_rest(data, 7)
         
-        print("Handle: {} Features {}".format(handle, as_hex(features)))
+        print("Handle: {} Features {}".format(handle, ByteHelper.as_hex(features)))
 
     def on_le_data_length_change(self, data):
-        handle = to_u16(data, 4)
-        max_tx_octets = to_u16(data, 6) # 0x001B to 0x00FB
-        max_tx_time = to_u16(data, 8) # 0x0148 to 0x4290
-        max_rx_octets = to_u16(data, 10) # 0x001B to 0x00FB
-        max_rx_time = to_u16(data, 12) # 0x0148 to 0x4290
+        handle = ByteHelper.to_u16(data, 4)
+        max_tx_octets = ByteHelper.to_u16(data, 6) # 0x001B to 0x00FB
+        max_tx_time = ByteHelper.to_u16(data, 8) # 0x0148 to 0x4290
+        max_rx_octets = ByteHelper.to_u16(data, 10) # 0x001B to 0x00FB
+        max_rx_time = ByteHelper.to_u16(data, 12) # 0x0148 to 0x4290
         print(event_text, "Data length changed for 0x{:04X}".format(handle))
 
     def on_le_read_local_public_key(self, data):
-        status = to_u8(data, 4)
-        key_x_coordinate = to_data(data, 5, 37)  # 32 octets
-        key_y_coordinate = to_data(data, 37, 69) # 32 octets
+        status = ByteHelper.to_u8(data, 4)
+        key_x_coordinate = ByteHelper.to_data(data, 5, 37)  # 32 octets
+        key_y_coordinate = ByteHelper.to_data(data, 37, 69) # 32 octets
         print(event_text, "Read Local Public Key Complete")
 
     def on_le_update_complete(self, data):
-        status = to_u8(data, 4)
-        handle = to_u16(data, 5)
-        connection_interval = to_u16(data, 7)
-        supervision_timeout = to_u16(data, 9)
+        status = ByteHelper.to_u8(data, 4)
+        handle = ByteHelper.to_u16(data, 5)
+        connection_interval = ByteHelper.to_u16(data, 7)
+        supervision_timeout = ByteHelper.to_u16(data, 9)
         print(event_text, "Connection Update Complete")
 
     def on_hci_meta_event(self, data):
@@ -393,7 +329,7 @@ class BluetoothLEConnection:
         #     subevent_code                                  1 octet
         #     data                                           n octets
 
-        subevent_code = to_u8(data, 3)
+        subevent_code = ByteHelper.to_u8(data, 3)
         # print(event_text, "LE Meta event: ", hex(subevent_code))
         if   subevent_code == 0x01:                 # LE Connection Complete
             self.on_le_connection_complete(data)
@@ -421,9 +357,9 @@ class BluetoothLEConnection:
         #     reason                                         1 octet
 
         
-        status = to_u8  (data, 3)
-        handle = to_u16 (data, 4)
-        reason = to_u8  (data, 6)
+        status = ByteHelper.to_u8  (data, 3)
+        handle = ByteHelper.to_u16 (data, 4)
+        reason = ByteHelper.to_u8  (data, 6)
         if status == 0:
             print("HCI Disconnection Complete, Handle = 0x{:04X}".format(handle))
         else:
@@ -483,8 +419,8 @@ class BluetoothLEConnection:
         #     status                                         1 octet
 
         # print(event_text, "HCI Command Complete")
-        cmd =    to_u16 (data, 4)
-        status = to_u8  (data, 6)
+        cmd =    ByteHelper.to_u16 (data, 4)
+        status = ByteHelper.to_u8  (data, 6)
         status_text = "Success" if status == HCI_SUCCESS else "Failure"
         self.command_complete = cmd
         self.command_status =   status
@@ -501,8 +437,8 @@ class BluetoothLEConnection:
         #     command_opcode                                 2 octets
 
         # print(event_text, "HCI Command Status")
-        status = to_u8  (data, 3)
-        opcode = to_u16 (data, 5)
+        status = ByteHelper.to_u8  (data, 3)
+        opcode = ByteHelper.to_u16 (data, 5)
         if opcode == 0x2025:
             print(event_text, "Local Public Key Command Complete")
         else:
@@ -517,7 +453,7 @@ class BluetoothLEConnection:
         #     connection handle[i]                           2n octets
         #     num completed packets[i]                       2n octets
 
-        print(event_text, "HCI Number Of Completed Packets = {}".format(to_u16(data, len(data) - 2)))
+        print(event_text, "HCI Number Of Completed Packets = {}".format(ByteHelper.to_u16(data, len(data) - 2)))
 
     def on_hci_event_vendor_specific (self, data):
         print(event_text, "Vendor Specific")
@@ -529,7 +465,7 @@ class BluetoothLEConnection:
         #     parameter_length                               1 octet
         #     parameters                                     n octets
 
-        event = to_u8(data, 1)         
+        event = ByteHelper.to_u8(data, 1)         
         # print("\nHCI Event Packet:", hex(event))
 
         if   event == 0x0f:                                   # Command Status
@@ -558,35 +494,35 @@ class BluetoothLEConnection:
 
         # print("ACL Packet")
 
-        handle = to_bits_u16(data, 1, 0, 12)
-        pb =     to_bits_u16(data, 1, 12, 2)
-        bc =     to_bits_u16(data, 1, 14, 2)
-        length = to_u16(data, 3)  #di["packet length"]
+        handle = ByteHelper.to_bits_u16(data, 1, 0, 12)
+        pb =     ByteHelper.to_bits_u16(data, 1, 12, 2)
+        bc =     ByteHelper.to_bits_u16(data, 1, 14, 2)
+        length = ByteHelper.to_u16(data, 3)  #di["packet length"]
  
         full_packet = False
         # print('ACL header: handle: {}  bc: {}  pb: {}'.format(handle, bc, pb))
 
         if pb & 0x01 == 0:
-            size =     to_u16(data, 5)
-            channel =  to_u16(data, 7)
-            acl_data = to_data_rest(data, 9)
+            size =     ByteHelper.to_u16(data, 5)
+            channel =  ByteHelper.to_u16(data, 7)
+            acl_data = ByteHelper.ByteHelper.to_data_rest(data, 9)
             full_packet = length - size == 4
 
             print("Channel: {} Length: {} Data size: {} Full packet? {}".format(channel, length, size, full_packet))
-            # print("ACL packet:    ", as_hex(acl_data))
+            # print("ACL packet:    ", ByteHelper.as_hex(acl_data))
 
             self.acl_total_length = size
             self.acl_packet =       acl_data
 
         if pb & 0x01 == 1:
             print("ACL Packet Continuation")
-            acl_data = to_data_rest(data, 5)
+            acl_data = ByteHelper.ByteHelper.to_data_rest(data, 5)
             self.acl_packet += acl_data
-            print("ACL data:  ", as_hex(acl_data))
+            print("ACL data:  ", ByteHelper.as_hex(acl_data))
             if len(self.acl_packet) == self.acl_total_length:    # This was the last continuation packet
                 full_packet = True
                 print("ACL Packet Final")
-                print("Full ACL data: ", as_hex(self.acl_packet))
+                print("Full ACL data: ", ByteHelper.as_hex(self.acl_packet))
                 
         if full_packet:
             self.on_acl_event(self.acl_packet)                 
@@ -600,7 +536,7 @@ class BluetoothLEConnection:
         #
         #     packet_type                                    1 octet
 
-        packet_type = to_u8(data, 0)
+        packet_type = ByteHelper.to_u8(data, 0)
         # print("Packet type:", packet_type)
 
         self.command_complete = None               # set to None and changed by Command Complete event
@@ -624,7 +560,7 @@ class BluetoothLEConnection:
     def reset(self):
         print(cmd_text, "BLE Reset")
         
-        packet = from_u8(None)
+        packet = ByteHelper.from_u8(None)
         self.send_command(0x0C03, packet)
 
     def set_event_masks(self):
@@ -656,17 +592,17 @@ class BluetoothLEConnection:
 
     def read_local_commands(self):
         print(cmd_text, "Read Local Supported Commands")
-        packet = from_u8(None)
+        packet = ByteHelper.from_u8(None)
         self.send_command(0x1002, packet)
 
     def read_local_board_address(self):
         print(cmd_text, "Read Local Board Address")
-        packet = from_u8(None)
+        packet = ByteHelper.from_u8(None)
         self.send_command(0x1009, packet)
 
     def read_le_buffer_size(self):
         print(cmd_text, "Read LE Buffer Size")
-        packet = from_u8(None)
+        packet = ByteHelper.from_u8(None)
         self.send_command(0x2002, packet)
 
     def write_local_name(self, name):
@@ -686,7 +622,7 @@ class BluetoothLEConnection:
 
     def read_local_public_key(self):
         print(cmd_text, "Read Local Public Key")
-        packet = from_u8(None)
+        packet = ByteHelper.from_u8(None)
         self.send_command(0x2025, packet)
 
 
@@ -715,14 +651,14 @@ class BluetoothLEConnection:
 
         print(cmd_text, "LE Set Advertising Parameters")
         
-        packet =  from_u16  (min_interval)
-        packet += from_u16  (max_interval)
-        packet += from_u8   (adv_type)
-        packet += from_u8   (own_addr_type)
-        packet += from_u8   (peer_addr_type)
-        packet += from_addr (peer_addr)
-        packet += from_u8   (adv_channel_map)
-        packet += from_u8   (adv_filter_policy)
+        packet =  ByteHelper.from_u16  (min_interval)
+        packet += ByteHelper.from_u16  (max_interval)
+        packet += ByteHelper.from_u8   (adv_type)
+        packet += ByteHelper.from_u8   (own_addr_type)
+        packet += ByteHelper.from_u8   (peer_addr_type)
+        packet += ByteHelper.from_addr (peer_addr)
+        packet += ByteHelper.from_u8   (adv_channel_map)
+        packet += ByteHelper.from_u8   (adv_filter_policy)
         self.send_command(0x2006, packet)
 
     def do_set_advertising_data(self, data):
@@ -741,7 +677,7 @@ class BluetoothLEConnection:
         print(cmd_text, "LE Set Advertising Data")
 
         pad = bytes(b'\x00' * (31-len(data)))
-        # packet = from_u8 (len(data))
+        # packet = ByteHelper.from_u8 (len(data))
         packet =         data
         packet +=         pad
         self.send_command(0x2008, packet)
@@ -762,7 +698,7 @@ class BluetoothLEConnection:
         print(cmd_text, "LE Set Scan Response Data")
         pad = bytes(b'\x00' * (31 - len(data)))
 
-        # packet =  from_u8 (len(data))
+        # packet =  ByteHelper.from_u8 (len(data))
         packet =         data
         packet +=         pad
         self.send_command(0x2009, packet)
@@ -784,7 +720,7 @@ class BluetoothLEConnection:
         else:
             print(cmd_text, "LE Set Advertising: Disabled")
         
-        packet = from_u8(0x01 if enabled else 0x00)
+        packet = ByteHelper.from_u8(0x01 if enabled else 0x00)
         self.send_command(0x200a, packet)
 
     def do_set_scan_parameters(self, scan_type=SCAN_TYPE_ACTIVE, scan_internal=0x0060, scan_window=0x0060,
@@ -806,11 +742,11 @@ class BluetoothLEConnection:
 
         print(cmd_text, "LE Set Scan Parameters")
         
-        packet =  from_u8  (scan_type)
-        packet += from_u16 (scan_internal)
-        packet += from_u16 (scan_window)
-        packet += from_u8  (own_addr_type)
-        packet += from_u8  (scan_filter_policy)
+        packet =  ByteHelper.from_u8  (scan_type)
+        packet += ByteHelper.from_u16 (scan_internal)
+        packet += ByteHelper.from_u16 (scan_window)
+        packet += ByteHelper.from_u8  (own_addr_type)
+        packet += ByteHelper.from_u8  (scan_filter_policy)
         self.send_command(0x200b, packet)
 
     def do_set_scan(self, enabled=False, duplicates=False):
@@ -832,8 +768,8 @@ class BluetoothLEConnection:
 
         print(cmd_text, "LE Set Scan Enable" if enabled else "LE Set Scan Disable")
         
-        packet =  from_u8(0x01 if enabled else 0x00)
-        packet += from_u8(0x01 if duplicates else 0x00)        
+        packet =  ByteHelper.from_u8(0x01 if enabled else 0x00)
+        packet += ByteHelper.from_u8(0x01 if duplicates else 0x00)        
         self.send_command(0x200c, packet)
 
     def do_create_connection(self, addr, addr_type, interval=0x0060, window=0x0060, initiator_filter=0x00,
@@ -864,18 +800,18 @@ class BluetoothLEConnection:
 
         print(cmd_text, "LE Create Connection")
         
-        packet =  from_u16 (interval)
-        packet += from_u16 (window)
-        packet += from_u8  (initiator_filter)
-        packet += from_u8  (addr_type)
-        packet += from_addr(addr)
-        packet += from_u8  (own_addr_type)
-        packet += from_u16 (min_interval)
-        packet += from_u16 (max_interval)
-        packet += from_u16 (latency)
-        packet += from_u16 (supervision_timeout)
-        packet += from_u16 (min_ce_length)
-        packet += from_u16 (max_ce_length)
+        packet =  ByteHelper.from_u16 (interval)
+        packet += ByteHelper.from_u16 (window)
+        packet += ByteHelper.from_u8  (initiator_filter)
+        packet += ByteHelper.from_u8  (addr_type)
+        packet += ByteHelper.from_addr(addr)
+        packet += ByteHelper.from_u8  (own_addr_type)
+        packet += ByteHelper.from_u16 (min_interval)
+        packet += ByteHelper.from_u16 (max_interval)
+        packet += ByteHelper.from_u16 (latency)
+        packet += ByteHelper.from_u16 (supervision_timeout)
+        packet += ByteHelper.from_u16 (min_ce_length)
+        packet += ByteHelper.from_u16 (max_ce_length)
         self.send_command(0x200d, packet)
         
 
@@ -895,8 +831,8 @@ class BluetoothLEConnection:
 
         print(cmd_text, "LE Add Device To Filter Accept List")
         
-        packet =  from_u8(addr_type)
-        packet += from_addr(addr)
+        packet =  ByteHelper.from_u8(addr_type)
+        packet += ByteHelper.from_addr(addr)
         self.send_command(0x2011, packet)
 
     def do_read_remote_used_features(self):
@@ -914,7 +850,7 @@ class BluetoothLEConnection:
 
         print(cmd_text, "LE Read Remote Features")
         
-        packet = from_u16(self.handle)
+        packet = ByteHelper.from_u16(self.handle)
         self.send_command(0x2016, packet)
 
     #
@@ -924,10 +860,10 @@ class BluetoothLEConnection:
     def do_att_error_rsp(self, request_opcode, handle, error_code):
         print(att_rsp_text, "Error")
 
-        packet =  from_u8(0x01) 
-        packet += from_u8(request_opcode)     
-        packet += from_u16(handle) 
-        packet += from_u8(error_code)
+        packet =  ByteHelper.from_u8(0x01) 
+        packet += ByteHelper.from_u8(request_opcode)     
+        packet += ByteHelper.from_u16(handle) 
+        packet += ByteHelper.from_u8(error_code)
         
         cmd = make_acl(self.handle, len(packet)) + packet
         self.send(cmd)
@@ -945,8 +881,8 @@ class BluetoothLEConnection:
 
         print(att_req_text, "EXCHANGE MTU (0x02)")
 
-        packet =  from_u8  (0x02)           # ATT opcode ATT_EXCHANGE_MTU_REQ
-        packet += from_u16 (mtu_size)       # MTU size requested
+        packet =  ByteHelper.from_u8  (0x02)           # ATT opcode ATT_EXCHANGE_MTU_REQ
+        packet += ByteHelper.from_u16 (mtu_size)       # MTU size requested
         
         cmd = make_acl(self.handle, len(packet)) + packet
         self.send(cmd)
@@ -954,8 +890,8 @@ class BluetoothLEConnection:
     def do_att_exchange_mtu_rsp(self, mtu_size = 244):
         print(att_rsp_text, "EXCHANGE MTU (0x03)")
 
-        packet =  from_u8  (0x03)      
-        packet += from_u16 (mtu_size) 
+        packet =  ByteHelper.from_u8  (0x03)      
+        packet += ByteHelper.from_u16 (mtu_size) 
         
         cmd = make_acl(self.handle, len(packet)) + packet
         self.send(cmd)
@@ -976,9 +912,9 @@ class BluetoothLEConnection:
 
         print(att_req_text, "FIND INFORMATION (0x04)")
         
-        packet =  from_u8(0x04)          # ATT opcode ATT_FIND_INFORMATION_REQ
-        packet += from_u16(start_handle)
-        packet += from_u16(end_handle)
+        packet =  ByteHelper.from_u8(0x04)          # ATT opcode ATT_FIND_INFORMATION_REQ
+        packet += ByteHelper.from_u16(start_handle)
+        packet += ByteHelper.from_u16(end_handle)
 
         cmd = make_acl(self.handle, len(packet)) + packet
         self.send(cmd)
@@ -990,11 +926,11 @@ class BluetoothLEConnection:
             print("No uuid between 0x{:04X} and 0x{:04X}".format(start_handle, end_handle))
             self.do_att_error_rsp(0x10, start_handle, ATTErrorCode.ATTRIBUTE_NOT_FOUND) 
             return
-        packet =  from_u8(0x05)
-        packet += from_u8(uuid_format)
+        packet =  ByteHelper.from_u8(0x05)
+        packet += ByteHelper.from_u8(uuid_format)
         for each_handle_uuid in handle_uuid:
             handle, uuid = each_handle_uuid
-            packet += from_u16(start_handle)
+            packet += ByteHelper.from_u16(start_handle)
             packet += uuid
 
         cmd = make_acl(self.handle, len(packet)) + packet
@@ -1018,17 +954,17 @@ class BluetoothLEConnection:
 
         print(att_req_text, "READ BY TYPE (0x08)")
         
-        packet =  from_u8  (0x08)               # ATT opcode ATT_READ_BY_TYPE_REQ
-        packet += from_u16 (start_handle)
-        packet += from_u16 (end_handle)
-        packet += from_u16 (attribute_type)        
+        packet =  ByteHelper.from_u8  (0x08)               # ATT opcode ATT_READ_BY_TYPE_REQ
+        packet += ByteHelper.from_u16 (start_handle)
+        packet += ByteHelper.from_u16 (end_handle)
+        packet += ByteHelper.from_u16 (attribute_type)        
                
         cmd = make_acl(self.handle, len(packet)) + packet
         self.send(cmd)
 
     def do_att_read_by_type_rsp(self, start_handle, end_handle, uuid):
         print(att_rsp_text, "READ BY TYPE (0x09)")
-        packet =  from_u8  (0x09)
+        packet =  ByteHelper.from_u8  (0x09)
         if uuid == GATTAttributes.CHARACTERISTIC.value:
             char_decl = self.gatt_server.read_char_uuid_value(start_handle, end_handle)
             if not char_decl:
@@ -1037,12 +973,12 @@ class BluetoothLEConnection:
                 return
             else:
                 len_char_item = len(char_decl)
-                packet += from_u8(7) 
+                packet += ByteHelper.from_u8(7) 
                 # for idx, char_item in enumerate(char_decl):
                 handle, prop_byte, value_handle, char_uuid = char_decl
-                packet += from_u16(handle)
-                packet += from_u8(prop_byte)
-                packet += from_u16(value_handle)
+                packet += ByteHelper.from_u16(handle)
+                packet += ByteHelper.from_u8(prop_byte)
+                packet += ByteHelper.from_u16(value_handle)
                 packet += char_uuid
         
         else:
@@ -1052,8 +988,8 @@ class BluetoothLEConnection:
                 self.do_att_error_rsp(0x10, start_handle, ATTErrorCode.ATTRIBUTE_NOT_FOUND) 
                 return
             
-            packet += from_u8(2 + len(data))
-            packet += from_u16 (handle)
+            packet += ByteHelper.from_u8(2 + len(data))
+            packet += ByteHelper.from_u16 (handle)
             packet += data        
                
         cmd = make_acl(self.handle, len(packet)) + packet
@@ -1073,15 +1009,15 @@ class BluetoothLEConnection:
 
         print(att_req_text, "GROUP TYPE (0x0A)")
         
-        packet =  from_u8  (0x0a)               # ATT opcode ATT_READ_REQ
-        packet += from_u16 (handle)
+        packet =  ByteHelper.from_u8  (0x0a)               # ATT opcode ATT_READ_REQ
+        packet += ByteHelper.from_u16 (handle)
                
         cmd = make_acl(self.handle, len(packet)) + packet
         self.send(cmd)
 
     def do_att_group_type_rsp(self, gatt_uuid, start_handle, end_handle):
         print(att_rsp_text, "GROUP TYPE (0x11)")
-        packet =  from_u8  (0x11)    
+        packet =  ByteHelper.from_u8  (0x11)    
         if gatt_uuid == GATTAttributes.PRIMARY_SERVICE.value:
             print("Get primary services for handles 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
             handle_range = self.gatt_server.get_service_handle_range(start_handle)
@@ -1097,9 +1033,9 @@ class BluetoothLEConnection:
                 return_end_handle = end_handle
             primary_service = handle_range[2]
             att_length = 4 + self.gatt_server.get_uuid_byte_length(primary_service)
-            packet += from_u8(att_length)  
-            packet += from_u16(return_start_handle)
-            packet += from_u16(return_end_handle)
+            packet += ByteHelper.from_u8(att_length)  
+            packet += ByteHelper.from_u16(return_start_handle)
+            packet += ByteHelper.from_u16(return_end_handle)
             packet += self.gatt_server.uuid_string_to_bytes(primary_service)    
         else:
             print("GATT Attribute 0x{:04X} Not Implemented".format(gatt_uuid))
@@ -1111,59 +1047,59 @@ class BluetoothLEConnection:
 
     def do_att_write_rsp(self, handle, value):
         self.gatt_server.write_char_value(handle, value)
-        packet =  from_u8(0x13)   
+        packet =  ByteHelper.from_u8(0x13)   
         cmd = make_acl(self.handle, len(packet)) + packet
         self.send(cmd)
 
     def on_acl_event(self, data):
-        print("ACL data:      ", as_hex(data))
-        att_opcode = to_u8(data, 0)
+        print("ACL data:      ", ByteHelper.as_hex(data))
+        att_opcode = ByteHelper.to_u8(data, 0)
         if att_opcode == 0x02:
             print(att_req_text, "Exchange MTU (0x{:02X})".format(att_opcode))
-            client_rx_mtu = to_u16(data, 1)
+            client_rx_mtu = ByteHelper.to_u16(data, 1)
             self.do_att_exchange_mtu_rsp()
         elif att_opcode == 0x03:
             print("Warning: Exchange MTU RSP (0x03) - should not get from client")
-            # server_rx_mtu = to_u16(data, 1)
+            # server_rx_mtu = ByteHelper.to_u16(data, 1)
         elif att_opcode == 0x04:
             print(att_req_text, "Find Information (0x{:02X})".format(att_opcode))
-            start_handle = to_u16(data, 1)
-            end_handle = to_u16(data, 3)
+            start_handle = ByteHelper.to_u16(data, 1)
+            end_handle = ByteHelper.to_u16(data, 3)
             self.do_att_find_information_rsp(start_handle, end_handle)
         elif att_opcode == 0x05:
             print("Warning: Find Information RSP (0x05) - should not get from client")      
         elif att_opcode == 0x06:
             print(att_req_text, "Find by Type Value (0x{:02X})".format(att_opcode))
-            start_handle = to_u16(data, 1)
-            end_handle = to_u16(data, 3)
-            att_uuid = to_u16(data, 5)
+            start_handle = ByteHelper.to_u16(data, 1)
+            end_handle = ByteHelper.to_u16(data, 3)
+            att_uuid = ByteHelper.to_u16(data, 5)
             att_value = data[7:]
         elif att_opcode == 0x07:
             print("Warning: Find by Type Value RSP (0x07) - should not get from client")         
         elif att_opcode == 0x08:
-            start_handle = to_u16(data, 1)
-            end_handle = to_u16(data, 3)
+            start_handle = ByteHelper.to_u16(data, 1)
+            end_handle = ByteHelper.to_u16(data, 3)
             uuid = self.gatt_server.uuid_bytes_to_string(data[5:])
             print(att_req_text, "Read by Type (0x{:02X}), UUID = {}".format(att_opcode, uuid))
             self.do_att_read_by_type_rsp(start_handle, end_handle, uuid)
         elif att_opcode == 0x09:
             print("Read by Type RSP (0x09) - should not get from client")
         elif att_opcode == 0x0A:
-            start_handle = to_u16(data, 1)
+            start_handle = ByteHelper.to_u16(data, 1)
             print(att_req_text, "READ (0x{:02X})".format(att_opcode))
             print("Error: Still need to add this function")
         elif att_opcode == 0x0B:
             print("Warning Read RSP (0x0B) - should not get from client")
         elif att_opcode == 0x10:
-            start_handle = to_u16(data, 1)
-            end_handle = to_u16(data, 3)
+            start_handle = ByteHelper.to_u16(data, 1)
+            end_handle = ByteHelper.to_u16(data, 3)
             uuid = self.gatt_server.uuid_bytes_to_string(data[5:])
             print(att_req_text, "Read by Group Request (0x{:02X}), UUID = {}".format(att_opcode, uuid))
             self.do_att_group_type_rsp(uuid, start_handle, end_handle)
         elif att_opcode == 0x11:
             print("Warning: Read by Group RSP (0x11) - should not get from client") 
         elif att_opcode == 0x12:
-            handle = to_u16(data, 1)
+            handle = ByteHelper.to_u16(data, 1)
             value = data[3:]
             print(att_req_text, "Write Request handle = 0x{:04X}, value = {}".format(handle, value))
             self.do_att_write_rsp(handle, value)

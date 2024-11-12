@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
+from ble_helper import ByteHelper
 from ble_helper import GATTAttributes
 
 class GattServer:
     def __init__(self):
         self.gatt_table = None
         self.device_name = None
+        self.service_changed = 0x0000
         self.getTestTable()
 
     def create_pnp_id(self, vendor_id_source = 0x01, vendor_id = 0x1234, product_id = 0x0203, product_version = 0x0001):
@@ -29,6 +31,13 @@ class GattServer:
             product_version & 0xFF, (product_version >> 8) & 0xFF  # 2 bytes for Product Version (little-endian)
         ])
         return pnp_id
+
+    def updateServiceCharacteristic(self, start_handle, end_handle):
+        if end_handle < start_handle:
+            raise ValueError("end_handle 0x{:02X} is less than start_handle 0x{:02X}".format(end_handle, start_handle))
+        print("start_handle 0x{:04X}, end_handle 0x{:02X}".format(start_handle << 8, end_handle))
+        self.service_changed = (start_handle << 16) | end_handle
+        print("Service changed: 0x{:08X}".format(self.service_changed))
 
     def getTestTable(self):
         self.device_name = "My  Pi"
@@ -60,10 +69,11 @@ class GattServer:
             "indications": 0x0002
         }
 
-        self.value_type {
+        self.value_type = {
+            "bytes": 0x00,
             "int": 0x01,
             "string": 0x02,
-            "bytes": 0x04
+            "variable": 0x04
         }
 
         self.max_value_length = 247 # Bytes
@@ -73,49 +83,49 @@ class GattServer:
         self.appearance = 0x0080 # Generic Computer (0x0080)
 
         # GATT Table
-        # All Values are setup as strings except handles
         # Type: Current options are primary_service, characteristic_declaration, characteristic_value, and descriptor
         # Descriptor represents CCCD (Client Characteristic Configuration Descriptor: 0x2902) or CUD (Client User Description: 0x2901)
         # If Descriptor is CCCD then the value should be one of the choices in self.cccd
         # CUD Descriptor should be a more descriptive name (only needed if called by client)
         # UUID: 2 bytes or 16 bytes in string format (4 chars, 36 chars including the 4 '-')
         # Value Handle: the handle that has the actual value
+        # Value Type: the type of value, see self.value_type. Fixed Length required for INTs
         # Properties: see options in self.perm_flags
         # Permissions for each handle are dictated by the property values and are not included since
         # we are not using Encryption or Authentication.  Putting permission read or write seems redundant
         # Advertise isn't used since we assume all services should be advertised
         # Constant is only added if True
-        # Fixed length only added if True, length is then added as well 
+        # Fixed length only added if True, length is then added as well. For int, length refers to the number of bytes in the data
         self.gatt_table = {
             # Generic Access Service (0x1800)
             0x0003: {"type": "primary_service", "uuid": "1800"},
-            0x0004: {"type": "characteristic_declaration", "uuid": "2A00", "properties": "read", "constant": "True", "value_handle": 0x0005},
+            0x0004: {"type": "characteristic_declaration", "uuid": "2A00", "properties": "read", "constant": "True", "value_type": "variable", "value_handle": 0x0005},
             0x0005: {"type": "characteristic_value", "uuid": "2A00", "value": self.device_name},  # Device Name (string)
-            0x0006: {"type": "characteristic_declaration", "uuid": "2A01", "properties": "read", "constant": "True", "value_handle": 0x0007},
+            0x0006: {"type": "characteristic_declaration", "uuid": "2A01", "properties": "read", "constant": "True", "value_type": "variable", "value_handle": 0x0007},
             0x0007: {"type": "characteristic_value", "uuid": "2A01", "value": self.appearance},  # Appearance
 
             # Generic Attribute Service (0x1801)
             0x0008: {"type": "primary_service", "uuid": "1801"},
-            0x0009: {"type": "characteristic_declaration", "uuid": "2A05", "properties": "indicate", "value_handle": 0x000A},
-            0x000A: {"type": "characteristic_value", "uuid": "2A05", "value": None},  # Service Changed
+            0x0009: {"type": "characteristic_declaration", "uuid": "2A05", "properties": "indicate", "fixed_length": "True", "length": 8, "value_type": "variable", "value_handle": 0x000A},
+            0x000A: {"type": "characteristic_value", "uuid": "2A05", "value": self.service_changed},  # Service Changed
             0x000B: {"type": "descriptor", "uuid": GATTAttributes.CLIENT_CHAR_CONFIG.value, "value": "disabled"},
 
             # Device Information Service (0x180A)
             0x000C: {"type": "primary_service", "uuid": "180A"},
-            0x000D: {"type": "characteristic_declaration", "uuid": "2A50", "properties": "read", "value_handle": 0x000E},
+            0x000D: {"type": "characteristic_declaration", "uuid": "2A50", "properties": "read", "value_type": "variable", "value_handle": 0x000E},
             0x000E: {"type": "characteristic_value", "uuid": "2A50", "value": self.pnp_id},  # PnP ID
 
             # Custom Service (11223344-5566-7788-99AA-BBCCDDEEFF00)
             0x000F: {"type": "primary_service", "uuid": "11223344-5566-7788-99AA-BBCCDDEEFF00"},
-            0x0010: {"type": "characteristic_declaration", "uuid": "ABCD", "properties": "read|write", "value_handle": 0x0011},
+            0x0010: {"type": "characteristic_declaration", "uuid": "ABCD", "properties": "read|write", "value_type": "string", "value_handle": 0x0011},
             0x0011: {"type": "characteristic_value", "uuid": "ABCD", "value": None},  # Control characteristic
             # 0x00XX: {"type": "descriptor", "uuid": GATTAttributes.CHARACTERISTIC_USER_DESC.value, "value": "User description, such as Control Characteristic"},
-            0x0012: {"type": "characteristic_declaration", "uuid": "CDEF", "properties": "read|notify", "value_handle": 0x0013},
+            0x0012: {"type": "characteristic_declaration", "uuid": "CDEF", "properties": "read|notify", "value_type": "string", "value_handle": 0x0013},
             0x0013: {"type": "characteristic_value", "uuid": "CDEF", "value": None},  # Counter characteristic
             0x0014: {"type": "descriptor", "uuid": GATTAttributes.CLIENT_CHAR_CONFIG.value, "value": "disabled"},
-            0x0015: {"type": "characteristic_declaration", "uuid": "DEAF", "properties": "read|notify", "value_handle": 0x0016},
+            0x0015: {"type": "characteristic_declaration", "uuid": "DEAF", "properties": "read|notify", "value_type": "string", "value_handle": 0x0016},
             0x0016: {"type": "characteristic_value", "uuid": "DEAF", "value": None},  # Data characteristic
-            0x0017: {"type": "descriptor", "uuid": GATTAttributes.CLIENT_CHAR_CONFIG.value, "value": "disabled"},
+            0x0017: {"type": "descriptor", "uuid": GATTAttributes.CLIENT_CHAR_CONFIG.value, "value_type": "string", "value": "disabled"},
             0x0018: {"type": "characteristic_declaration", "uuid": "DCBA", "properties": "read|notify", "value_handle": 0x0019},
             0x0019: {"type": "characteristic_value", "uuid": "DCBA", "value": None},  # Response characteristic
             0x001A: {"type": "descriptor", "uuid": GATTAttributes.CLIENT_CHAR_CONFIG.value, "value": "disabled"},
@@ -144,7 +154,7 @@ class GattServer:
             entry = self.gatt_table[handle]
             if entry.get('type') == 'descriptor' and entry.get('uuid') == GATTAttributes.CLIENT_CHAR_CONFIG.value:
                 entry['value'] = value_string
-                print(f"Updated CCCD at handle 0x{handle:04X}: {value_string}")
+                print("Updated CCCD at handle 0x{:04X} to {}".format(handle, value_string))
                 return True
             else:
                 print("Handle 0x{:04X} is not a valid CCCD descriptor 0x{:04X}.".format( handle, GATTAttributes.CLIENT_CHAR_CONFIG.value))
@@ -169,20 +179,102 @@ class GattServer:
             print(f"Handle 0x{handle:04X} not found in gatt_table.")
             return None
 
-    def has_property(self, value_handle, one_prop_value):
+    def has_property(self, handle, one_prop_value):
         if '-' in one_prop_value:
             raise ValueError("Should only be a single property: write, read, indication, etc")
-        for handle, entry in self.gatt_table.items():
-            if entry.get('type') == 'characteristic_declaration' and entry.get('value_handle') == value_handle:
+        for cd_handle, entry in self.gatt_table.items():
+            if entry.get('type') == 'characteristic_declaration' and entry.get('value_handle') == handle:
                 properties = entry.get('properties', '')
                 if one_prop_value in properties.split('|'):
                     return True
                 else:
-                    print("No {} Property for handle 0x{:04X}".format(one_prop_value, value_handle))
+                    print("No {} Property for handle 0x{:04X}".format(one_prop_value, handle))
                     return False
-        print(f"Characteristic value handle 0x{value_handle:04X} not found in gatt_table.")
+        print("Characteristic value handle 0x{:04X} not found in gatt_table.".format(handle))
         return False
-        
+
+    def write_table_variable(self, uuid, value):
+        print("No Variable can be written at this time")
+        return False
+
+    def convert_and_write(self, handle, value):
+        for cd_handle, entry in self.gatt_table.items():
+            if entry.get('type') == 'characteristic_declaration' and entry.get('value_handle') == handle:
+                value_type = entry.get("value_type")
+                if handle in self.gatt_table:
+                    value_entry = self.gatt_table[handle]
+                    if value_type == "bytes":
+                        value_entry["value"] = value
+                        return True
+                    elif value_type == "int":
+                        int_len = entry.get("length")
+                        if int_len == None:
+                            print("No length attribute in handle 0x{:04X} w".format(cd_handle))
+                            return False
+                        if int_len != len(value):
+                            print("Int requires a specific len of bytes {} w".format(len(value)))
+                        value_entry["value"] = int.from_bytes(value, byteorder='little')
+                        return True
+                    elif value_type == "string":
+                        value_entry["value"] = value.decode("utf-8")
+                    elif value_type == "variable":
+                        uuid = entry.get("uuid")
+                        if uuid == None:
+                            print("No uuid attribute in handle 0x{:04X} w".format(cd_handle))
+                            return False
+                        return self.write_table_variable(uuid, value)
+                    else:
+                        print("Unkown value type {} for handle 0x{:04X} w".format(value_type, handle))
+                else:
+                    print("No value for handle 0x{:04X}".format(handle))
+                    return False
+        print("Characteristic value handle 0x{:04X} not found in gatt_table. w".format(handle))
+        return False
+
+    def read_table_variable(self, uuid):
+        if uuid == "2A00":
+            return self.device_name.encode("utf-8")
+        elif uuid == "2A01":
+            return self.appearance
+
+
+    def read_and_convert(self, handle):
+        for cd_handle, entry in self.gatt_table.items():
+            if entry.get('type') == 'characteristic_declaration' and entry.get('value_handle') == handle:
+                value_type = entry.get("value_type")
+                if handle in self.gatt_table:
+                    value_entry = self.gatt_table[handle]
+                    if value_type == "bytes":
+                        return value_entry.get("value")
+                    elif value_type == "int":
+                        int_len = entry.get("length")
+                        if int_len == None:
+                            print("No length attribute in handle 0x{:04X} r".format(cd_handle))
+                            return None
+                        int_value = value_entry.get("value")
+                        int_bytes = int_value.to_bytes(int_len, byteorder='little')
+                        if int_len != len(int_bytes):
+                            print("Int requires a specific len of bytes {} != {} r".format(int_len, len(int_bytes)))
+                            return None
+                        return int_bytes
+                    elif value_type == "string":
+                        string_value = value_entry.get("value")
+                        return string_value.encode("utf-8")
+                    elif value_type == "variable":
+                        uuid = entry.get("uuid")
+                        if uuid == None:
+                            print("No uuid attribute in handle 0x{:04X}".format(cd_handle))
+                            return None
+                        return self.read_table_variable(uuid)
+                    else:
+                        print("Unkown value type {} for handle 0x{:04X} r".format(value_type, handle))
+                else:
+                    print("No value for handle 0x{:04X} r".format(handle))
+                    return None
+        print("Characteristic value handle 0x{:04X} not found in gatt_table. r".format(handle))
+        return None
+
+
     def write_char_value(self, handle, value):
         if handle in self.gatt_table:
             entry = self.gatt_table[handle]
@@ -193,6 +285,7 @@ class GattServer:
                 entry["value"] = value.decode('utf-8')
                 return True
             else:
+                print("can't write to this handle 0x{:04X}".format(handle))
                 return False
         print("No value attribute in handle 0x{:04X}".format(handle))
         return False
@@ -346,5 +439,8 @@ if __name__ == "__main__":
     print(gatt_server.read_char_value(0x0011))
     gatt_server.write_char_value(0x0011, b'right-way')
     print(gatt_server.read_char_value(0x0011))
+    gatt_server.updateServiceCharacteristic(0x0011, 0x0013)
+    print(gatt_server.read_and_convert(0x000A))
+
 
     

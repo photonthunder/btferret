@@ -1,6 +1,56 @@
 from enum import IntEnum
 from enum import Enum
 
+class ByteHelper:
+    def as_addr (byts):
+        return ':'.join('{:02x}'.format (a) for a in byts)
+
+    def as_hex (byts):
+        return ' '.join('{:02x}'.format (a) for a in byts)
+
+    def as_printable(byts):
+        return ''.join('{:c}'.format(a) if (a >= 32 and a <= 126) else '.' for a in byts) 
+
+    def to_u16 (byts, ind):
+        return byts[ind] | (byts [ind+1] << 8)
+
+    def to_u8 (byts, ind):
+        return byts[ind]
+
+    def to_addr(byts, ind):
+        return as_addr(bytes(reversed(byts [ind: ind+6])))
+
+    def to_data(byts, ind, length):
+        return byts[ind: ind + length]
+
+    def to_data_rest(byts, ind):
+        return byts[ind:]
+
+    def to_bits_u16 (byts, ind, start, num_bits):
+        val = to_u16(byts, ind)
+        val = val >> start
+        mask = (1 << num_bits) - 1
+        return val & mask
+
+    def from_u8(val):
+        if val == None:
+            return bytes()
+        else:
+            return bytes ([val])
+
+    def from_u16(val):
+        v1 = val & 0xff
+        v2 = val >> 8
+        return bytes([v1]) + bytes([v2])
+
+    def from_addr(val):
+        return bytes(reversed(bytes.fromhex(val.replace(':', ''))))
+
+    def from_data(val):
+        return bytes(val)
+
+
+
 class ATTErrorCode(IntEnum):
     INVALID_HANDLE = 0x01  # The attribute handle given was not valid on this server.
     READ_NOT_PERMITTED = 0x02  # The attribute cannot be read.
