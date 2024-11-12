@@ -34,8 +34,8 @@ class GattServer:
 
     def updateServiceCharacteristic(self, start_handle, end_handle):
         if end_handle < start_handle:
-            raise ValueError("end_handle 0x{:02X} is less than start_handle 0x{:02X}".format(end_handle, start_handle))
-        print("start_handle 0x{:04X}, end_handle 0x{:02X}".format(start_handle << 8, end_handle))
+            raise ValueError("end_handle 0x{:04X} is less than start_handle 0x{:04X}".format(end_handle, start_handle))
+        print("start_handle 0x{:04X}, end_handle 0x{:04X}".format(start_handle << 8, end_handle))
         self.service_changed = (start_handle << 16) | end_handle
         print("Service changed: 0x{:08X}".format(self.service_changed))
 
@@ -118,16 +118,16 @@ class GattServer:
             # Custom Service (11223344-5566-7788-99AA-BBCCDDEEFF00)
             0x000F: {"type": "primary_service", "uuid": "11223344-5566-7788-99AA-BBCCDDEEFF00"},
             0x0010: {"type": "characteristic_declaration", "uuid": "ABCD", "properties": "read|write", "value_type": "string", "value_handle": 0x0011},
-            0x0011: {"type": "characteristic_value", "uuid": "ABCD", "value": None},  # Control characteristic
+            0x0011: {"type": "characteristic_value", "uuid": "ABCD", "value": ""},  # Control characteristic
             # 0x00XX: {"type": "descriptor", "uuid": GATTAttributes.CHARACTERISTIC_USER_DESC.value, "value": "User description, such as Control Characteristic"},
             0x0012: {"type": "characteristic_declaration", "uuid": "CDEF", "properties": "read|notify", "value_type": "string", "value_handle": 0x0013},
-            0x0013: {"type": "characteristic_value", "uuid": "CDEF", "value": None},  # Counter characteristic
+            0x0013: {"type": "characteristic_value", "uuid": "CDEF", "value": ""},  # Counter characteristic
             0x0014: {"type": "descriptor", "uuid": GATTAttributes.CLIENT_CHAR_CONFIG.value, "value": "disabled"},
             0x0015: {"type": "characteristic_declaration", "uuid": "DEAF", "properties": "read|notify", "value_type": "string", "value_handle": 0x0016},
-            0x0016: {"type": "characteristic_value", "uuid": "DEAF", "value": None},  # Data characteristic
+            0x0016: {"type": "characteristic_value", "uuid": "DEAF", "value": ""},  # Data characteristic
             0x0017: {"type": "descriptor", "uuid": GATTAttributes.CLIENT_CHAR_CONFIG.value, "value_type": "string", "value": "disabled"},
             0x0018: {"type": "characteristic_declaration", "uuid": "DCBA", "properties": "read|notify", "value_handle": 0x0019},
-            0x0019: {"type": "characteristic_value", "uuid": "DCBA", "value": None},  # Response characteristic
+            0x0019: {"type": "characteristic_value", "uuid": "DCBA", "value": ""},  # Response characteristic
             0x001A: {"type": "descriptor", "uuid": GATTAttributes.CLIENT_CHAR_CONFIG.value, "value": "disabled"},
         }
 
@@ -170,7 +170,7 @@ class GattServer:
                 value = entry.get('value')
                 if value not in self.cccd:
                     raise ValueError("Invalid value for CCCD {}.".format(value))
-                print("CCCD at handle 0x{:04X} = {}".format(handle, value))
+                # print("CCCD at handle 0x{:04X} = {}".format(handle, value))
                 return value
             else:
                 print("Handle 0x{:04X} is not a valid CCCD descriptor 0x{:04X}.".format( handle, GATTAttributes.CLIENT_CHAR_CONFIG.value))
@@ -182,7 +182,7 @@ class GattServer:
     def has_property(self, handle, one_prop_value):
         if '-' in one_prop_value:
             raise ValueError("Should only be a single property: write, read, indication, etc")
-        for entry in self.gatt_table.items():
+        for _, entry in self.gatt_table.items():
             if entry.get('type') == 'characteristic_declaration' and entry.get('value_handle') == handle:
                 properties = entry.get('properties', '')
                 if one_prop_value in properties.split('|'):
@@ -198,8 +198,7 @@ class GattServer:
         return False
 
     def convert_and_write(self, handle, value):
-        for entry in self.gatt_table.items():
-            print(entry)
+        for _, entry in self.gatt_table.items():
             if entry.get('type') == 'characteristic_declaration' and entry.get('value_handle') == handle:
                 value_type = entry.get("value_type")
                 if handle in self.gatt_table:
@@ -217,7 +216,8 @@ class GattServer:
                         value_entry["value"] = int.from_bytes(value, byteorder='little')
                         return True
                     elif value_type == "string":
-                        value_entry["value"] = value.decode("utf-8")
+                        value_entry["value"] = ByteHelper.to_string(value)
+                        return True
                     elif value_type == "variable":
                         uuid = entry.get("uuid")
                         if uuid == None:
@@ -226,6 +226,7 @@ class GattServer:
                         return self.write_table_variable(uuid, value)
                     else:
                         print("Write: Unkown value type {} for handle 0x{:04X}".format(value_type, handle))
+                        return False
                 else:
                     print("Write: No value for handle 0x{:04X}".format(handle))
                     return False
@@ -250,7 +251,7 @@ class GattServer:
             raise ValueError("UUID not found {}".format(uuid))
 
     def read_and_convert(self, handle):
-        for entry in self.gatt_table.items():
+        for _, entry in self.gatt_table.items():
             if entry.get('type') == 'characteristic_declaration' and entry.get('value_handle') == handle:
                 value_type = entry.get("value_type")
                 if handle in self.gatt_table:
@@ -282,6 +283,7 @@ class GattServer:
                         return self.read_table_variable(uuid)
                     else:
                         print("Read: Unkown value type {} for handle 0x{:04X}".format(value_type, handle))
+                        return None
                 else:
                     print("Read: No value for handle 0x{:04X}".format(handle))
                     return None
@@ -295,10 +297,9 @@ class GattServer:
             if entry.get('type') == 'descriptor' and entry.get('uuid') == GATTAttributes.CLIENT_CHAR_CONFIG.value:
                 return self.set_cccd(handle, value)
             if self.has_property(handle, 'write'):
-                print("writing", value)
+                # print("writing", value)
                 return self.convert_and_write(handle, value)
             else:
-                print("can't write to this handle 0x{:04X}".format(handle))
                 return False
         print("No value attribute in handle 0x{:04X}".format(handle))
         return False
@@ -453,16 +454,19 @@ if __name__ == "__main__":
     gatt_server.set_cccd(0x0014, 2)
     if gatt_server.read_cccd(0x0014) != 'indications':
         print("Error: gatt_server.read_cccd(0x0014) != 'indications'")
-    if gatt_server.read_char_value(0x0013) != None:
-        print("Error: gatt_server.read_char_value(0x0013) != None")
-    gatt_server.write_char_value(0x0013, b'1234-5678')
-    if gatt_server.read_char_value(0x0013) == True:
-        print("Error: gatt_server.read_char_value(0x0013) == True")
-    if gatt_server.read_char_value(0x0011) != None:
-        print("Error: gatt_server.read_char_value(0x0011) != None:")
+
+    if gatt_server.read_char_value(0x0013) != b"":
+        print(gatt_server.read_char_value(0x0013))
+        print("Error: gatt_server.read_char_value(0x0013) != empty string")
+    if gatt_server.write_char_value(0x0013, b'1234-5678') == True:
+        print("gatt_server.write_char_value(0x0013, b'1234-5678') == True")
+    if gatt_server.read_char_value(0x0013) == '1234-5678':
+        print("Error: gatt_server.read_char_value(0x0013) = write value")
+    if gatt_server.read_char_value(0x0011) != b"":
+        print("Error: gatt_server.read_char_value(0x0011)")
     gatt_server.write_char_value(0x0011, b'right-way')
-    if gatt_server.read_char_value(0x0011) != 'right-way':
-        print("Error: gatt_server.read_char_value(0x0011) != 'right-way'")
+    if gatt_server.read_char_value(0x0011) != b'right-way':
+        print("Error: gatt_server.read_char_value(0x0011) != b'right-way'")
     gatt_server.updateServiceCharacteristic(0x0011, 0x0013)
     if gatt_server.read_and_convert(0x000A) != b'\x11\x00\x13\x00':
         print("Error: gatt_server.read_and_convert(0x000A) != b'\x11\x00\x13\x00'")
