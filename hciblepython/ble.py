@@ -1032,23 +1032,20 @@ class BluetoothLEConnection:
         packet =  ByteHelper.from_u8  (0x11)    
         if gatt_uuid == GATTAttributes.PRIMARY_SERVICE.value:
             print("Get primary services for handles 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
-            handle_range = self.gatt_server.get_service_handle_range(start_handle)
-            return_start_handle = handle_range[0]
-            return_end_handle = handle_range[1]
-            if return_start_handle == None or return_end_handle == None:
+            return_start_handle, return_end_handle, primary_uuid = self.gatt_server.get_service_handle_range(start_handle)
+            if return_start_handle == None or return_end_handle == None or primary_uuid == None:
                 print("No handles found starting at 0x{:04X}".format(start_handle))
                 self.do_att_error_rsp(0x10, start_handle, ATTErrorCode.ATTRIBUTE_NOT_FOUND)
                 return
-            print("Handles 0x{:04X} 0x{:04X}".format(return_start_handle, return_end_handle))
+            print("Handles 0x{:04X} to 0x{:04X}".format(return_start_handle, return_end_handle))
             if end_handle < return_end_handle:
                 print("Service handle 0x{:04X} larger than request max 0x{:04X}, truncating".format(end_handle, return_end_handle))
                 return_end_handle = end_handle
-            primary_service = handle_range[2]
-            att_length = 4 + self.gatt_server.get_uuid_byte_length(primary_service)
-            packet += ByteHelper.from_u8(att_length)  
-            packet += ByteHelper.from_u16(return_start_handle)
-            packet += ByteHelper.from_u16(return_end_handle)
-            packet += self.gatt_server.uuid_string_to_bytes(primary_service)    
+                att_length = 4 + ByteHelper.get_uuid_byte_length(primary_service)
+                packet += ByteHelper.from_u8(att_length)  
+                packet += ByteHelper.from_u16(return_start_handle)
+                packet += ByteHelper.from_u16(return_end_handle)
+                packet += primary_uuid
         else:
             print("GATT Attribute 0x{:04X} Not Implemented".format(gatt_uuid))
             self.do_att_error_rsp(0x10, start_handle, ATTErrorCode.INVALID_HANDLE)
@@ -1105,7 +1102,7 @@ class BluetoothLEConnection:
         elif att_opcode == 0x08:
             start_handle = ByteHelper.to_u16(data, 1)
             end_handle = ByteHelper.to_u16(data, 3)
-            uuid = self.gatt_server.uuid_bytes_to_string(data[5:])
+            uuid = ByteHelper.to_uuid(data[5:])
             print(att_req_text, "Read by Type (0x{:02X}), UUID = {}".format(att_opcode, uuid))
             self.do_att_read_by_type_rsp(start_handle, end_handle, uuid)
         elif att_opcode == 0x09:
@@ -1119,7 +1116,7 @@ class BluetoothLEConnection:
         elif att_opcode == 0x10:
             start_handle = ByteHelper.to_u16(data, 1)
             end_handle = ByteHelper.to_u16(data, 3)
-            uuid = self.gatt_server.uuid_bytes_to_string(data[5:])
+            uuid = ByteHelper.to_uuid(data[5:])
             print(att_req_text, "Read by Group Request (0x{:02X}), UUID = {}".format(att_opcode, uuid))
             self.do_att_group_type_rsp(uuid, start_handle, end_handle)
         elif att_opcode == 0x11:

@@ -27,6 +27,19 @@ class ByteHelper:
         return byts[ind]
 
     @staticmethod
+    def to_uuid (uuid_bytes):
+        if len(uuid_bytes) == 2:
+            # Convert 2-byte UUID to a 4-character hex string
+            return "{:02X}{:02X}".format(uuid_bytes[1], uuid_bytes[0])
+        elif len(uuid_bytes) == 16:
+            # Reverse the bytes and convert 16-byte UUID to string format with dashes
+            reversed_uuid_bytes = uuid_bytes[::-1]
+            uuid_str = ''.join(f"{b:02X}" for b in reversed_uuid_bytes)
+            return f"{uuid_str[0:8]}-{uuid_str[8:12]}-{uuid_str[12:16]}-{uuid_str[16:20]}-{uuid_str[20:32]}"
+        else:
+            return None
+        
+    @staticmethod
     def to_string(byts):
         return byts.decode('utf-8')
 
@@ -71,6 +84,16 @@ class ByteHelper:
         return bytes([v1]) + bytes([v2]) + bytes([v3]) + bytes([v4])
 
     @staticmethod
+    def from_uuid(uuid):
+        if isinstance(uuid, str):
+            cleaned_uuid = ByteHelper.clean_uuid(uuid)
+            byte_pairs = [cleaned_uuid[i:i+2] for i in range(0, len(cleaned_uuid), 2)]
+            little_endian_bytes = byte_pairs[::-1]
+            little_endian_bytes = bytes(int(byte, 16) for byte in little_endian_bytes)
+            return little_endian_bytes
+        return None
+
+    @staticmethod
     def from_string(val):
         return val.encode("utf-8")
 
@@ -81,6 +104,15 @@ class ByteHelper:
     @staticmethod
     def from_data(val):
         return bytes(val)
+
+    @staticmethod
+    def clean_uuid(uuid):
+        return uuid.replace('-', '')
+
+    @staticmethod
+    def get_uuid_byte_length(uuid):
+        cleaned_uuid = uuid.replace('-', '')
+        return int(len(cleaned_uuid)/2)
 
 
 
