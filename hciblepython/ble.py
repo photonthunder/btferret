@@ -1046,10 +1046,22 @@ class BluetoothLEConnection:
         self.send(cmd)
 
     def do_att_write_rsp(self, handle, value):
-        self.gatt_server.write_char_value(handle, value)
-        packet =  ByteHelper.from_u8(0x13)   
-        cmd = make_acl(self.handle, len(packet)) + packet
-        self.send(cmd)
+        write_code = self.gatt_server.write_char_value(handle, value)
+        if write_code == ATTErrorCode.SUCCESS:
+            packet =  ByteHelper.from_u8(0x13)   
+            cmd = make_acl(self.handle, len(packet)) + packet
+            self.send(cmd)
+        else:
+            self.do_att_error_rsp(0x12, handle, write_code)
+
+
+    def do_att_write_no_response(self, handle, value):
+        write_success = self.gatt_server.write_char_value(handle, value)
+        if write_success != ATTErrorCode.SUCCESS:
+            print("No response was requested but write was not successful, Error = 0x{:02X}".format(write_success))
+
+
+        
 
     def on_acl_event(self, data):
         print("ACL data:      ", ByteHelper.as_hex(data))
@@ -1105,6 +1117,10 @@ class BluetoothLEConnection:
             self.do_att_write_rsp(handle, value)
         elif att_opcode == 0x13:
             print("Warning: Write RSP (0x13) - should not get from client") 
-
+        elif att_opcode == 0x52:
+            handle = ByteHelper.to_u16(data, 1)
+            value = data[3:]
+            print(att_req_text, "Write without response handle = 0x{:04X}, value = {}".format(handle, value))
+            self.do_att_write_no_response(handle, value)
         else:
             print("Warning: ATT Opcode 0x{:02X} Unknown".format(att_opcode))

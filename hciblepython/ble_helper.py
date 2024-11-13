@@ -85,6 +85,7 @@ class ByteHelper:
 
 
 class ATTErrorCode(IntEnum):
+    SUCCESS = 0x00
     INVALID_HANDLE = 0x01  # The attribute handle given was not valid on this server.
     READ_NOT_PERMITTED = 0x02  # The attribute cannot be read.
     WRITE_NOT_PERMITTED = 0x03  # The attribute cannot be written.

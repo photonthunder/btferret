@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from ble_helper import ByteHelper
+from ble_helper import ATTErrorCode
 from ble_helper import GATTAttributes
 
 class GattServer:
@@ -35,7 +36,7 @@ class GattServer:
     def updateServiceCharacteristic(self, start_handle, end_handle):
         if end_handle < start_handle:
             raise ValueError("end_handle 0x{:04X} is less than start_handle 0x{:04X}".format(end_handle, start_handle))
-        print("start_handle 0x{:04X}, end_handle 0x{:04X}".format(start_handle << 8, end_handle))
+        # print("start_handle 0x{:04X}, end_handle 0x{:04X}".format(start_handle << 8, end_handle))
         self.service_changed = (start_handle << 16) | end_handle
         print("Service changed: 0x{:08X}".format(self.service_changed))
 
@@ -144,7 +145,7 @@ class GattServer:
     def set_cccd(self, handle, value):
         if value not in self.cccd.values():
             print("Invalid value for CCCD. Use 0x0001 for notifications, 0x0002 for indications, or 0x0000 to disable.")
-            return False
+            return ATTErrorCode.VALUE_NOT_ALLOWED
         value_string = None
         for key, val in self.cccd.items():
             if val == value:
@@ -155,13 +156,13 @@ class GattServer:
             if entry.get('type') == 'descriptor' and entry.get('uuid') == GATTAttributes.CLIENT_CHAR_CONFIG.value:
                 entry['value'] = value_string
                 print("Updated CCCD at handle 0x{:04X} to {}".format(handle, value_string))
-                return True
+                return ATTErrorCode.SUCCESS
             else:
                 print("Handle 0x{:04X} is not a valid CCCD descriptor 0x{:04X}.".format( handle, GATTAttributes.CLIENT_CHAR_CONFIG.value))
-                return False
+                return ATTErrorCode.ATTRIBUTE_NOT_FOUND
         else:
             print(f"Handle 0x{handle:04X} not found in gatt_table.")
-            return False
+            return ATTErrorCode.INVALID_HANDLE
 
     def read_cccd(self, handle):
         if handle in self.gatt_table:
@@ -188,7 +189,7 @@ class GattServer:
                 if one_prop_value in properties.split('|'):
                     return True
                 else:
-                    print("No {} Property for handle 0x{:04X}".format(one_prop_value, handle))
+                    # print("No {} Property for handle 0x{:04X}".format(one_prop_value, handle))
                     return False
         print("Characteristic value handle 0x{:04X} not found in gatt_table.".format(handle))
         return False
@@ -295,13 +296,12 @@ class GattServer:
             entry = self.gatt_table[handle]
             if entry.get('type') == 'descriptor' and entry.get('uuid') == GATTAttributes.CLIENT_CHAR_CONFIG.value:
                 return self.set_cccd(handle, value)
-            if self.has_property(handle, 'write'):
-                # print("writing", value)
+            if self.has_property(handle, 'write') or self.has_property(handle, 'write_without_response'):
                 return self.convert_and_write(handle, value)
             else:
-                return False
-        print("No value attribute in handle 0x{:04X}".format(handle))
-        return False
+                return ATTErrorCode.WRITE_NOT_PERMITTED
+        print("No handle 0x{:04X}".format(handle))
+        return ATTErrorCode.INVALID_HANDLE
 
     def read_char_value(self, handle):
         if handle in self.gatt_table:
@@ -470,10 +470,12 @@ if __name__ == "__main__":
     if gatt_server.read_char_value(0x0013) != b"":
         print(gatt_server.read_char_value(0x0013))
         print("Error: gatt_server.read_char_value(0x0013) != empty string")
-    if gatt_server.write_char_value(0x0013, b'1234-5678') == True:
-        print("gatt_server.write_char_value(0x0013, b'1234-5678') == True")
-    if gatt_server.read_char_value(0x0013) == '1234-5678':
+    if gatt_server.write_char_value(0x0013, b'1234-5678') != ATTErrorCode.SUCCESS:
+        print("Error: gatt_server.write_char_value(0x0013, b'1234-5678') != ATTErrorCode.SUCCESS")
+    if gatt_server.read_char_value(0x0013) != b'1234-5678':
         print("Error: gatt_server.read_char_value(0x0013) = write value")
+    if gatt_server.write_char_value(0x0016, b'abcd1234') == ATTErrorCode.SUCCESS:
+        print("Error: gatt_server.write_char_value(0x0016, b'abcd1234') == ATTErrorCode.SUCCESS")
     if gatt_server.read_char_value(0x0011) != b"":
         print("Error: gatt_server.read_char_value(0x0011)")
     gatt_server.write_char_value(0x0011, b'right-way')
