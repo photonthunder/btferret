@@ -41,7 +41,7 @@ class GattServer:
         print("Service changed: 0x{:08X}".format(self.service_changed))
 
     def getTestTable(self):
-        self.device_name = "My  Pi"
+        self.device_name = "My New Pi"
         self.prop_flags = {
             "broadcast": 0x01,
             "read": 0x02,
@@ -295,7 +295,8 @@ class GattServer:
         if handle in self.gatt_table:
             entry = self.gatt_table[handle]
             if entry.get('type') == 'descriptor' and entry.get('uuid') == GATTAttributes.CLIENT_CHAR_CONFIG.value:
-                return self.set_cccd(handle, value)
+                int_value = ByteHelper.to_u16(value, 0)
+                return self.set_cccd(handle, int_value)
             if self.has_property(handle, 'write') or self.has_property(handle, 'write_without_response'):
                 return self.convert_and_write(handle, value)
             else:

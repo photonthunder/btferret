@@ -969,7 +969,7 @@ class BluetoothLEConnection:
             char_decl = self.gatt_server.read_char_uuid_value(start_handle, end_handle)
             if not char_decl:
                 print("No Characteristic Decleration between 0x{:04X} and 0x{:04X}".format(start_handle, end_handle))
-                self.do_att_error_rsp(0x10, start_handle, ATTErrorCode.ATTRIBUTE_NOT_FOUND) 
+                self.do_att_error_rsp(0x08, start_handle, ATTErrorCode.ATTRIBUTE_NOT_FOUND) 
                 return
             else:
                 len_char_item = len(char_decl)
@@ -985,7 +985,7 @@ class BluetoothLEConnection:
             handle, data = self.gatt_server.read_uuid_value(start_handle, end_handle, uuid)
             if handle == None:
                 print("No match {} found bewtween 0x{:04X} and 0x{:04X}".format(uuid, start_handle, end_handle))
-                self.do_att_error_rsp(0x10, start_handle, ATTErrorCode.ATTRIBUTE_NOT_FOUND) 
+                self.do_att_error_rsp(0x08, start_handle, ATTErrorCode.ATTRIBUTE_NOT_FOUND) 
                 return
             
             packet += ByteHelper.from_u8(2 + len(data))
