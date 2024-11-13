@@ -196,7 +196,7 @@ class GattServer:
 
     def write_table_variable(self, uuid, value):
         print("No Variable can be written at this time")
-        return False
+        return ATTErrorCode.VALUE_NOT_ALLOWED
 
     def convert_and_write(self, handle, value):
         for _, entry in self.gatt_table.items():
@@ -206,33 +206,33 @@ class GattServer:
                     value_entry = self.gatt_table[handle]
                     if value_type == "bytes":
                         value_entry["value"] = value
-                        return True
+                        return ATTErrorCode.SUCCESS
                     elif value_type == "int":
                         int_len = entry.get("length")
                         if int_len == None:
                             print("Write: No length attribute in handle 0x{:04X}".format(handle))
-                            return False
+                            return ATTErrorCode.ATTRIBUTE_NOT_FOUND
                         if int_len != len(value):
                             print("Write: Int requires a specific len of bytes {}".format(len(value)))
                         value_entry["value"] = int.from_bytes(value, byteorder='little')
-                        return True
+                        return ATTErrorCode.SUCCESS
                     elif value_type == "string":
                         value_entry["value"] = ByteHelper.to_string(value)
-                        return True
+                        return ATTErrorCode.SUCCESS
                     elif value_type == "variable":
                         uuid = entry.get("uuid")
                         if uuid == None:
                             print("Write: No uuid attribute in handle 0x{:04X}".format(handle))
-                            return False
+                            return ATTErrorCode.ATTRIBUTE_NOT_FOUND
                         return self.write_table_variable(uuid, value)
                     else:
                         print("Write: Unkown value type {} for handle 0x{:04X}".format(value_type, handle))
-                        return False
+                        return ATTErrorCode.VALUE_NOT_ALLOWED
                 else:
                     print("Write: No value for handle 0x{:04X}".format(handle))
-                    return False
-        print("Write: Characteristic value handle 0x{:04X} not found in gatt_table.".format(handle))
-        return False
+                    return ATTErrorCode.ATTRIBUTE_NOT_FOUND
+        print("Write: Handle 0x{:04X} not found in gatt_table.".format(handle))
+        return ATTErrorCode.INVALID_HANDLE
 
     def read_table_variable(self, uuid):
         if uuid == "2A00":
@@ -470,7 +470,9 @@ if __name__ == "__main__":
     if gatt_server.read_char_value(0x0013) != b"":
         print(gatt_server.read_char_value(0x0013))
         print("Error: gatt_server.read_char_value(0x0013) != empty string")
-    if gatt_server.write_char_value(0x0013, b'1234-5678') != ATTErrorCode.SUCCESS:
+    test_write = gatt_server.write_char_value(0x0013, b'1234-5678') 
+    if test_write != ATTErrorCode.SUCCESS:
+        print("0x{:02X}".format(test_write))
         print("Error: gatt_server.write_char_value(0x0013, b'1234-5678') != ATTErrorCode.SUCCESS")
     if gatt_server.read_char_value(0x0013) != b'1234-5678':
         print("Error: gatt_server.read_char_value(0x0013) = write value")
