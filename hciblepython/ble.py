@@ -1009,11 +1009,23 @@ class BluetoothLEConnection:
 
         print(att_req_text, "GROUP TYPE (0x0A)")
         
-        packet =  ByteHelper.from_u8  (0x0a)               # ATT opcode ATT_READ_REQ
+        packet =  ByteHelper.from_u8  (0x0A)               # ATT opcode ATT_READ_REQ
         packet += ByteHelper.from_u16 (handle)
                
         cmd = make_acl(self.handle, len(packet)) + packet
         self.send(cmd)
+
+    def do_att_read_rsp(self, handle):
+        print(att_rsp_text, "READ (0x0B)")
+        read_code, value = self.gatt_server.read_char_value(handle)
+        if read_code == ATTErrorCode.SUCCESS:  
+            packet = ByteHelper.from_u8(0x0B)
+            packet += value
+            cmd = make_acl(self.handle, len(packet)) + packet
+            self.send(cmd)
+        else:
+            self.do_att_error_rsp(0x0A, handle, read_code)
+
 
     def do_att_group_type_rsp(self, gatt_uuid, start_handle, end_handle):
         print(att_rsp_text, "GROUP TYPE (0x11)")
@@ -1046,6 +1058,7 @@ class BluetoothLEConnection:
         self.send(cmd)
 
     def do_att_write_rsp(self, handle, value):
+        print(att_rsp_text, "WRITE (0x13)")
         write_code = self.gatt_server.write_char_value(handle, value)
         if write_code == ATTErrorCode.SUCCESS:
             packet =  ByteHelper.from_u8(0x13)   
@@ -1056,6 +1069,7 @@ class BluetoothLEConnection:
 
 
     def do_att_write_no_response(self, handle, value):
+        print(att_rsp_text, "WRITE NO RESPONSE (0x52)")
         write_success = self.gatt_server.write_char_value(handle, value)
         if write_success != ATTErrorCode.SUCCESS:
             print("No response was requested but write was not successful, Error = 0x{:02X}".format(write_success))
@@ -1097,9 +1111,9 @@ class BluetoothLEConnection:
         elif att_opcode == 0x09:
             print("Read by Type RSP (0x09) - should not get from client")
         elif att_opcode == 0x0A:
-            start_handle = ByteHelper.to_u16(data, 1)
+            handle = ByteHelper.to_u16(data, 1)
             print(att_req_text, "READ (0x{:02X})".format(att_opcode))
-            print("Error: Still need to add this function")
+            self.do_att_read_rsp(handle)
         elif att_opcode == 0x0B:
             print("Warning Read RSP (0x0B) - should not get from client")
         elif att_opcode == 0x10:

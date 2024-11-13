@@ -214,6 +214,7 @@ class GattServer:
                             return ATTErrorCode.ATTRIBUTE_NOT_FOUND
                         if int_len != len(value):
                             print("Write: Int requires a specific len of bytes {}".format(len(value)))
+                            return ATTErrorCode.INVALID_ATTRIBUTE_VALUE_LENGTH
                         value_entry["value"] = int.from_bytes(value, byteorder='little')
                         return ATTErrorCode.SUCCESS
                     elif value_type == "string":
@@ -236,20 +237,21 @@ class GattServer:
 
     def read_table_variable(self, uuid):
         if uuid == "2A00":
-            return self.device_name.encode("utf-8")
+            return ATTErrorCode.SUCCESS, self.device_name.encode("utf-8")
         elif uuid == "2A01":
-            return ByteHelper.from_u16(self.appearance)
+            return ATTErrorCode.SUCCESS, ByteHelper.from_u16(self.appearance)
         elif uuid == "2A05":
             v1 = self.service_changed & 0xFF
             v2 = (self.service_changed >> 8) & 0xFF
             v3 = (self.service_changed >> 16) & 0xFF
             v4 = (self.service_changed >> 24) & 0xFF
             sc_value = bytes([v3]) + bytes([v4]) + bytes([v1]) + bytes([v2])
-            return sc_value
+            return ATTErrorCode.SUCCESS, sc_value
         elif uuid == "2A50":
-            return self.pnp_id
+            return ATTErrorCode.SUCCESS, self.pnp_id
         else:
-            raise ValueError("UUID not found {}".format(uuid))
+            print("Error: UUID not found {}".format(uuid))
+            return ATTErrorCode.VALUE_NOT_ALLOWED, None
 
     def read_and_convert(self, handle):
         for _, entry in self.gatt_table.items():
@@ -263,33 +265,33 @@ class GattServer:
                         int_len = entry.get("length")
                         if int_len == None:
                             print("Read: No length attribute in handle 0x{:04X}".format(handle))
-                            return None
+                            return ATTErrorCode.ATTRIBUTE_NOT_FOUND, None
                         int_value = value_entry.get("value")
                         int_bytes = int_value.to_bytes(int_len, byteorder='little')
                         if int_len != len(int_bytes):
                             print("Read: Int requires a specific len of bytes {} != {}".format(int_len, len(int_bytes)))
-                            return None
-                        return int_bytes
+                            return ATTErrorCode.INVALID_ATTRIBUTE_VALUE_LENGTH, None
+                        return ATTErrorCode.SUCCESS, int_bytes
                     elif value_type == "string":
                         string_value = value_entry.get("value")
                         if string_value == None:
                             print("Read: No string value at 0x{:04X}".format(handle))
-                            return None
-                        return ByteHelper.from_string(string_value)
+                            return ATTErrorCode.ATTRIBUTE_NOT_FOUND, None
+                        return ATTErrorCode.SUCCESS, ByteHelper.from_string(string_value)
                     elif value_type == "variable":
                         uuid = entry.get("uuid")
                         if uuid == None:
                             print("Read: No uuid attribute in handle 0x{:04X}".format(handle))
-                            return None
+                            return ATTErrorCode.ATTRIBUTE_NOT_FOUND, None
                         return self.read_table_variable(uuid)
                     else:
                         print("Read: Unkown value type {} for handle 0x{:04X}".format(value_type, handle))
-                        return None
+                        return ATTErrorCode.VALUE_NOT_ALLOWED, None
                 else:
                     print("Read: No value for handle 0x{:04X}".format(handle))
-                    return None
+                    return ATTErrorCode.ATTRIBUTE_NOT_FOUND, None
         print("Read: Characteristic value handle 0x{:04X} not found in gatt_table.".format(handle))
-        return None
+        return ATTErrorCode.INVALID_HANDLE, None
 
     def write_char_value(self, handle, value):
         if handle in self.gatt_table:
@@ -307,11 +309,9 @@ class GattServer:
     def read_char_value(self, handle):
         if handle in self.gatt_table:
             entry = self.gatt_table[handle]
-            # if entry.get('type') == 'descriptor' and entry.get('uuid') == GATTAttributes.CLIENT_CHAR_CONFIG.value:
-            #     return self.read_cccd(handle)
             if self.has_property(handle, 'read'):
                 return self.read_and_convert(handle)
-        return None
+        return ATTErrorCode.INVALID_HANDLE, None
 
     def get_uuid_byte_length(self, uuid):
         cleaned_uuid = uuid.replace('-', '')
@@ -468,24 +468,29 @@ if __name__ == "__main__":
     if test_property != 0x16:
         print("Property is not 0x16, but 0x{:02X}".format(test_property))
 
-    if gatt_server.read_char_value(0x0013) != b"":
-        print(gatt_server.read_char_value(0x0013))
+    return_code, data = gatt_server.read_char_value(0x0013)
+    if  data != b"":
+        print(return_code, data)
         print("Error: gatt_server.read_char_value(0x0013) != empty string")
     test_write = gatt_server.write_char_value(0x0013, b'1234-5678') 
     if test_write != ATTErrorCode.SUCCESS:
         print("0x{:02X}".format(test_write))
         print("Error: gatt_server.write_char_value(0x0013, b'1234-5678') != ATTErrorCode.SUCCESS")
-    if gatt_server.read_char_value(0x0013) != b'1234-5678':
+    return_code, data = gatt_server.read_char_value(0x0013)
+    if  data != b'1234-5678':
         print("Error: gatt_server.read_char_value(0x0013) = write value")
     if gatt_server.write_char_value(0x0016, b'abcd1234') == ATTErrorCode.SUCCESS:
         print("Error: gatt_server.write_char_value(0x0016, b'abcd1234') == ATTErrorCode.SUCCESS")
-    if gatt_server.read_char_value(0x0011) != b"":
+    return_code, data = gatt_server.read_char_value(0x0011)
+    if data != b"":
         print("Error: gatt_server.read_char_value(0x0011)")
     gatt_server.write_char_value(0x0011, b'right-way')
-    if gatt_server.read_char_value(0x0011) != b'right-way':
+    return_code, data = gatt_server.read_char_value(0x0011)
+    if data != b'right-way':
         print("Error: gatt_server.read_char_value(0x0011) != b'right-way'")
     gatt_server.updateServiceCharacteristic(0x0011, 0x0013)
-    if gatt_server.read_and_convert(0x000A) != b'\x11\x00\x13\x00':
+    return_code, data = gatt_server.read_and_convert(0x000A)
+    if data != b'\x11\x00\x13\x00':
         print("Error: gatt_server.read_and_convert(0x000A) != b'\x11\x00\x13\x00'")
 
 
