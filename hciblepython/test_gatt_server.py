@@ -117,10 +117,10 @@ class GattServer:
 
             # Custom Service (11223344-5566-7788-99AA-BBCCDDEEFF00)
             0x000F: {"type": "primary_service", "uuid": "11223344-5566-7788-99AA-BBCCDDEEFF00"},
-            0x0010: {"type": "characteristic_declaration", "uuid": "ABCD", "properties": "read|write", "value_type": "string", "value_handle": 0x0011},
+            0x0010: {"type": "characteristic_declaration", "uuid": "ABCD", "properties": "read|write_without_response", "value_type": "string", "value_handle": 0x0011},
             0x0011: {"type": "characteristic_value", "uuid": "ABCD", "value": ""},  # Control characteristic
             # 0x00XX: {"type": "descriptor", "uuid": GATTAttributes.CHARACTERISTIC_USER_DESC.value, "value": "User description, such as Control Characteristic"},
-            0x0012: {"type": "characteristic_declaration", "uuid": "CDEF", "properties": "read|notify", "value_type": "string", "value_handle": 0x0013},
+            0x0012: {"type": "characteristic_declaration", "uuid": "CDEF", "properties": "read|notify|write_without_response", "value_type": "string", "value_handle": 0x0013},
             0x0013: {"type": "characteristic_value", "uuid": "CDEF", "value": ""},  # Counter characteristic
             0x0014: {"type": "descriptor", "uuid": GATTAttributes.CLIENT_CHAR_CONFIG.value, "value": "disabled"},
             0x0015: {"type": "characteristic_declaration", "uuid": "DEAF", "properties": "read|notify", "value_type": "string", "value_handle": 0x0016},
@@ -136,7 +136,7 @@ class GattServer:
 
     def char_prop_to_byte(self, properties):
         prop_byte = 0x00
-        for prop in properties.split():
+        for prop in properties.split('|'):
             if prop in self.prop_flags:
                 prop_byte |= self.prop_flags[prop]
         return prop_byte
@@ -388,9 +388,18 @@ class GattServer:
         for handle, attr in self.gatt_table.items():
             if start_handle <= handle <= end_handle and attr["type"] == "characteristic_declaration":
                 properties = attr.get("properties")
+                if properties == None:
+                    print("No properties found at 0x{:04X}".format(handle))
+                    return characteristics
                 prop_byte = self.char_prop_to_byte(properties)
                 value_handle = attr.get("value_handle")
+                if value_handle == None:
+                    print("No value_handle found at 0x{:04X}".format(handle))
+                    return characteristics
                 uuid = attr.get("uuid")
+                if uuid == None:
+                    print("No uuid found at 0x{:04X}".format(handle))
+                    return characteristics
                 uuid_bytes = self.uuid_string_to_bytes(uuid)
                 #characteristics.append((handle, prop_byte, value_handle, uuid_bytes))
                 characteristics = [handle, prop_byte, value_handle, uuid_bytes]
@@ -453,6 +462,10 @@ if __name__ == "__main__":
     gatt_server.set_cccd(0x0014, 2)
     if gatt_server.read_cccd(0x0014) != 'indications':
         print("Error: gatt_server.read_cccd(0x0014) != 'indications'")
+
+    test_property = gatt_server.char_prop_to_byte("read|write_without_response|notify")
+    if test_property != 0x16:
+        print("Property is not 0x16, but 0x{:02X}".format(test_property))
 
     if gatt_server.read_char_value(0x0013) != b"":
         print(gatt_server.read_char_value(0x0013))
