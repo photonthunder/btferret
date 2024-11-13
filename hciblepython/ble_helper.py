@@ -2,53 +2,67 @@ from enum import IntEnum
 from enum import Enum
 
 class ByteHelper:
+    @staticmethod
     def as_addr (byts):
         return ':'.join('{:02x}'.format (a) for a in byts)
 
+    @staticmethod
     def as_hex (byts):
         return ' '.join('{:02x}'.format (a) for a in byts)
 
+    @staticmethod
     def as_printable(byts):
         return ''.join('{:c}'.format(a) if (a >= 32 and a <= 126) else '.' for a in byts) 
 
+    @staticmethod
     def to_u32(byts, ind):
         return byts[ind] | (byts [ind+1] << 8) | (byts [ind+2] << 16) | (byts [ind+3] << 24)
 
+    @staticmethod
     def to_u16 (byts, ind):
         return byts[ind] | (byts [ind+1] << 8)
 
+    @staticmethod
     def to_u8 (byts, ind):
         return byts[ind]
 
+    @staticmethod
     def to_string(byts):
         return byts.decode('utf-8')
 
+    @staticmethod
     def to_addr(byts, ind):
-        return as_addr(bytes(reversed(byts [ind: ind+6])))
+        return ByteHelper.as_addr(bytes(reversed(byts [ind: ind+6])))
 
+    @staticmethod
     def to_data(byts, ind, length):
         return byts[ind: ind + length]
 
+    @staticmethod
     def to_data_rest(byts, ind):
         return byts[ind:]
 
+    @staticmethod
     def to_bits_u16 (byts, ind, start, num_bits):
-        val = to_u16(byts, ind)
+        val = ByteHelper.to_u16(byts, ind)
         val = val >> start
         mask = (1 << num_bits) - 1
         return val & mask
 
+    @staticmethod
     def from_u8(val):
         if val == None:
             return bytes()
         else:
             return bytes ([val])
 
+    @staticmethod
     def from_u16(val):
         v1 = val & 0xFF
         v2 = val >> 8
         return bytes([v1]) + bytes([v2])
 
+    @staticmethod
     def from_u32(val):
         v1 = val & 0xFF
         v2 = (val >> 8) & 0xFF
@@ -56,12 +70,15 @@ class ByteHelper:
         v4 = (val >> 24) & 0xFF
         return bytes([v1]) + bytes([v2]) + bytes([v3]) + bytes([v4])
 
+    @staticmethod
     def from_string(val):
         return val.encode("utf-8")
 
+    @staticmethod
     def from_addr(val):
         return bytes(reversed(bytes.fromhex(val.replace(':', ''))))
 
+    @staticmethod
     def from_data(val):
         return bytes(val)
 

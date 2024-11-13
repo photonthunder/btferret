@@ -290,7 +290,6 @@ class GattServer:
         print("Read: Characteristic value handle 0x{:04X} not found in gatt_table.".format(handle))
         return None
 
-
     def write_char_value(self, handle, value):
         if handle in self.gatt_table:
             entry = self.gatt_table[handle]

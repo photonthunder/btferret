@@ -228,11 +228,11 @@ class BluetoothLEConnection:
         
         # These lines double the report to test for num_reports = 2
         # num_reports = ByteHelper.to_u8       (data, 4)
-        # reports =     ByteHelper.ByteHelper.to_data_rest(data, 5)
+        # reports =     ByteHelper.to_data_rest(data, 5)
         # data = data[0:4] + ByteHelper.from_u8(2) + reports + reports
 
         num_reports = ByteHelper.to_u8       (data, 4)
-        reports =     ByteHelper.ByteHelper.to_data_rest(data, 5)                  # the actual 'reports'
+        reports =     ByteHelper.to_data_rest(data, 5)                  # the actual 'reports'
         
         report_offset = 0                                    # start of this entry in 'reports'
         for rep in range(0, num_reports):
@@ -295,7 +295,7 @@ class BluetoothLEConnection:
         print("Read Remote Features Complete")
         
         handle = ByteHelper.to_u16(data, 5)
-        features = ByteHelper.ByteHelper.to_data_rest(data, 7)
+        features = ByteHelper.to_data_rest(data, 7)
         
         print("Handle: {} Features {}".format(handle, ByteHelper.as_hex(features)))
 
@@ -505,7 +505,7 @@ class BluetoothLEConnection:
         if pb & 0x01 == 0:
             size =     ByteHelper.to_u16(data, 5)
             channel =  ByteHelper.to_u16(data, 7)
-            acl_data = ByteHelper.ByteHelper.to_data_rest(data, 9)
+            acl_data = ByteHelper.to_data_rest(data, 9)
             full_packet = length - size == 4
 
             print("Channel: {} Length: {} Data size: {} Full packet? {}".format(channel, length, size, full_packet))
@@ -516,7 +516,7 @@ class BluetoothLEConnection:
 
         if pb & 0x01 == 1:
             print("ACL Packet Continuation")
-            acl_data = ByteHelper.ByteHelper.to_data_rest(data, 5)
+            acl_data = ByteHelper.to_data_rest(data, 5)
             self.acl_packet += acl_data
             print("ACL data:  ", ByteHelper.as_hex(acl_data))
             if len(self.acl_packet) == self.acl_total_length:    # This was the last continuation packet
