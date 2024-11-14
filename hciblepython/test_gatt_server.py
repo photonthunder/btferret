@@ -373,10 +373,12 @@ class GattServer:
                     if value == None:
                         continue
                     # print(value)
-                    return handle, value.encode('utf-8')
-        return None, None
+                    return ATTErrorCode.SUCCESS, handle, value.encode('utf-8')
+        print("No match {} found bewtween 0x{:04X} and 0x{:04X}".format(uuid, start_handle, end_handle))
+        return ATTErrorCode.ATTRIBUTE_NOT_FOUND, None, None
 
     def read_char_uuid_value(self, start_handle, end_handle):
+        # print("Handle range of 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
         characteristics = []
         for handle, attr in self.gatt_table.items():
             if start_handle <= handle <= end_handle and attr["type"] == "characteristic_declaration":
@@ -395,7 +397,7 @@ class GattServer:
                     return ATTErrorCode.ATTRIBUTE_NOT_FOUND, characteristics
                 return_code, uuid_bytes = self.uuid_string_to_bytes(uuid)
                 if return_code != ATTErrorCode.SUCCESS:
-                    return ATTErrorCode.UNLIKELY_ERROR, characteristic
+                    return ATTErrorCode.UNLIKELY_ERROR, characteristics
                 #characteristics.append((handle, prop_byte, value_handle, uuid_bytes))
                 characteristics = [handle, prop_byte, value_handle, uuid_bytes]
                 break
@@ -417,7 +419,7 @@ class GattServer:
             attribute = self.gatt_table[handle]
             if attribute["type"] == "primary_service":
                 if in_service:
-                    return first_handle, last_handle, primary_service_uuid
+                    break
                 first_handle = handle
                 string_uuid = attribute["uuid"]
                 primary_service_uuid = ByteHelper.from_uuid(string_uuid)
@@ -429,8 +431,8 @@ class GattServer:
                     last_handle = 0xFFFF
         if first_handle is None:
             print("No primary service found starting at handle 0x{:04X}.".format(start_handle))
-            return None, None, ""
-        return first_handle, last_handle, primary_service_uuid
+            return ATTErrorCode.SUCCESS, None, None, ""
+        return ATTErrorCode.SUCCESS, first_handle, last_handle, primary_service_uuid
 
 # logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logging.basicConfig(level=logging.INFO, format='%(message)s')
@@ -451,11 +453,11 @@ def error_check(condition, message, error_code=None):
 if __name__ == "__main__":
     gatt_server = GattServer()
 
-    first, last, primary = gatt_server.get_service_handle_range(0x000C)
+    return_code, first, last, primary = gatt_server.get_service_handle_range(0x000C)
     expected_first = 0x000C
     expected_last = 0x000E
     expected_primary = b'\n\x18'
-    error_check(first == expected_first and last == expected_last and primary == expected_primary, f"First Handle = 0x{first:04X}, Last Handle = 0x{last:04X}, Primary UUID = {primary}")
+    error_check(first == expected_first and last == expected_last and primary == expected_primary, f"First Handle = 0x{first:04X}, Last Handle = 0x{last:04X}, Primary UUID = {primary}", return_code)
     
     return_code, uuid_bytes = gatt_server.uuid_string_to_bytes("11223344-5566-7788-99AA-BBCCDDEEFF00")
     expected_uuid_bytes = b'\x00\xff\xee\xdd\xcc\xbb\xaa\x99\x88wfUD3"\x11'
@@ -503,4 +505,5 @@ if __name__ == "__main__":
     return_code, data = gatt_server.read_and_convert(0x000A)
     error_check(data == b'\x11\x00\x13\x00', f"gatt_server.read_and_convert(0x000A) != expected bytes", return_code)
 
-    
+    return_code, data = gatt_server.read_char_uuid_value(0x000C, 0x000E)
+    error_check(data == [13, 2, 14, b'P*'], f"gatt_server.read_char_uuid_value(0x000C, 0x000E)", return_code)

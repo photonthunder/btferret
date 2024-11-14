@@ -921,10 +921,9 @@ class BluetoothLEConnection:
 
     def do_att_find_information_rsp(self, start_handle, end_handle):
         print(att_rsp_text, "FIND INFORMATION (0x05)")
-        uuid_format, handle_uuid = self.gatt_server.find_information(start_handle, end_handle)
-        if uuid_format == None:
-            print("No uuid between 0x{:04X} and 0x{:04X}".format(start_handle, end_handle))
-            self.do_att_error_rsp(0x10, start_handle, ATTErrorCode.ATTRIBUTE_NOT_FOUND) 
+        return_code, uuid_format, handle_uuid = self.gatt_server.find_information(start_handle, end_handle)
+        if return_code != ATTErrorCode.SUCCESS:
+            self.do_att_error_rsp(0x04, start_handle, return_code) 
             return
         packet =  ByteHelper.from_u8(0x05)
         packet += ByteHelper.from_u8(uuid_format)
@@ -966,15 +965,15 @@ class BluetoothLEConnection:
         print(att_rsp_text, "READ BY TYPE (0x09)")
         packet =  ByteHelper.from_u8  (0x09)
         if uuid == GATTAttributes.CHARACTERISTIC.value:
-            char_decl = self.gatt_server.read_char_uuid_value(start_handle, end_handle)
-            if not char_decl:
-                print("No Characteristic Decleration between 0x{:04X} and 0x{:04X}".format(start_handle, end_handle))
-                self.do_att_error_rsp(0x08, start_handle, ATTErrorCode.ATTRIBUTE_NOT_FOUND) 
+            return_code, char_decl = self.gatt_server.read_char_uuid_value(start_handle, end_handle)
+            if return_code != ATTErrorCode.SUCCESS:
+                self.do_att_error_rsp(0x08, start_handle, return_code) 
                 return
             else:
-                len_char_item = len(char_decl)
+                # len_char_item = len(char_decl)
                 packet += ByteHelper.from_u8(7) 
                 # for idx, char_item in enumerate(char_decl):
+                print(char_decl)
                 handle, prop_byte, value_handle, char_uuid = char_decl
                 packet += ByteHelper.from_u16(handle)
                 packet += ByteHelper.from_u8(prop_byte)
@@ -982,12 +981,10 @@ class BluetoothLEConnection:
                 packet += char_uuid
         
         else:
-            handle, data = self.gatt_server.read_uuid_value(start_handle, end_handle, uuid)
-            if handle == None:
-                print("No match {} found bewtween 0x{:04X} and 0x{:04X}".format(uuid, start_handle, end_handle))
-                self.do_att_error_rsp(0x08, start_handle, ATTErrorCode.ATTRIBUTE_NOT_FOUND) 
-                return
-            
+            return_code, handle, data = self.gatt_server.read_uuid_value(start_handle, end_handle, uuid)
+            if return_code != ATTErrorCode.SUCCESS:
+                self.do_att_error_rsp(0x08, start_handle, return_code) 
+                return  
             packet += ByteHelper.from_u8(2 + len(data))
             packet += ByteHelper.from_u16 (handle)
             packet += data        
@@ -1017,38 +1014,37 @@ class BluetoothLEConnection:
 
     def do_att_read_rsp(self, handle):
         print(att_rsp_text, "READ (0x0B)")
-        read_code, value = self.gatt_server.read_char_value(handle)
-        if read_code == ATTErrorCode.SUCCESS:  
+        return_code, value = self.gatt_server.read_char_value(handle)
+        if return_code != ATTErrorCode.SUCCESS: 
+            self.do_att_error_rsp(0x0A, handle, return_code)
+            return
+        else: 
             packet = ByteHelper.from_u8(0x0B)
             packet += value
             cmd = make_acl(self.handle, len(packet)) + packet
             self.send(cmd)
-        else:
-            self.do_att_error_rsp(0x0A, handle, read_code)
-
 
     def do_att_group_type_rsp(self, gatt_uuid, start_handle, end_handle):
         print(att_rsp_text, "GROUP TYPE (0x11)")
         packet =  ByteHelper.from_u8  (0x11)    
         if gatt_uuid == GATTAttributes.PRIMARY_SERVICE.value:
             print("Get primary services for handles 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
-            return_start_handle, return_end_handle, primary_uuid = self.gatt_server.get_service_handle_range(start_handle)
-            if return_start_handle == None or return_end_handle == None or primary_uuid == None:
-                print("No handles found starting at 0x{:04X}".format(start_handle))
-                self.do_att_error_rsp(0x10, start_handle, ATTErrorCode.ATTRIBUTE_NOT_FOUND)
+            return_code, return_start_handle, return_end_handle, primary_uuid = self.gatt_server.get_service_handle_range(start_handle)
+            if return_code != ATTErrorCode.SUCCESS: 
+                self.do_att_error_rsp(0x10, handle, return_code)
                 return
             print("Handles 0x{:04X} to 0x{:04X}".format(return_start_handle, return_end_handle))
             if end_handle < return_end_handle:
                 print("Service handle 0x{:04X} larger than request max 0x{:04X}, truncating".format(end_handle, return_end_handle))
                 return_end_handle = end_handle
-                att_length = 4 + ByteHelper.get_uuid_byte_length(primary_service)
-                packet += ByteHelper.from_u8(att_length)  
-                packet += ByteHelper.from_u16(return_start_handle)
-                packet += ByteHelper.from_u16(return_end_handle)
-                packet += primary_uuid
+            att_length = 4 + len(primary_uuid)
+            packet += ByteHelper.from_u8(att_length)  
+            packet += ByteHelper.from_u16(return_start_handle)
+            packet += ByteHelper.from_u16(return_end_handle)
+            packet += primary_uuid
         else:
             print("GATT Attribute 0x{:04X} Not Implemented".format(gatt_uuid))
-            self.do_att_error_rsp(0x10, start_handle, ATTErrorCode.INVALID_HANDLE)
+            self.do_att_error_rsp(0x10, start_handle, ATTErrorCode.UNLIKELY_ERROR)
             return
 
         cmd = make_acl(self.handle, len(packet)) + packet
@@ -1056,23 +1052,19 @@ class BluetoothLEConnection:
 
     def do_att_write_rsp(self, handle, value):
         print(att_rsp_text, "WRITE (0x13)")
-        write_code = self.gatt_server.write_char_value(handle, value)
-        if write_code == ATTErrorCode.SUCCESS:
+        return_code = self.gatt_server.write_char_value(handle, value)
+        if return_code == ATTErrorCode.SUCCESS:
             packet =  ByteHelper.from_u8(0x13)   
             cmd = make_acl(self.handle, len(packet)) + packet
             self.send(cmd)
         else:
-            self.do_att_error_rsp(0x12, handle, write_code)
-
+            self.do_att_error_rsp(0x12, handle, return_code)
 
     def do_att_write_no_response(self, handle, value):
         print(att_rsp_text, "WRITE NO RESPONSE (0x52)")
-        write_success = self.gatt_server.write_char_value(handle, value)
-        if write_success != ATTErrorCode.SUCCESS:
-            print("No response was requested but write was not successful, Error = 0x{:02X}".format(write_success))
-
-
-        
+        return_code = self.gatt_server.write_char_value(handle, value)
+        if return_code != ATTErrorCode.SUCCESS:
+            print("No response was requested but write was not successful, Error = 0x{:02X}".format(return_code))
 
     def on_acl_event(self, data):
         print("ACL data:      ", ByteHelper.as_hex(data))

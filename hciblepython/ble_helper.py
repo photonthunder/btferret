@@ -111,8 +111,11 @@ class ByteHelper:
 
     @staticmethod
     def get_uuid_byte_length(uuid):
-        cleaned_uuid = uuid.replace('-', '')
-        return int(len(cleaned_uuid)/2)
+        if isinstance(uuid, str):      
+            cleaned_uuid = uuid.replace('-', '')
+            return int(len(cleaned_uuid)/2)
+        else:
+            return 0
 
 
 
