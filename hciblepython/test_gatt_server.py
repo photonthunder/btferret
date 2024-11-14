@@ -35,6 +35,7 @@ class GattServer:
         return pnp_id
 
     def updateServiceCharacteristic(self, start_handle, end_handle):
+        # Only updated if a service or charactaristic has been added, removed, or modified
         if end_handle < start_handle:
             print("end_handle 0x{:04X} is less than start_handle 0x{:04X}".format(end_handle, start_handle))
             return ATTErrorCode.UNLIKELY_ERROR
@@ -190,6 +191,10 @@ class GattServer:
             0x0019: {"type": "characteristic_value", "uuid": "DCBA", "value": "SET CNT"},  # Response characteristic
             0x001A: {"type": "descriptor", "uuid": GATTAttributes.CLIENT_CHAR_CONFIG.value, "value": "disabled"},
         }
+        handles = self.gatt_table.keys()
+        min_handle = min(handles)
+        max_handle = max(handles)
+        self.updateServiceCharacteristic(min_handle, max_handle)
 
         self.check_gatt_table()
 
