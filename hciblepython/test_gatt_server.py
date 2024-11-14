@@ -69,33 +69,24 @@ class GattServer:
             if entry["type"] == "primary_service":
                 if not self.validate_uuid(entry["uuid"]):
                     raise ValueError(f"Error at handle 0x{handle:04X}: Invalid UUID {entry['uuid']}")
-            
             elif entry["type"] == "characteristic_declaration":
                 if "properties" not in entry or not self.validate_properties(entry["properties"]):
                     raise ValueError(f"Error at handle 0x{handle:04X}: Invalid properties {entry.get('properties', 'None')}")
-                
                 if "value_handle" not in entry:
                     raise ValueError(f"Error at handle 0x{handle:04X}: Missing value_handle")
-
                 if "value_type" not in entry or not self.validate_value_type(entry["value_type"]):
                     raise ValueError(f"Error at handle 0x{handle:04X}: Invalid value_type {entry.get('value_type', 'None')}")
-            
             elif entry["type"] == "characteristic_value":
-                # Ensure there is a value field
                 if "value" not in entry:
                     raise ValueError(f"Error at handle 0x{handle:04X}: Missing value")
-
-                # Validate UUID
                 if not self.validate_uuid(entry["uuid"]):
                     raise ValueError(f"Error at handle 0x{handle:04X}: Invalid UUID {entry['uuid']}")
-
             elif entry["type"] == "descriptor":
                 # Check if this is a CCCD and if the value is valid
                 if entry["uuid"] == "2902" and not self.validate_cccd(entry["value"]):
                     raise ValueError(f"Error at handle 0x{handle:04X}: Invalid CCCD value {entry['value']}")
             else:
                 raise ValueError(f"Error at handle 0x{handle:04X}: Unknown type {entry['type']}")
-        
         print("GATT table check complete.")
 
     def getTestTable(self):
