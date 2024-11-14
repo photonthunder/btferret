@@ -969,11 +969,14 @@ class BluetoothLEConnection:
             if return_code != ATTErrorCode.SUCCESS:
                 self.do_att_error_rsp(0x08, start_handle, return_code) 
                 return
+            elif not char_decl:
+                print("No CD Handle in range of 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
+                self.do_att_error_rsp(0x08, start_handle, return_code) 
+                return
             else:
                 # len_char_item = len(char_decl)
                 packet += ByteHelper.from_u8(7) 
                 # for idx, char_item in enumerate(char_decl):
-                print(char_decl)
                 handle, prop_byte, value_handle, char_uuid = char_decl
                 packet += ByteHelper.from_u16(handle)
                 packet += ByteHelper.from_u8(prop_byte)

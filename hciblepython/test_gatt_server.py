@@ -507,3 +507,6 @@ if __name__ == "__main__":
 
     return_code, data = gatt_server.read_char_uuid_value(0x000C, 0x000E)
     error_check(data == [13, 2, 14, b'P*'], f"gatt_server.read_char_uuid_value(0x000C, 0x000E)", return_code)
+
+    return_code, data = gatt_server.read_char_uuid_value(0x001A, 0x00FF)
+    error_check(not data, f"gatt_server.read_char_uuid_value(0x001A, 0x00FF)", return_code)
