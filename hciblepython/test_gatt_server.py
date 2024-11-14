@@ -76,6 +76,16 @@ class GattServer:
                     raise ValueError(f"Error at handle 0x{handle:04X}: Missing value_handle")
                 if "value_type" not in entry or not self.validate_value_type(entry["value_type"]):
                     raise ValueError(f"Error at handle 0x{handle:04X}: Invalid value_type {entry.get('value_type', 'None')}")
+                if 'constant' in entry and entry['constant'] != "True":
+                    print(f"Error: 'constant' must be 'True' at handle 0x{handle:04X}.")
+                if 'fixed_length' in entry:
+                    if entry['fixed_length'] != "True":
+                        print(f"Error: 'fixed_length' must be 'True' at handle 0x{handle:04X}.")
+                    if 'length' not in entry:
+                        print(f"Error: 'length' is required when 'fixed_length' is True at handle 0x{handle:04X}.")
+
+        # Check for descriptor completeness
+        
             elif entry["type"] == "characteristic_value":
                 if "value" not in entry:
                     raise ValueError(f"Error at handle 0x{handle:04X}: Missing value")
