@@ -43,6 +43,61 @@ class GattServer:
         print("Service changed: 0x{:08X}".format(self.service_changed))
         return ATTErrorCode.SUCCESS
 
+    def validate_uuid(self, uuid):
+        if len(uuid) == 4 and all(c in '0123456789ABCDEFabcdef' for c in uuid):
+            return True
+        if len(uuid) == 36 and uuid[8] == '-' and uuid[13] == '-' and uuid[18] == '-' and uuid[23] == '-':
+            hex_parts = uuid.replace('-', '')
+            if len(hex_parts) == 32 and all(c in '0123456789ABCDEFabcdef' for c in hex_parts):
+                return True
+        return False
+
+    def validate_properties(self, properties):
+        for prop in properties.split('|'):
+            if prop not in self.prop_flags:
+                return False
+        return True
+
+    def validate_value_type(self, value_type):
+        return value_type in self.value_type
+
+    def validate_cccd(self, value):
+        return value in self.cccd
+
+    def check_gatt_table(self):
+        for handle, entry in self.gatt_table.items():
+            if entry["type"] == "primary_service":
+                if not self.validate_uuid(entry["uuid"]):
+                    raise ValueError(f"Error at handle 0x{handle:04X}: Invalid UUID {entry['uuid']}")
+            
+            elif entry["type"] == "characteristic_declaration":
+                if "properties" not in entry or not self.validate_properties(entry["properties"]):
+                    raise ValueError(f"Error at handle 0x{handle:04X}: Invalid properties {entry.get('properties', 'None')}")
+                
+                if "value_handle" not in entry:
+                    raise ValueError(f"Error at handle 0x{handle:04X}: Missing value_handle")
+
+                if "value_type" not in entry or not self.validate_value_type(entry["value_type"]):
+                    raise ValueError(f"Error at handle 0x{handle:04X}: Invalid value_type {entry.get('value_type', 'None')}")
+            
+            elif entry["type"] == "characteristic_value":
+                # Ensure there is a value field
+                if "value" not in entry:
+                    raise ValueError(f"Error at handle 0x{handle:04X}: Missing value")
+
+                # Validate UUID
+                if not self.validate_uuid(entry["uuid"]):
+                    raise ValueError(f"Error at handle 0x{handle:04X}: Invalid UUID {entry['uuid']}")
+
+            elif entry["type"] == "descriptor":
+                # Check if this is a CCCD and if the value is valid
+                if entry["uuid"] == "2902" and not self.validate_cccd(entry["value"]):
+                    raise ValueError(f"Error at handle 0x{handle:04X}: Invalid CCCD value {entry['value']}")
+            else:
+                raise ValueError(f"Error at handle 0x{handle:04X}: Unknown type {entry['type']}")
+        
+        print("GATT table check complete.")
+
     def getTestTable(self):
         self.device_name = "My New Pi"
         self.prop_flags = {
@@ -129,11 +184,14 @@ class GattServer:
             0x0014: {"type": "descriptor", "uuid": GATTAttributes.CLIENT_CHAR_CONFIG.value, "value": "disabled"},
             0x0015: {"type": "characteristic_declaration", "uuid": "DEAF", "properties": "read|notify", "value_type": "string", "value_handle": 0x0016},
             0x0016: {"type": "characteristic_value", "uuid": "DEAF", "value": "210"},  # Data characteristic
-            0x0017: {"type": "descriptor", "uuid": GATTAttributes.CLIENT_CHAR_CONFIG.value, "value_type": "string", "value": "disabled"},
-            0x0018: {"type": "characteristic_declaration", "uuid": "DCBA", "properties": "read|notify", "value_handle": 0x0019},
+            0x0017: {"type": "descriptor", "uuid": GATTAttributes.CLIENT_CHAR_CONFIG.value, "value": "disabled"},
+            0x0018: {"type": "characteristic_declaration", "uuid": "DCBA", "properties": "read|notify", "value_type": "string", "value_handle": 0x0019},
             0x0019: {"type": "characteristic_value", "uuid": "DCBA", "value": "SET CNT"},  # Response characteristic
             0x001A: {"type": "descriptor", "uuid": GATTAttributes.CLIENT_CHAR_CONFIG.value, "value": "disabled"},
         }
+
+        self.check_gatt_table()
+
 
     def get_device_name(self):
         return self.device_name.encode('utf-8')
@@ -233,7 +291,7 @@ class GattServer:
                             return ATTErrorCode.ATTRIBUTE_NOT_FOUND
                         return self.write_table_variable(uuid, value)
                     else:
-                        print("Write: Unkown value type {} for handle 0x{:04X}".format(value_type, handle))
+                        print("Write: Unknown value type {} for handle 0x{:04X}".format(value_type, handle))
                         return ATTErrorCode.VALUE_NOT_ALLOWED
                 else:
                     print("Write: No value for handle 0x{:04X}".format(handle))
@@ -291,7 +349,7 @@ class GattServer:
                             return ATTErrorCode.ATTRIBUTE_NOT_FOUND, None
                         return self.read_table_variable(uuid)
                     else:
-                        print("Read: Unkown value type {} for handle 0x{:04X}".format(value_type, handle))
+                        print("Read: Unknown value type {} for handle 0x{:04X}".format(value_type, handle))
                         return ATTErrorCode.VALUE_NOT_ALLOWED, None
                 else:
                     print("Read: No value for handle 0x{:04X}".format(handle))
@@ -495,13 +553,19 @@ if __name__ == "__main__":
     error_check(return_code != ATTErrorCode.SUCCESS, f"gatt_server.write_char_value(0x0016, b'abcd1234')")
     
     return_code, data = gatt_server.read_char_value(0x0011)
-    error_check(data == b"ENTER", "gatt_server.read_char_value(0x0011) != ENTER", return_code)
+    error_check(data == b"ENTER", "gatt_server.read_char_value(0x0011)", return_code)
     
-    gatt_server.write_char_value(0x0011, b'right-way')
+    return_code = gatt_server.write_char_value(0x0011, b'right-way')
+    error_check(return_code == ATTErrorCode.SUCCESS, "gatt_server.write_char_value(0x0011, b'right-way')", return_code)
+
     return_code, data = gatt_server.read_char_value(0x0011)
     error_check(data == b'right-way', "gatt_server.read_char_value(0x0011) != 'right-way'", return_code)
+
+    return_code, data = gatt_server.read_char_value(0x0019)
+    error_check(data == b'SET CNT', "gatt_server.read_char_value(0x0019)", return_code)
     
-    gatt_server.updateServiceCharacteristic(0x0011, 0x0013)
+    return_code = gatt_server.updateServiceCharacteristic(0x0011, 0x0013)
+    error_check(return_code == ATTErrorCode.SUCCESS, "gatt_server.updateServiceCharacteristic(0x0011, 0x0013)", return_code)
     
     return_code, data = gatt_server.read_and_convert(0x000A)
     error_check(data == b'\x11\x00\x13\x00', f"gatt_server.read_and_convert(0x000A) != expected bytes", return_code)
