@@ -119,6 +119,7 @@ class BluetoothLEConnection:
             timer -= quanta
             while self.readable():
                 a = self.receive()
+            self.check_notification()
             sleep(quanta)
 
     def wait_complete(self, command, timeout = DATA_TIMEOUT):
@@ -1063,11 +1064,27 @@ class BluetoothLEConnection:
         else:
             self.do_att_error_rsp(0x12, handle, return_code)
 
+    def check_notification(self):
+        print(att_rsp_text, "Notification (0x1B)")
+        notification_exists, handle, data = self.gatt_server.get_notification()
+        if notification_exists == False:
+            return
+        packet =  ByteHelper.from_u8(0x1B) 
+        packet += ByteHelper.from_u16(return_start_handle)
+        packet += data
+        cmd = make_acl(self.handle, len(packet)) + packet
+        self.send(cmd)
+
+        
+
+
     def do_att_write_no_response(self, handle, value):
         print(att_rsp_text, "WRITE NO RESPONSE (0x52)")
         return_code = self.gatt_server.write_char_value(handle, value)
         if return_code != ATTErrorCode.SUCCESS:
             print("No response was requested but write was not successful, Error = 0x{:02X}".format(return_code))
+
+    
 
     def on_acl_event(self, data):
         print("ACL data:      ", ByteHelper.as_hex(data))
@@ -1130,3 +1147,4 @@ class BluetoothLEConnection:
             self.do_att_write_no_response(handle, value)
         else:
             print("Warning: ATT Opcode 0x{:02X} Unknown".format(att_opcode))
+

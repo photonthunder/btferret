@@ -200,6 +200,12 @@ class GattServer:
         self.check_gatt_table()
 
 
+    def self.gatt_server.get_notification()
+        notification_exists = False
+        handle = None
+        data = None
+        return notification_exists, handle, data
+
     def get_device_name(self):
         return self.device_name.encode('utf-8')
 
