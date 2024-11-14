@@ -191,6 +191,7 @@ class GattServer:
             0x0019: {"type": "characteristic_value", "uuid": "DCBA", "value": "SET CNT"},  # Response characteristic
             0x001A: {"type": "descriptor", "uuid": GATTAttributes.CLIENT_CHAR_CONFIG.value, "value": "disabled"},
         }
+        # Once gatt table is stable don't have to update service characteristics
         handles = self.gatt_table.keys()
         min_handle = min(handles)
         max_handle = max(handles)
