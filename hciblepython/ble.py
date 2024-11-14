@@ -1017,13 +1017,13 @@ class BluetoothLEConnection:
 
     def do_att_read_rsp(self, handle):
         print(att_rsp_text, "READ (0x0B)")
-        return_code, value = self.gatt_server.read_char_value(handle)
+        return_code, byte_value = self.gatt_server.read_char_value(handle)
         if return_code != ATTErrorCode.SUCCESS: 
             self.do_att_error_rsp(0x0A, handle, return_code)
             return
         else: 
             packet = ByteHelper.from_u8(0x0B)
-            packet += value
+            packet += byte_value
             cmd = make_acl(self.handle, len(packet)) + packet
             self.send(cmd)
 

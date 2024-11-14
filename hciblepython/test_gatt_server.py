@@ -176,7 +176,8 @@ class GattServer:
                     print("Invalid value for CCCD {}.".format(value))
                     return ATTErrorCode.VALUE_NOT_ALLOWED, None
                 # print("CCCD at handle 0x{:04X} = {}".format(handle, value))
-                return ATTErrorCode.SUCCESS, value
+                value_int = self.cccd.get(value)
+                return ATTErrorCode.SUCCESS, value_int.to_bytes(2, byteorder='little')
             else:
                 print("Handle 0x{:04X} is not a valid CCCD descriptor 0x{:04X}.".format( handle, GATTAttributes.CLIENT_CHAR_CONFIG.value))
                 return ATTErrorCode.ATTRIBUTE_NOT_FOUND, None
@@ -464,19 +465,19 @@ if __name__ == "__main__":
     error_check(uuid_bytes == expected_uuid_bytes, "UUID conversion failed", return_code)
     
     return_code, cccd = gatt_server.read_cccd(0x0014)
-    error_check(cccd == 'disabled', f"gatt_server.read_cccd(0x0014) != 'disabled'", return_code)
+    error_check(cccd == b'\x00\x00', f"gatt_server.read_cccd(0x0014) != 'disabled'", return_code)
     
     return_code = gatt_server.set_cccd(0x0014, 1)
     error_check(return_code == ATTErrorCode.SUCCESS, "Failed to set CCCD at 0x0014 to notifications", return_code)
     
     return_code, cccd = gatt_server.read_cccd(0x0014)
-    error_check(cccd == 'notifications', "CCCD not set to 'notifications'", return_code)
+    error_check(cccd == b'\x01\x00', "CCCD not set to 'notifications'", return_code)
     
     return_code = gatt_server.set_cccd(0x0014, 2)
     error_check(return_code == ATTErrorCode.SUCCESS, "Failed to set CCCD at 0x0014 to indications", return_code)
 
     return_code, cccd = gatt_server.read_cccd(0x0014)
-    error_check(cccd == 'indications', "CCCD not set to 'indications'", return_code)
+    error_check(cccd == b'\x02\x00', "CCCD not set to 'indications'", return_code)
     
     test_property = gatt_server.char_prop_to_byte("read|write_without_response|notify")
     error_check(test_property == 0x16, f"Property is not 0x16, but 0x{test_property:02X}")
