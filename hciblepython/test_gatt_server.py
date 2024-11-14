@@ -489,7 +489,7 @@ if __name__ == "__main__":
     error_check(data == b'1234-5678', f"gatt_server.read_char_value(0x0013) != written value", return_code)
     
     return_code = gatt_server.write_char_value(0x0016, b'abcd1234') 
-    error_check(return_code == ATTErrorCode.SUCCESS, f"gatt_server.write_char_value(0x0016, b'abcd1234')", return_code)
+    error_check(return_code != ATTErrorCode.SUCCESS, f"gatt_server.write_char_value(0x0016, b'abcd1234')")
     
     return_code, data = gatt_server.read_char_value(0x0011)
     error_check(data == b"ENTER", "gatt_server.read_char_value(0x0011) != ENTER", return_code)
@@ -502,59 +502,5 @@ if __name__ == "__main__":
     
     return_code, data = gatt_server.read_and_convert(0x000A)
     error_check(data == b'\x11\x00\x13\x00', f"gatt_server.read_and_convert(0x000A) != expected bytes", return_code)
-
-
-
-    # first, last, primary = gatt_server.get_service_handle_range(0x000C)
-    # print("First Handle = 0x{:04X}, Second Handle = 0x{:04X}, Primary UUID = {}".format(first, last, primary))
-    # return_code, uuid_bytes = gatt_server.uuid_string_to_bytes("11223344-5566-7788-99AA-BBCCDDEEFF00")
-    # if uuid_bytes != b'\x00\xff\xee\xdd\xcc\xbb\xaa\x99\x88wfUD3"\x11':
-    #     print("Error 0x{:02X}: uuid_bytes".format(return_code))
-    # # print(gatt_server.find_information(0x0010, 0x001A))
-    # # gatt_server.read_uuid_value(0x0003, 0x007, "2A00"))
-    # # print(gatt_server.read_char_uuid_value(0x000F, 0xFFFF))
-    # return_code, cccd = gatt_server.read_cccd(0x0014)
-    # if cccd != 'disabled':
-    #     print("Error 0x{:02X}".format(return_code))
-    #     print("Error: gatt_server.read_cccd(0x0014) != 'disabled'")
-    # return_code = gatt_server.set_cccd(0x0014, 1)
-    # if return_code != ATTErrorCode.SUCCESS:
-    #     print("Error: gatt_server.set_cccd(0x0014, 1)")
-
-    # if gatt_server.read_cccd(0x0014) != 'notifications':
-    #     print("Error: gatt_server.read_cccd(0x0014) != 'notifications'")
-    # gatt_server.set_cccd(0x0014, 2)
-    # if gatt_server.read_cccd(0x0014) != 'indications':
-    #     print("Error: gatt_server.read_cccd(0x0014) != 'indications'")
-
-    # test_property = gatt_server.char_prop_to_byte("read|write_without_response|notify")
-    # if test_property != 0x16:
-    #     print("Property is not 0x16, but 0x{:02X}".format(test_property))
-
-    # return_code, data = gatt_server.read_char_value(0x0013)
-    # if  data != b"":
-    #     print(return_code, data)
-    #     print("Error: gatt_server.read_char_value(0x0013) != empty string")
-    # test_write = gatt_server.write_char_value(0x0013, b'1234-5678') 
-    # if test_write != ATTErrorCode.SUCCESS:
-    #     print("0x{:02X}".format(test_write))
-    #     print("Error: gatt_server.write_char_value(0x0013, b'1234-5678') != ATTErrorCode.SUCCESS")
-    # return_code, data = gatt_server.read_char_value(0x0013)
-    # if  data != b'1234-5678':
-    #     print("Error: gatt_server.read_char_value(0x0013) = write value")
-    # if gatt_server.write_char_value(0x0016, b'abcd1234') == ATTErrorCode.SUCCESS:
-    #     print("Error: gatt_server.write_char_value(0x0016, b'abcd1234') == ATTErrorCode.SUCCESS")
-    # return_code, data = gatt_server.read_char_value(0x0011)
-    # if data != b"":
-    #     print("Error: gatt_server.read_char_value(0x0011)")
-    # gatt_server.write_char_value(0x0011, b'right-way')
-    # return_code, data = gatt_server.read_char_value(0x0011)
-    # if data != b'right-way':
-    #     print("Error: gatt_server.read_char_value(0x0011) != b'right-way'")
-    # gatt_server.updateServiceCharacteristic(0x0011, 0x0013)
-    # return_code, data = gatt_server.read_and_convert(0x000A)
-    # if data != b'\x11\x00\x13\x00':
-    #     print("Error: gatt_server.read_and_convert(0x000A) != b'\x11\x00\x13\x00'")
-
 
     
