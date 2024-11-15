@@ -92,6 +92,7 @@ class BluetoothLEConnection:
         self.hc_le_data_packet_length = None
         self.hc_le_data_buffer = None
         self.local_name = None
+        self.client_connected = False
 
     def __del__(self):
         self.user_socket.close()
@@ -120,6 +121,7 @@ class BluetoothLEConnection:
             while self.readable():
                 a = self.receive()
             self.check_notification()
+            self.check_indication()
             sleep(quanta)
 
     def wait_complete(self, command, timeout = DATA_TIMEOUT):
@@ -333,6 +335,7 @@ class BluetoothLEConnection:
         subevent_code = ByteHelper.to_u8(data, 3)
         # print(event_text, "LE Meta event: ", hex(subevent_code))
         if   subevent_code == 0x01:                 # LE Connection Complete
+            self.client_connected = True
             self.on_le_connection_complete(data)
         elif subevent_code == 0x02:                 # LE Advertising Report
             self.on_le_advertising_report(data)
@@ -361,6 +364,7 @@ class BluetoothLEConnection:
         status = ByteHelper.to_u8  (data, 3)
         handle = ByteHelper.to_u16 (data, 4)
         reason = ByteHelper.to_u8  (data, 6)
+        self.client_connected = False
         if status == 0:
             print("HCI Disconnection Complete, Handle = 0x{:04X}".format(handle))
         else:
@@ -1065,6 +1069,8 @@ class BluetoothLEConnection:
             self.do_att_error_rsp(0x12, handle, return_code)
 
     def check_notification(self):
+        if self.client_connected == False:
+            return
         print(att_rsp_text, "Notification (0x1B)")
         notification_exists, handle, data = self.gatt_server.get_notification()
         if notification_exists == False:
@@ -1074,6 +1080,23 @@ class BluetoothLEConnection:
         packet += data
         cmd = make_acl(self.handle, len(packet)) + packet
         self.send(cmd)
+
+     def check_indication(self):
+        if self.client_connected == False:
+            return
+        print(att_rsp_text, "Indication (0x1D)")
+        notification_exists, handle, data = self.gatt_server.get_indication()
+        if indication_exists == False:
+            return
+        packet =  ByteHelper.from_u8(0x1B) 
+        packet += ByteHelper.from_u16(return_start_handle)
+        packet += data
+        cmd = make_acl(self.handle, len(packet)) + packet
+        self.send(cmd)
+
+    def ack_indication(self):
+        print("\nIndication ACK (0x1E)")
+        self.gatt_server.clear_ack()
 
         
 
@@ -1140,6 +1163,8 @@ class BluetoothLEConnection:
             self.do_att_write_rsp(handle, value)
         elif att_opcode == 0x13:
             print("Warning: Write RSP (0x13) - should not get from client") 
+        elif att_opcode == 0x1E:
+            self.ack_indication()
         elif att_opcode == 0x52:
             handle = ByteHelper.to_u16(data, 1)
             value = data[3:]

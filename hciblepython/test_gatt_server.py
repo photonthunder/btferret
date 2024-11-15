@@ -3,6 +3,7 @@ from ble_helper import ByteHelper
 from ble_helper import ATTErrorCode
 from ble_helper import GATTAttributes
 import logging
+import time
 
 class GattServer:
     def __init__(self):
@@ -10,6 +11,13 @@ class GattServer:
         self.device_name = None
         self.service_changed = 0x0000
         self.getTestTable()
+        self.notification_list = []
+        self.indication_list = []
+        self.notification_exists = False
+        self.indication_exists = False
+        self.indication_waiting_ack = None
+        self.indication_sent_time = None 
+        self.indication_timeout = 30 
 
     def create_pnp_id(self, vendor_id_source = 0x01, vendor_id = 0x1234, product_id = 0x0203, product_version = 0x0001):
         # vendor_id_source = 0x01   # Bluetooth SIG
@@ -184,7 +192,7 @@ class GattServer:
             0x0012: {"type": "characteristic_declaration", "uuid": "CDEF", "properties": "read|notify|write_without_response", "value_type": "string", "value_handle": 0x0013},
             0x0013: {"type": "characteristic_value", "uuid": "CDEF", "value": "0"},  # Counter characteristic
             0x0014: {"type": "descriptor", "uuid": GATTAttributes.CLIENT_CHAR_CONFIG.value, "value": "disabled"},
-            0x0015: {"type": "characteristic_declaration", "uuid": "DEAF", "properties": "read|notify", "value_type": "string", "value_handle": 0x0016},
+            0x0015: {"type": "characteristic_declaration", "uuid": "DEAF", "properties": "read|indicate", "value_type": "string", "value_handle": 0x0016},
             0x0016: {"type": "characteristic_value", "uuid": "DEAF", "value": "210"},  # Data characteristic
             0x0017: {"type": "descriptor", "uuid": GATTAttributes.CLIENT_CHAR_CONFIG.value, "value": "disabled"},
             0x0018: {"type": "characteristic_declaration", "uuid": "DCBA", "properties": "read|notify", "value_type": "string", "value_handle": 0x0019},
@@ -196,15 +204,97 @@ class GattServer:
         min_handle = min(handles)
         max_handle = max(handles)
         self.updateServiceCharacteristic(min_handle, max_handle)
-
         self.check_gatt_table()
 
+    def set_string_value_from_server(self, handle, string_data):
+        if handle in self.gatt_table:
+            item = self.gatt_table[handle]
+            if isinstance(string_data, str):
+                if self.has_value_type(handle, "string"):
+                    item['value'] = data
+                    if self.has_property(handle, 'notify'):
+                        self.notification_exists = True
+                        self.notification_list.append(handle)
+                    elif self.has_property(handle, 'indicate'):
+                        self.indication_exists = True
+                        self.indication_list.append(handle)
+                    return True
+                else:
+                    print("Error: Value Type is not string")
+                    return False
+            else:
+                print("Error: All values set should be string")
+                return False
+        else:
+            print("Error: Handle not in Gatt Server")
+            return False
 
-    def self.gatt_server.get_notification()
-        notification_exists = False
+    def has_value_type(self, handle, value_type_string):
+        for _, entry in self.gatt_table.items():
+            if entry.get('type') == 'characteristic_declaration' and entry.get('value_handle') == handle:
+                value_type = entry.get("value_type")
+                return value_type == value_type_string
+        return False
+
+    def get_notification(self):
+        if self.notification_exists == False:
+            return self.notification_exists, None, None
         handle = None
-        data = None
-        return notification_exists, handle, data
+        new_data = None
+        for handle in self.notification_list:
+            return_code, new_data = self.read_and_convert(handle)
+            if self.has_property(handle, 'notify'):
+                if return_code != ATTErrorCode.SUCCESS:
+                    print("Notification in list, but got error 0x{:02X}, removing handle".format(return_code))
+                    self.notification_list.remove(handle)
+                    if not self.notification_list:
+                        self.notification_exists == False
+                    continue
+                self.notification_list.remove(handle)
+                if not self.notification_list:
+                    self.notification_exists == False
+                break
+        return self.notification_exists, handle, new_data
+
+    def get_indication(self):
+        if not self.indication_exists:
+            return self.indication_exists, None, None
+        if self.indication_waiting_ack is not None:
+            elapsed_time = time.time() - self.indication_sent_time
+            if elapsed_time >= self.indication_timeout:
+                handle = self.indication_waiting_ack
+                print("ACK not received for handle 0x{:04X}. Timeout occurred.".format(self.indication_waiting_ack))
+                if handle in self.indication_list:
+                    self.indication_list.remove(handle)
+                    self.indication_list.append(handle)
+                self.indication_waiting_ack = None
+                self.indication_sent_time = None
+            else:
+                return self.indication_exists, None, None
+        handle = None
+        new_data = None
+        for handle in self.indication_list:
+            return_code, new_data = self.read_and_convert(handle)
+            if self.has_property(handle, 'indicate'):
+                if return_code != ATTErrorCode.SUCCESS:
+                    print("Indication in list, but got error 0x{:02X}".format(return_code))
+                    self.indication_list.remove(handle)
+                    if not self.indication_list:
+                        self.indication_exists = False
+                    continue
+                self.indication_waiting_ack = handle
+                self.indication_sent_time = time.time()
+                break
+        return self.indication_exists, handle, new_data
+
+    def clear_ack(self):
+        if self.indication_waiting_ack != None:
+            handle = self.indication_waiting_ack
+            if handle in self.indication_list:
+                self.indication_list.remove(handle)
+                if not self.indication_list:
+                    self.indication_exists = False
+                self.indication_waiting_ack = None
 
     def get_device_name(self):
         return self.device_name.encode('utf-8')
@@ -536,7 +626,7 @@ if __name__ == "__main__":
     error_check(uuid_bytes == expected_uuid_bytes, "UUID conversion failed", return_code)
     
     return_code, cccd = gatt_server.read_cccd(0x0014)
-    error_check(cccd == b'\x00\x00', f"gatt_server.read_cccd(0x0014) != 'disabled'", return_code)
+    error_check(cccd == b'\x00\x00', f"read_cccd(0x0014) != 'disabled'", return_code)
     
     return_code = gatt_server.set_cccd(0x0014, 1)
     error_check(return_code == ATTErrorCode.SUCCESS, "Failed to set CCCD at 0x0014 to notifications", return_code)
@@ -554,37 +644,81 @@ if __name__ == "__main__":
     error_check(test_property == 0x16, f"Property is not 0x16, but 0x{test_property:02X}")
     
     return_code, data = gatt_server.read_char_value(0x0013)
-    error_check(data == bytes([0x30]), f"gatt_server.read_char_value(0x0013) {data} != {bytes([0])}", return_code)
+    error_check(data == bytes([0x30]), f"read_char_value(0x0013) {data} != {bytes([0])}", return_code)
     
     return_code = gatt_server.write_char_value(0x0013, b'1234-5678') 
-    error_check(return_code == ATTErrorCode.SUCCESS, f"gatt_server.write_char_value(0x0013, b'1234-5678') was successful", return_code)
+    error_check(return_code == ATTErrorCode.SUCCESS, f"write_char_value(0x0013, b'1234-5678') was successful", return_code)
     
     return_code, data = gatt_server.read_char_value(0x0013)
-    error_check(data == b'1234-5678', f"gatt_server.read_char_value(0x0013) != written value", return_code)
+    error_check(data == b'1234-5678', f"read_char_value(0x0013) != written value", return_code)
     
     return_code = gatt_server.write_char_value(0x0016, b'abcd1234') 
-    error_check(return_code != ATTErrorCode.SUCCESS, f"gatt_server.write_char_value(0x0016, b'abcd1234')")
+    error_check(return_code != ATTErrorCode.SUCCESS, f"write_char_value(0x0016, b'abcd1234')")
     
     return_code, data = gatt_server.read_char_value(0x0011)
-    error_check(data == b"ENTER", "gatt_server.read_char_value(0x0011)", return_code)
+    error_check(data == b"ENTER", "read_char_value(0x0011)", return_code)
     
     return_code = gatt_server.write_char_value(0x0011, b'right-way')
-    error_check(return_code == ATTErrorCode.SUCCESS, "gatt_server.write_char_value(0x0011, b'right-way')", return_code)
+    error_check(return_code == ATTErrorCode.SUCCESS, "write_char_value(0x0011, b'right-way')", return_code)
 
     return_code, data = gatt_server.read_char_value(0x0011)
-    error_check(data == b'right-way', "gatt_server.read_char_value(0x0011) != 'right-way'", return_code)
+    error_check(data == b'right-way', "read_char_value(0x0011) != 'right-way'", return_code)
 
     return_code, data = gatt_server.read_char_value(0x0019)
-    error_check(data == b'SET CNT', "gatt_server.read_char_value(0x0019)", return_code)
+    error_check(data == b'SET CNT', "read_char_value(0x0019)", return_code)
     
     return_code = gatt_server.updateServiceCharacteristic(0x0011, 0x0013)
-    error_check(return_code == ATTErrorCode.SUCCESS, "gatt_server.updateServiceCharacteristic(0x0011, 0x0013)", return_code)
+    error_check(return_code == ATTErrorCode.SUCCESS, "updateServiceCharacteristic(0x0011, 0x0013)", return_code)
     
     return_code, data = gatt_server.read_and_convert(0x000A)
-    error_check(data == b'\x11\x00\x13\x00', f"gatt_server.read_and_convert(0x000A) != expected bytes", return_code)
+    error_check(data == b'\x11\x00\x13\x00', f"read_and_convert(0x000A) != expected bytes", return_code)
 
     return_code, data = gatt_server.read_char_uuid_value(0x000C, 0x000E)
-    error_check(data == [13, 2, 14, b'P*'], f"gatt_server.read_char_uuid_value(0x000C, 0x000E)", return_code)
+    error_check(data == [13, 2, 14, b'P*'], f"read_char_uuid_value(0x000C, 0x000E)", return_code)
 
     return_code, data = gatt_server.read_char_uuid_value(0x001A, 0x00FF)
-    error_check(not data, f"gatt_server.read_char_uuid_value(0x001A, 0x00FF)", return_code)
+    error_check(not data, f"read_char_uuid_value(0x001A, 0x00FF)", return_code)
+
+    # string_set = gatt_server.set_string_value_from_server(0x0019, 25)
+    # error_check(string_set == False, f"set_string_value_from_server(0x0019, 25)")
+
+    indication_exists, handle, new_data = gatt_server.get_indication()
+    error_check(indication_exists == False, f"get_indication 1")
+
+    notification_exists, handle, new_data = gatt_server.get_notification()
+    error_check(notification_exists == False, f"get_notification 1")
+
+    string_set = gatt_server.set_string_value_from_server(0x0019, 'Something')
+    error_check(string_set == True, f"set_string_value_from_server(0x0019, 'Something')")
+
+    indication_exists, handle, new_data = gatt_server.get_indication()
+    error_check(indication_exists == False, f"get_indication 2")
+
+    notification_exists, handle, new_data = gatt_server.get_notification()
+    error_check(notification_exists == True, f"get_notification 2")
+
+    gatt_server.notification_exists = False
+    gatt_server.notification_list.clear()
+
+    string_set = gatt_server.set_string_value_from_server(0x0016, '65')
+    error_check(string_set == True, f"set_string_value_from_server(0x0016, '65')")
+
+    indication_exists, handle, new_data = gatt_server.get_indication()
+    error_check(indication_exists == True, f"get_indication 3")
+
+    notification_exists, handle, new_data = gatt_server.get_notification()
+    error_check(notification_exists == False, f"get_notification 3")
+
+    gatt_server.clear_ack()
+
+    indication_exists, handle, new_data = gatt_server.get_indication()
+    error_check(indication_exists == False, f"get_indication 4")
+
+    notification_exists, handle, new_data = gatt_server.get_notification()
+    error_check(notification_exists == False, f"get_notification 4")
+
+
+
+
+
+

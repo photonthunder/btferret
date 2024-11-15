@@ -95,7 +95,9 @@ class ByteHelper:
 
     @staticmethod
     def from_string(val):
-        return val.encode("utf-8")
+        if isinstance(val, str):
+            return val.encode("utf-8")
+        return None
 
     @staticmethod
     def from_addr(val):
