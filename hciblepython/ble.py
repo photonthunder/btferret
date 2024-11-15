@@ -1071,23 +1071,23 @@ class BluetoothLEConnection:
     def check_notification(self):
         if self.client_connected == False:
             return
-        print(att_rsp_text, "Notification (0x1B)")
         notification_exists, handle, data = self.gatt_server.get_notification()
         if notification_exists == False:
             return
+        print(att_rsp_text, "Notification (0x1B)")
         packet =  ByteHelper.from_u8(0x1B) 
         packet += ByteHelper.from_u16(return_start_handle)
         packet += data
         cmd = make_acl(self.handle, len(packet)) + packet
         self.send(cmd)
 
-     def check_indication(self):
+    def check_indication(self):
         if self.client_connected == False:
             return
-        print(att_rsp_text, "Indication (0x1D)")
-        notification_exists, handle, data = self.gatt_server.get_indication()
+        indication_exists, handle, data = self.gatt_server.get_indication()
         if indication_exists == False:
             return
+        print(att_rsp_text, "Indication (0x1D)")
         packet =  ByteHelper.from_u8(0x1B) 
         packet += ByteHelper.from_u16(return_start_handle)
         packet += data
@@ -1098,16 +1098,11 @@ class BluetoothLEConnection:
         print("\nIndication ACK (0x1E)")
         self.gatt_server.clear_ack()
 
-        
-
-
     def do_att_write_no_response(self, handle, value):
         print(att_rsp_text, "WRITE NO RESPONSE (0x52)")
         return_code = self.gatt_server.write_char_value(handle, value)
         if return_code != ATTErrorCode.SUCCESS:
             print("No response was requested but write was not successful, Error = 0x{:02X}".format(return_code))
-
-    
 
     def on_acl_event(self, data):
         print("ACL data:      ", ByteHelper.as_hex(data))
