@@ -197,7 +197,7 @@ class GattServer:
             0x0012: {"type": "characteristic_declaration", "uuid": "CDEF", "properties": "read|notify|write_without_response", "value_type": "string", "value_handle": 0x0013},
             0x0013: {"type": "characteristic_value", "uuid": "CDEF", "value": "0"},  # Counter characteristic
             0x0014: {"type": "descriptor", "uuid": GATTAttributes.CLIENT_CHAR_CONFIG.value, "value": "disabled"},
-            0x0015: {"type": "characteristic_declaration", "uuid": "DEAF", "properties": "read|indicate", "value_type": "string", "value_handle": 0x0016},
+            0x0015: {"type": "characteristic_declaration", "uuid": "DEAF", "properties": "read|notify", "value_type": "string", "value_handle": 0x0016},
             0x0016: {"type": "characteristic_value", "uuid": "DEAF", "value": "210"},  # Data characteristic
             0x0017: {"type": "descriptor", "uuid": GATTAttributes.CLIENT_CHAR_CONFIG.value, "value": "disabled"},
             0x0018: {"type": "characteristic_declaration", "uuid": "DCBA", "properties": "read|notify", "value_type": "string", "value_handle": 0x0019},
@@ -268,6 +268,7 @@ class GattServer:
                     if not self.notification_list:
                         self.notification_exists == False
                     continue
+                print("Sending Notification")
                 self.notification_list.remove(handle)
                 if not self.notification_list:
                     self.notification_exists == False
