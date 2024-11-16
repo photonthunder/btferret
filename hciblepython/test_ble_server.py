@@ -20,6 +20,7 @@ class BLE(BluetoothLEConnection):
             exit(0)
 
         self.escape_pressed = False
+        self.last_print_time = time.time()
         self.old_settings = termios.tcgetattr(sys.stdin)
 
     def enable_raw_mode(self):
@@ -34,6 +35,15 @@ class BLE(BluetoothLEConnection):
             key = sys.stdin.read(1)
             if key == '\x1b':  # Escape key (ASCII code)
                 self.escape_pressed = True
+
+    def updateCharacteristicValues(self):
+        current_time = time.time()
+        if current_time - self.last_print_time >= 5: # 5 seconds
+            current_seconds = str(int(current_time) % 60)
+            print("Set DEAF to {}".format(current_seconds))
+            self.gatt_server.set_string_value_from_server(0x0016, current_seconds)
+            self.last_print_time = current_time
+
 
     def adv(self):
         self.reset()
@@ -138,6 +148,7 @@ class BLE(BluetoothLEConnection):
             while self.escape_pressed == False:
                 self.check_key_press()
                 self.wait_listen(WAIT_TIME)
+                self.updateCharacteristicValues()
         finally:
             self.restore_terminal()
 

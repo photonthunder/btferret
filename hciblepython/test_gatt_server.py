@@ -14,7 +14,7 @@ class GattServer:
         self.notification_list = []
         self.indication_list = []
         self.notification_exists = False
-        self.indication_exists = False
+        self.indication_available = False
         self.indication_waiting_ack = None
         self.indication_sent_time = None 
         self.indication_timeout = 30 
@@ -83,6 +83,15 @@ class GattServer:
                     raise ValueError(f"Error at handle 0x{handle:04X}: Invalid properties {entry.get('properties', 'None')}")
                 if "value_handle" not in entry:
                     raise ValueError(f"Error at handle 0x{handle:04X}: Missing value_handle")
+                value_handle = entry.get("value_handle")
+                if value_handle is None:
+                    raise ValueError(f"Error at handle 0x{handle:04X}: Missing value_handle value.")
+                if any(prop in entry.get("properties", "") for prop in ("notify", "indicate")):
+                    next_handle = value_handle + 1
+                    next_entry = self.gatt_table.get(next_handle)
+                    if next_entry is None or next_entry.get("type") != "descriptor":
+                        raise ValueError(f"Expected a descriptor at handle 0x{next_handle:04X}, descriptor shoudld \
+                        always follow a characteristic_value if it has notify or indicate.")
                 if "value_type" not in entry or not self.validate_value_type(entry["value_type"]):
                     raise ValueError(f"Error at handle 0x{handle:04X}: Invalid value_type {entry.get('value_type', 'None')}")
                 if 'constant' in entry and entry['constant'] != "True":
@@ -92,16 +101,12 @@ class GattServer:
                         print(f"Error: 'fixed_length' must be 'True' at handle 0x{handle:04X}.")
                     if 'length' not in entry:
                         print(f"Error: 'length' is required when 'fixed_length' is True at handle 0x{handle:04X}.")
-
-        # Check for descriptor completeness
-        
             elif entry["type"] == "characteristic_value":
                 if "value" not in entry:
                     raise ValueError(f"Error at handle 0x{handle:04X}: Missing value")
                 if not self.validate_uuid(entry["uuid"]):
                     raise ValueError(f"Error at handle 0x{handle:04X}: Invalid UUID {entry['uuid']}")
             elif entry["type"] == "descriptor":
-                # Check if this is a CCCD and if the value is valid
                 if entry["uuid"] == "2902" and not self.validate_cccd(entry["value"]):
                     raise ValueError(f"Error at handle 0x{handle:04X}: Invalid CCCD value {entry['value']}")
             else:
@@ -206,17 +211,30 @@ class GattServer:
         self.updateServiceCharacteristic(min_handle, max_handle)
         self.check_gatt_table()
 
+    def check_cccd(self, handle, value_string):
+        if handle in self.gatt_table:
+            entry = self.gatt_table[handle]
+            if entry.get('type') == 'descriptor' and entry.get('uuid') == GATTAttributes.CLIENT_CHAR_CONFIG.value:
+                value = entry.get('value')
+                # print("descriptor value is ", value)
+                if value == value_string:
+                    return True
+        return False
+
+
     def set_string_value_from_server(self, handle, string_data):
         if handle in self.gatt_table:
             item = self.gatt_table[handle]
             if isinstance(string_data, str):
                 if self.has_value_type(handle, "string"):
-                    item['value'] = data
-                    if self.has_property(handle, 'notify'):
+                    item['value'] = string_data
+                    if self.has_property(handle, 'notify') and self.check_cccd(handle+1, 'notifications'):
+                        print("New notify value", string_data)
                         self.notification_exists = True
                         self.notification_list.append(handle)
-                    elif self.has_property(handle, 'indicate'):
-                        self.indication_exists = True
+                    elif self.has_property(handle, 'indicate') and self.check_cccd(handle+1, 'indications'):
+                        print("New indicate value", string_data)
+                        self.indication_available = True
                         self.indication_list.append(handle)
                     return True
                 else:
@@ -257,8 +275,8 @@ class GattServer:
         return self.notification_exists, handle, new_data
 
     def get_indication(self):
-        if not self.indication_exists:
-            return self.indication_exists, None, None
+        if not self.indication_available:
+            return self.indication_available, None, None
         if self.indication_waiting_ack is not None:
             elapsed_time = time.time() - self.indication_sent_time
             if elapsed_time >= self.indication_timeout:
@@ -270,7 +288,7 @@ class GattServer:
                 self.indication_waiting_ack = None
                 self.indication_sent_time = None
             else:
-                return self.indication_exists, None, None
+                return False, None, None
         handle = None
         new_data = None
         for handle in self.indication_list:
@@ -280,12 +298,12 @@ class GattServer:
                     print("Indication in list, but got error 0x{:02X}".format(return_code))
                     self.indication_list.remove(handle)
                     if not self.indication_list:
-                        self.indication_exists = False
+                        self.indication_available = False
                     continue
                 self.indication_waiting_ack = handle
                 self.indication_sent_time = time.time()
                 break
-        return self.indication_exists, handle, new_data
+        return self.indication_available, handle, new_data
 
     def clear_ack(self):
         if self.indication_waiting_ack != None:
@@ -293,7 +311,9 @@ class GattServer:
             if handle in self.indication_list:
                 self.indication_list.remove(handle)
                 if not self.indication_list:
-                    self.indication_exists = False
+                    self.indication_available = False
+                else:
+                    self.indication_available = True
                 self.indication_waiting_ack = None
 
     def get_device_name(self):
@@ -328,7 +348,7 @@ class GattServer:
             print("Handle 0x{:04X} not found in gatt_table.".format(handle))
             return ATTErrorCode.INVALID_HANDLE
 
-    def read_cccd(self, handle):
+    def read_cccd_as_byte(self, handle):
         if handle in self.gatt_table:
             entry = self.gatt_table[handle]
             if entry.get('type') == 'descriptor' and entry.get('uuid') == GATTAttributes.CLIENT_CHAR_CONFIG.value:
@@ -477,7 +497,7 @@ class GattServer:
         if handle in self.gatt_table:
             entry = self.gatt_table[handle]
             if entry.get('type') == 'descriptor' and entry.get('uuid') == GATTAttributes.CLIENT_CHAR_CONFIG.value:
-                return self.read_cccd(handle)
+                return self.read_cccd_as_byte(handle)
             if self.has_property(handle, 'read'):
                 return self.read_and_convert(handle)
         return ATTErrorCode.INVALID_HANDLE, None
@@ -625,20 +645,26 @@ if __name__ == "__main__":
     expected_uuid_bytes = b'\x00\xff\xee\xdd\xcc\xbb\xaa\x99\x88wfUD3"\x11'
     error_check(uuid_bytes == expected_uuid_bytes, "UUID conversion failed", return_code)
     
-    return_code, cccd = gatt_server.read_cccd(0x0014)
-    error_check(cccd == b'\x00\x00', f"read_cccd(0x0014) != 'disabled'", return_code)
+    return_code, cccd = gatt_server.read_cccd_as_byte(0x0017)
+    error_check(cccd == b'\x00\x00', f"CCCD not set to 'disabled'", return_code)
     
-    return_code = gatt_server.set_cccd(0x0014, 1)
+    return_code = gatt_server.set_cccd(0x0017, 1)
     error_check(return_code == ATTErrorCode.SUCCESS, "Failed to set CCCD at 0x0014 to notifications", return_code)
     
-    return_code, cccd = gatt_server.read_cccd(0x0014)
+    return_code, cccd = gatt_server.read_cccd_as_byte(0x0017)
     error_check(cccd == b'\x01\x00', "CCCD not set to 'notifications'", return_code)
     
-    return_code = gatt_server.set_cccd(0x0014, 2)
+    return_code = gatt_server.set_cccd(0x0017, 2)
     error_check(return_code == ATTErrorCode.SUCCESS, "Failed to set CCCD at 0x0014 to indications", return_code)
 
-    return_code, cccd = gatt_server.read_cccd(0x0014)
+    return_code, cccd = gatt_server.read_cccd_as_byte(0x0017)
     error_check(cccd == b'\x02\x00', "CCCD not set to 'indications'", return_code)
+
+    return_code = gatt_server.set_cccd(0x001A, 1)
+    error_check(return_code == ATTErrorCode.SUCCESS, "Failed to set CCCD at 0x0014 to notifications", return_code)
+
+    return_code, cccd = gatt_server.read_cccd_as_byte(0x001A)
+    error_check(cccd == b'\x01\x00', "CCCD not set to 'notifications'", return_code)
     
     test_property = gatt_server.char_prop_to_byte("read|write_without_response|notify")
     error_check(test_property == 0x16, f"Property is not 0x16, but 0x{test_property:02X}")

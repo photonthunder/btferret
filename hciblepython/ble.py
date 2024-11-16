@@ -1087,9 +1087,12 @@ class BluetoothLEConnection:
         indication_exists, handle, data = self.gatt_server.get_indication()
         if indication_exists == False:
             return
+        if handle == None or data == None:
+            print("Indication has no handle or data")
+            return
         print(att_rsp_text, "Indication (0x1D)")
         packet =  ByteHelper.from_u8(0x1B) 
-        packet += ByteHelper.from_u16(return_start_handle)
+        packet += ByteHelper.from_u16(handle)
         packet += data
         cmd = make_acl(self.handle, len(packet)) + packet
         self.send(cmd)
