@@ -13,6 +13,7 @@ from time import sleep
 from hci_socket import *
 #from hci_uart import *
 from random import randint
+from ble_helper import AdvertisingDataType
 from ble_helper import ATTErrorCode
 from ble_helper import ByteHelper
 from ble_helper import GATTAttributes  
@@ -669,7 +670,28 @@ class BluetoothLEConnection:
         packet += ByteHelper.from_u8   (adv_filter_policy)
         self.send_command(0x2006, packet)
 
-    def do_set_advertising_data(self, data):
+    def create_advertising_packet(self, fields):
+        packet = bytes()
+        total_length = 0
+        for field_type, field_data in fields:
+            if not isinstance(field_type, AdvertisingDataType):
+                raise ValueError(f"Field type must be an instance of AdvertisingDataType.")
+            if not isinstance(field_data, bytes):
+                raise ValueError(f"Data for type {field_type.name} must be provided as bytes.")
+            length = len(field_data) + 1
+            if length > 31:
+                raise ValueError(f"Field data for type {field_type.name} exceeds the maximum allowed length.")
+            packet += ByteHelper.from_u8(length)
+            packet += ByteHelper.from_u8(field_type.value)
+            packet += field_data
+        if len(packet) > 31:
+            raise ValueError("Total advertising packet exceeds the 31-byte maximum.")
+        packet = ByteHelper.from_u8(len(packet)) + packet
+        pad = bytes(b'\x00' * (32-len(packet)))
+        packet += pad
+        return bytes(packet)
+
+    def do_set_advertising_data(self, fields, old_data = None):
         # Specification v5.4  Vol 4 Part E 7.8.7 LE Set Advertising Data (p2355)
         # Opcode 0x2008
         #
@@ -681,13 +703,15 @@ class BluetoothLEConnection:
         #
         # Response:
         #     HCI Command Complete                          0x0e  0x2008
+        packet = self.create_advertising_packet(fields)
+        for i, (byte1, byte2) in enumerate(zip(packet, old_data)):
+            if byte1 != byte2:
+                print(f"Difference at index {i}: {byte1} != {byte2}")
+
+        if packet != old_data:
+            raise ValueError("Not equal {} {}".format(packet, old_data))
 
         print(cmd_text, "LE Set Advertising Data")
-
-        pad = bytes(b'\x00' * (31-len(data)))
-        # packet = ByteHelper.from_u8 (len(data))
-        packet =         data
-        packet +=         pad
         self.send_command(0x2008, packet)
 
     def do_set_scan_response_data(self, data):
