@@ -691,7 +691,7 @@ class BluetoothLEConnection:
         packet += pad
         return bytes(packet)
 
-    def do_set_advertising_data(self, fields, old_data = None):
+    def do_set_advertising_data(self, fields):
         # Specification v5.4  Vol 4 Part E 7.8.7 LE Set Advertising Data (p2355)
         # Opcode 0x2008
         #
@@ -704,17 +704,10 @@ class BluetoothLEConnection:
         # Response:
         #     HCI Command Complete                          0x0e  0x2008
         packet = self.create_advertising_packet(fields)
-        for i, (byte1, byte2) in enumerate(zip(packet, old_data)):
-            if byte1 != byte2:
-                print(f"Difference at index {i}: {byte1} != {byte2}")
-
-        if packet != old_data:
-            raise ValueError("Not equal {} {}".format(packet, old_data))
-
         print(cmd_text, "LE Set Advertising Data")
         self.send_command(0x2008, packet)
 
-    def do_set_scan_response_data(self, data):
+    def do_set_scan_response_data(self, fields):
         # Specification v5.4  Vol 4 Part E 7.8.8 LE Set Scan Response Data (p2357)
         # Opcode 0x2009
         #
@@ -726,13 +719,15 @@ class BluetoothLEConnection:
         #
         # Response:
         #     HCI Command Complete                          0x0e  0x2009
+        packet = self.create_advertising_packet(fields)
+        # for i, (byte1, byte2) in enumerate(zip(packet, old_data)):
+        #     if byte1 != byte2:
+        #         print(f"Difference at index {i}: {byte1} != {byte2}")
+
+        # if packet != old_data:
+        #     raise ValueError("Not equal {} {}".format(packet, old_data))
 
         print(cmd_text, "LE Set Scan Response Data")
-        pad = bytes(b'\x00' * (31 - len(data)))
-
-        # packet =  ByteHelper.from_u8 (len(data))
-        packet =         data
-        packet +=         pad
         self.send_command(0x2009, packet)
 
     def do_set_advertise_enable(self, enabled):

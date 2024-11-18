@@ -114,7 +114,7 @@ class GattServer:
         print("GATT table check complete.")
 
     def getTestTable(self):
-        self.device_name = "My New Pi"
+        self.device_name = "My Super Pi"
         self.prop_flags = {
             "broadcast": 0x01,
             "read": 0x02,
