@@ -197,7 +197,7 @@ class GattServer:
             0x0012: {"type": "characteristic_declaration", "uuid": "CDEF", "properties": "read|notify|write_without_response", "value_type": "string", "value_handle": 0x0013},
             0x0013: {"type": "characteristic_value", "uuid": "CDEF", "value": "0"},  # Counter characteristic
             0x0014: {"type": "descriptor", "uuid": GATTAttributes.CLIENT_CHAR_CONFIG.value, "value": "disabled"},
-            0x0015: {"type": "characteristic_declaration", "uuid": "DEAF", "properties": "read|notify", "value_type": "string", "value_handle": 0x0016},
+            0x0015: {"type": "characteristic_declaration", "uuid": "DEAF", "properties": "read|indicate", "value_type": "string", "value_handle": 0x0016},
             0x0016: {"type": "characteristic_value", "uuid": "DEAF", "value": "210"},  # Data characteristic
             0x0017: {"type": "descriptor", "uuid": GATTAttributes.CLIENT_CHAR_CONFIG.value, "value": "disabled"},
             0x0018: {"type": "characteristic_declaration", "uuid": "DCBA", "properties": "read|notify", "value_type": "string", "value_handle": 0x0019},
@@ -211,6 +211,11 @@ class GattServer:
         self.updateServiceCharacteristic(min_handle, max_handle)
         self.check_gatt_table()
 
+    def clear_connection_settings(self):
+        for handle, attr in self.gatt_table.items():
+            if attr.get('type') == 'descriptor' and attr.get('uuid') == GATTAttributes.CLIENT_CHAR_CONFIG.value:
+                attr['value'] = disabled
+
     def check_cccd(self, handle, value_string):
         if handle in self.gatt_table:
             entry = self.gatt_table[handle]
@@ -220,7 +225,6 @@ class GattServer:
                 if value == value_string:
                     return True
         return False
-
 
     def set_string_value_from_server(self, handle, string_data):
         if handle in self.gatt_table:

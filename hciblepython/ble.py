@@ -373,6 +373,7 @@ class BluetoothLEConnection:
             print("Remote User terminated Connection")
         else:
             print("Disconnect Reason: 0x{:02X}".format(reason))
+        self.gatt_server.clear_connection_settings()
         
 
     def handle_le_command(self, cmd, status_text, data=None):
@@ -459,6 +460,8 @@ class BluetoothLEConnection:
         #     num completed packets[i]                       2n octets
 
         print(event_text, "HCI Number Of Completed Packets = {}".format(ByteHelper.to_u16(data, len(data) - 2)))
+        self.gatt_server.clear_ack()  # Appears that some use this as an ack to indication
+        
 
     def on_hci_event_vendor_specific (self, data):
         print(event_text, "Vendor Specific")
