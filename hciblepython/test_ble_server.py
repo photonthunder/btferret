@@ -3,7 +3,7 @@
 from ble import *
 from test_gatt_server import GattServer
 from ble_helper import AdvertisingDataType
-from ble_helper import ByteHelper
+import byte_utils as bu
 import sys
 import termios
 import tty
@@ -74,7 +74,7 @@ class BLE(BluetoothLEConnection):
         self.do_set_advertising_data(fields)
         self.wait_listen(self.wait_time)
         fields = [
-            (AdvertisingDataType.COMPLETE_LOCAL_NAME, ByteHelper.from_string(self.gatt_server.device_name)),
+            (AdvertisingDataType.COMPLETE_LOCAL_NAME, bu.from_string(self.gatt_server.device_name)),
             (AdvertisingDataType.MANUFACTURER_SPECIFIC_DATA, bytes([0xAA, 0xBB, \
             0xCC, 0xDD, 0xEE, 0xFF, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0x00]))
         ]

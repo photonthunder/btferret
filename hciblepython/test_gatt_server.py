@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-from ble_helper import ByteHelper
 from ble_helper import ATTErrorCode
 from ble_helper import GATTAttributes
+import byte_utils as bu
 import logging
 import time
 
@@ -410,7 +410,7 @@ class GattServer:
                         value_entry["value"] = int.from_bytes(value, byteorder='little')
                         return ATTErrorCode.SUCCESS
                     elif value_type == "string":
-                        value_entry["value"] = ByteHelper.to_string(value)
+                        value_entry["value"] = bu.to_string(value)
                         return ATTErrorCode.SUCCESS
                     elif value_type == "variable":
                         uuid = entry.get("uuid")
@@ -431,7 +431,7 @@ class GattServer:
         if uuid == "2A00":
             return ATTErrorCode.SUCCESS, self.device_name.encode("utf-8")
         elif uuid == "2A01":
-            return ATTErrorCode.SUCCESS, ByteHelper.from_u16(self.appearance)
+            return ATTErrorCode.SUCCESS, bu.from_u16(self.appearance)
         elif uuid == "2A05":
             v1 = self.service_changed & 0xFF
             v2 = (self.service_changed >> 8) & 0xFF
@@ -469,7 +469,7 @@ class GattServer:
                         if string_value == None:
                             print("Read: No string value at 0x{:04X}".format(handle))
                             return ATTErrorCode.ATTRIBUTE_NOT_FOUND, None
-                        return ATTErrorCode.SUCCESS, ByteHelper.from_string(string_value)
+                        return ATTErrorCode.SUCCESS, bu.from_string(string_value)
                     elif value_type == "variable":
                         uuid = entry.get("uuid")
                         if uuid == None:
@@ -489,7 +489,7 @@ class GattServer:
         if handle in self.gatt_table:
             entry = self.gatt_table[handle]
             if entry.get('type') == 'descriptor' and entry.get('uuid') == GATTAttributes.CLIENT_CHAR_CONFIG.value:
-                int_value = ByteHelper.to_u16(value, 0)
+                int_value = bu.to_u16(value, 0)
                 return self.set_cccd(handle, int_value)
             if self.has_property(handle, 'write') or self.has_property(handle, 'write_without_response'):
                 return self.convert_and_write(handle, value)
@@ -509,9 +509,9 @@ class GattServer:
 
     def uuid_string_to_bytes(self, uuid):
         if isinstance(uuid, str):  # Check if uuid is a string
-            length_uuid = ByteHelper.get_uuid_byte_length(uuid)
+            length_uuid = bu.get_uuid_byte_length(uuid)
             if length_uuid == 16 or length_uuid == 2:
-                little_endian_bytes = ByteHelper.from_uuid(uuid)
+                little_endian_bytes = bu.from_uuid(uuid)
                 return ATTErrorCode.SUCCESS, little_endian_bytes
             else:
                 print("Invalid UUID length {}, must be 128-bit (32 hex characters).".format(length_uuid))
@@ -609,7 +609,7 @@ class GattServer:
                     break
                 first_handle = handle
                 string_uuid = attribute["uuid"]
-                primary_service_uuid = ByteHelper.from_uuid(string_uuid)
+                primary_service_uuid = bu.from_uuid(string_uuid)
                 in_service = True
             if in_service:
                 last_handle = handle
