@@ -88,8 +88,7 @@ class HCI():
         # Socket
         s = socket_c(socket_domain, socket_type, socket_protocol)
         if s < 0:
-            raise BluetoothSocketError(
-                f"Unable to open socket")
+            raise BluetoothSocketError(f"Unable to open socket")
 
         # Bind
         r = bind(s, sockaddr_hcip(sock_address), sizeof(sock_address))
@@ -128,17 +127,3 @@ class HCI():
     def receive_raw(self, x = MTU):
         return self._socket.recv(x)
     
- 
-###
-    # def send_command(self, cmd):
-    #     opcode = cmd.opcode
-    #     self._socket.send(bytes(cmd))
-    #     while True:
-    #         r = self._socket.recv(MTU)
-    #         if r.type == 0x04 and r.code == 0xe and r.opcode == opcode:
-    #             if r.status != 0:
-    #                 raise BluetoothCommandError("Command %x failed with %x" % (opcode, r.status))  # noqa: E501
-    #             return r
-###                
-
-

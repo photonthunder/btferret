@@ -1,6 +1,10 @@
 from enum import IntEnum
 from enum import Enum
 
+class Address(IntEnum):
+    PUBLIC = 0x00
+    RANDOM = 0x01
+
 class AdvertisingDataType(IntEnum):
     FLAGS = 0x01
     INCOMPLETE_LIST_16BIT_UUIDS = 0x02

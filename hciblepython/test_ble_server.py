@@ -2,6 +2,7 @@
 
 from ble import *
 from test_gatt_server import GattServer
+from ble_helper import Address
 from ble_helper import AdvertisingDataType
 import byte_utils as bu
 import sys
@@ -22,7 +23,7 @@ class BLE(BluetoothLEConnection):
         self.escape_pressed = False
         self.last_print_time = time.time()
         self.old_settings = termios.tcgetattr(sys.stdin)
-        self.wait_time = 0.005
+        self.long_wait = 0.05
 
     def enable_raw_mode(self):
         self.old_settings = termios.tcgetattr(sys.stdin)
@@ -48,69 +49,69 @@ class BLE(BluetoothLEConnection):
 
     def adv(self):
         self.reset()
-        self.wait_listen(5 * self.wait_time)
+        self.wait_listen(self.long_wait)
         self.set_event_masks()
-        self.wait_listen(self.wait_time)
+        self.wait_listen()
         self.set_le_event_masks()
-        self.wait_listen(self.wait_time)
+        self.wait_listen()
         self.set_inquiry_timeouts()
-        self.wait_listen(self.wait_time)
+        self.wait_listen()
         self.set_page_scan_activity()
-        self.wait_listen(self.wait_time)
+        self.wait_listen()
         self.set_inquiry_scan_activity()
-        self.wait_listen(self.wait_time)
+        self.wait_listen()
         self.read_local_commands()
-        self.wait_listen(self.wait_time)
+        self.wait_listen()
         self.read_local_board_address()
-        self.wait_listen(self.wait_time)
+        self.wait_listen()
         self.read_le_buffer_size()
-        self.wait_listen(self.wait_time)
+        self.wait_listen()
         self.write_local_name(self.gatt_server.device_name)
-        self.wait_listen(self.wait_time)
+        self.wait_listen()
         fields = [
             (AdvertisingDataType.FLAGS, bytes([0x06])), #0x06: General discoverable mode, BR/EDR not supported
             (AdvertisingDataType.SHORTENED_LOCAL_NAME, b"My Pi") 
         ]
         self.do_set_advertising_data(fields)
-        self.wait_listen(self.wait_time)
+        self.wait_listen()
         fields = [
             (AdvertisingDataType.COMPLETE_LOCAL_NAME, bu.from_string(self.gatt_server.device_name)),
             (AdvertisingDataType.MANUFACTURER_SPECIFIC_DATA, bytes([0xAA, 0xBB, \
             0xCC, 0xDD, 0xEE, 0xFF, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0x00]))
         ]
         self.do_set_scan_response_data(fields)
-        self.wait_listen(self.wait_time)
+        self.wait_listen()
         self.set_random_address()
-        self.wait_listen(self.wait_time)
+        self.wait_listen()
         self.do_set_advertising_parameters(
             min_interval=0x0200, # 320 ms
             max_interval=0x0200, # 320 ms
-            own_addr_type=0x01 # random address
+            own_addr_type=Address.RANDOM
         )
-        self.wait_listen(self.wait_time)
+        self.wait_listen()
         self.do_set_advertise_enable(True)
-        self.wait_listen(self.wait_time)
+        self.wait_listen()
 
         try:
             print("Press ESC and then Enter to terminate the program...")
             while self.escape_pressed == False:
                 self.check_key_press()
-                self.wait_listen(self.wait_time)
+                self.wait_listen()
                 self.updateCharacteristicValues()
         finally:
             self.restore_terminal()
 
         # Closing steps
         self.do_set_advertise_enable(True)
-        self.wait_listen(5 * self.wait_time)
+        self.wait_listen(self.long_wait)
         self.do_set_advertising_parameters(
             min_interval=0x0200, # 320 ms
             max_interval=0x0200, # 320 ms
-            own_addr_type=0x00 # turn off random address
+            own_addr_type=Address.PUBLIC # turn off random address
         )
-        self.wait_listen(self.wait_time)
+        self.wait_listen()
         self.do_set_advertise_enable(False)
-        self.wait_listen(self.wait_time)
+        self.wait_listen()
 
 
     
