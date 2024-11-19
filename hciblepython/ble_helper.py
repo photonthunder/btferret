@@ -18,6 +18,9 @@ class AdvertisingDataType(IntEnum):
     TX_POWER_LEVEL = 0x0A
     MANUFACTURER_SPECIFIC_DATA = 0xFF
 
+class ATTChannelID(IntEnum):
+    BLE = 0x0004
+
 class ATTErrorCode(IntEnum):
     SUCCESS = 0x00
     INVALID_HANDLE = 0x01  # The attribute handle given was not valid on this server.
@@ -130,16 +133,8 @@ class GATTAttributes(Enum):
     CHARACTERISTIC_PRESENTATION_FORMAT = "2904"
     CHARACTERISTIC_AGGREGATE_FORMAT = "2905"
 
-# class BLECharacteristics(IntEnum):
-#     Here are the key characteristics typically found in the Device Information Service (0x180A):
-# Device Name (0x2A00): The name of the device, e.g., "MyBLEDevice".
-# Appearance (0x2A01): Describes the appearance of the device, like "Generic Heart Rate Monitor" or "Generic Sensor".
-# Peripheral Preferred Connection Parameters (0x2A04): This characteristic provides parameters for how a peripheral prefers to connect (e.g., connection interval, slave latency, supervision timeout).
-# Manufacturer Name String (0x2A29): The name of the device manufacturer.
-# Model Number String (0x2A24): The model number of the device.
-# Serial Number String (0x2A25): The serial number of the device.
-# Hardware Revision String (0x2A27): The hardware revision of the device.
-# Firmware Revision String (0x2A26): The firmware revision of the device.
-# Software Revision String (0x2A28): The software revision of the device.
-# IEEE 11073-20601 Regulatory Certification Data List (0x2A2A): Regulatory certification data, if applicable.
-# PNP ID (0x2A50): Personal Network Profile (PNP) ID for identifying the device.
+class HCIPacket(INTEnum):
+    COMMAND = 0x01
+    ACL_DATA = 0x02
+    EVENT = 0x04
+

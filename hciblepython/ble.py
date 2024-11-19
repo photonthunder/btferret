@@ -3,17 +3,11 @@ from hci_socket import HCI
 from random import randint
 from ble_helper import Address
 from ble_helper import AdvertisingDataType
+from ble_helper import ATTChannelID
 from ble_helper import ATTErrorCode
 from ble_helper import GATTAttributes  
+from ble_helper import HCIPacket
 import byte_utils as bu
-
-
-
-HCI_COMMAND_PKT = 0x01
-HCI_ACLDATA_PKT = 0x02
-HCI_EVENT_PKT = 0x04
-
-ATT_CID = 0x0004
 
 SCAN_TYPE_ACTIVE  = 0x01
 FILTER_POLICY_NO_WHITELIST = 0x00
@@ -57,7 +51,7 @@ class BluetoothLEConnection:
         header += bu.from_u16(handle)     # hci handle
         header += bu.from_u16(length + 4) # hci packet length
         header += bu.from_u16(length)     # l2cap length
-        header += bu.from_u16(ATT_CID)    # channel for ATT - 4 for BLE
+        header += bu.from_u16(ATTChannelID.BLE)
         return header
 
     def make_cmd(self, cmd, length):
