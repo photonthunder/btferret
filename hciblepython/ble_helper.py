@@ -4,6 +4,18 @@ from enum import Enum
 class Address(IntEnum):
     PUBLIC = 0x00
     RANDOM = 0x01
+    RESOLVABLE_PUBLIC = 0x02
+    RESOLVABLE_RANDOM = 0x03
+
+class Advertising(IntEnum):
+    DISABLED = 0x00
+    ENABLED = 0x01
+
+class AdvertisingChannelMap(IntEnum):
+    CHANNEL_37 = 0x01
+    CHANNEL_38 = 0x02
+    CHANNEL_39 = 0x04
+    ALL_CHANNELS = 0x07
 
 class AdvertisingDataType(IntEnum):
     FLAGS = 0x01
@@ -17,6 +29,25 @@ class AdvertisingDataType(IntEnum):
     COMPLETE_LOCAL_NAME = 0x09
     TX_POWER_LEVEL = 0x0A
     MANUFACTURER_SPECIFIC_DATA = 0xFF
+
+class AdvertisingFilterPolicy(IntEnum):
+    SCAN_CONNECT_ALL = 0x00
+    SCAN_FILTER_CONNECT_ALL = 0x01
+    SCAN_ALL_CONNECT_FILTER = 0x02
+    SCAN_CONNECT_ALL = 0x03
+
+class AdvertistingInterval():
+    MIN = 0.02
+    MAX = 10.24
+    DEFAULT_TIME = 1.28
+    CONSTANT = 0.625E-3
+
+class AdvertisingType(IntEnum):
+    ADV_IND = 0x00
+    ADV_DIRECT_IND_HIGH = 0x01
+    ADV_SCAN_IND = 0x02
+    ADV_NONCONN_IND = 0x03
+    ADV_DIRECT_IND_LOW = 0x04
 
 class ATTChannelID(IntEnum):
     BLE = 0x0004
@@ -133,8 +164,28 @@ class GATTAttributes(Enum):
     CHARACTERISTIC_PRESENTATION_FORMAT = "2904"
     CHARACTERISTIC_AGGREGATE_FORMAT = "2905"
 
-class HCIPacket(INTEnum):
+class HCIPacket(IntEnum):
     COMMAND = 0x01
     ACL_DATA = 0x02
     EVENT = 0x04
+
+class PeerAddress(IntEnum):
+    PUBLIC_DEVICE = 0x00
+    RANDOM_DEVICE = 0x01
+
+class ScanningFilter(IntEnum):
+    BASIC_UNFILTERED = 0x00
+    BASIC_FILTERED = 0x01
+    EXTENDED_UNFILTERED = 0x02
+    EXTENDED_FILTERED = 0x03
+
+class ScanningTime():
+    MIN = 0.0025
+    MAX = 10.24
+    DEFAULT_TIME = 0.01
+    CONSTANT = 0.625E-3
+
+class ScanningType(IntEnum):
+    PASSIVE = 0x00
+    ACTIVE = 0x01
 

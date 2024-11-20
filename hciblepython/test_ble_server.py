@@ -75,7 +75,7 @@ class BLE(BluetoothLEConnection):
         self.do_set_advertising_data(fields)
         self.wait_listen()
         fields = [
-            (AdvertisingDataType.COMPLETE_LOCAL_NAME, bu.from_string(self.gatt_server.device_name)),
+            (AdvertisingDataType.COMPLETE_LOCAL_NAME, self.gatt_server.device_name),
             (AdvertisingDataType.MANUFACTURER_SPECIFIC_DATA, bytes([0xAA, 0xBB, \
             0xCC, 0xDD, 0xEE, 0xFF, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0x00]))
         ]
@@ -84,8 +84,8 @@ class BLE(BluetoothLEConnection):
         self.set_random_address()
         self.wait_listen()
         self.do_set_advertising_parameters(
-            min_interval=0x0200, # 320 ms
-            max_interval=0x0200, # 320 ms
+            min_interval=0.320, 
+            max_interval=0.320,
             own_addr_type=Address.RANDOM
         )
         self.wait_listen()
@@ -105,8 +105,8 @@ class BLE(BluetoothLEConnection):
         self.do_set_advertise_enable(True)
         self.wait_listen(self.long_wait)
         self.do_set_advertising_parameters(
-            min_interval=0x0200, # 320 ms
-            max_interval=0x0200, # 320 ms
+            min_interval=0.320,
+            max_interval=0.320,
             own_addr_type=Address.PUBLIC # turn off random address
         )
         self.wait_listen()

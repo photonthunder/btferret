@@ -747,9 +747,3 @@ if __name__ == "__main__":
 
     notification_exists, handle, new_data = gatt_server.get_notification()
     error_check(notification_exists == False, f"get_notification 4")
-
-
-
-
-
-
