@@ -1,3 +1,5 @@
+# Specification v5.4  Vol 4 Part E
+
 from enum import IntEnum
 from enum import Enum
 
@@ -34,13 +36,7 @@ class AdvertisingFilterPolicy(IntEnum):
     SCAN_CONNECT_ALL = 0x00
     SCAN_FILTER_CONNECT_ALL = 0x01
     SCAN_ALL_CONNECT_FILTER = 0x02
-    SCAN_CONNECT_ALL = 0x03
-
-class AdvertistingInterval():
-    MIN = 0.02
-    MAX = 10.24
-    DEFAULT_TIME = 1.28
-    CONSTANT = 0.625E-3
+    SCAN_CONNECT_FILTER_ONLY = 0x03
 
 class AdvertisingType(IntEnum):
     ADV_IND = 0x00
@@ -169,6 +165,10 @@ class HCIPacket(IntEnum):
     ACL_DATA = 0x02
     EVENT = 0x04
 
+class InitiatorFilter(IntEnum):
+    FILTER_ACCEPT_NOT_USED = 0x00
+    FILTER_ACCEPT_USED = 0x01
+
 class PeerAddress(IntEnum):
     PUBLIC_DEVICE = 0x00
     RANDOM_DEVICE = 0x01
@@ -179,11 +179,13 @@ class ScanningFilter(IntEnum):
     EXTENDED_UNFILTERED = 0x02
     EXTENDED_FILTERED = 0x03
 
-class ScanningTime():
-    MIN = 0.0025
-    MAX = 10.24
-    DEFAULT_TIME = 0.01
-    CONSTANT = 0.625E-3
+class ScanningFilterDuplicate(IntEnum):
+    DISABLED = 0x00
+    ENABLED = 0x01
+
+class ScanningStatus(IntEnum):
+    DISABLED = 0x00
+    ENABLED = 0x01
 
 class ScanningType(IntEnum):
     PASSIVE = 0x00

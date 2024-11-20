@@ -1,22 +1,14 @@
 from time import sleep
 from hci_socket import HCI
 from random import randint
-from ble_helper import Address
-from ble_helper import Advertising
-from ble_helper import AdvertisingChannelMap
-from ble_helper import AdvertisingDataType
-from ble_helper import AdvertisingFilterPolicy
-from ble_helper import AdvertistingInterval
-from ble_helper import AdvertisingType
-from ble_helper import ATTChannelID
-from ble_helper import ATTErrorCode
-from ble_helper import BLEErrorCode
-from ble_helper import GATTAttributes  
-from ble_helper import HCIPacket
-from ble_helper import PeerAddress
-from ble_helper import ScanningFilter
-from ble_helper import ScanningTime
-from ble_helper import ScanningType
+from ble_enum import Address, Advertising, AdvertisingChannelMap
+from ble_enum import AdvertisingDataType, AdvertisingFilterPolicy, AdvertisingType
+from ble_enum import ATTChannelID, ATTErrorCode, BLEErrorCode
+from ble_enum import GATTAttributes, HCIPacket, InitiatorFilter
+from ble_enum import PeerAddress, ScanningFilter, ScanningFilterDuplicate
+from ble_enum import ScanningStatus, ScanningType
+from ble_time import AdvertisingInterval, ConnectionInterval, MaxLatency
+from ble_time import ScanningTime, SupervisionTimeout, ConnectionEventTime
 import byte_utils as bu
 
 class BluetoothLEConnection:
@@ -511,23 +503,6 @@ class BluetoothLEConnection:
         else:
             print("Unhandled packet type", packet_type)
 
-    # HCI Command Helpers
-
-    def scan_conversion(self, scan_time):
-        if scan_time < ScanningTime.MIN or scan_time > ScanningTime.MAX:
-            raise ValueError("Scan Time {}, needs to be between 2.5 ms and 10.24 s".format(scan_time))
-        scan_convert = int(scan_time/ScanningTime.CONSTANT)
-        print("Scan {} -> 0x{:04X}".format(scan_time, scan_convert))
-        return scan_convert
-
-        AdvertistingInterval
-
-    def advertising_interval_conversion(self, interval_time):
-        if interval_time < AdvertistingInterval.MIN or AdvertistingInterval > ScanningTime.MAX:
-            raise ValueError("Interval Time {}, needs to be between 20 ms and 10.24 s".format(interval_time))
-        interval_conversion = int(interval_time/AdvertistingInterval.CONSTANT)
-        print("Interval {} -> 0x{:04X}".format(interval_time, interval_conversion))
-        return interval_conversion
 
     def create_advertising_packet(self, fields):
         packet = bytes()
@@ -625,13 +600,11 @@ class BluetoothLEConnection:
         packet = bu.from_u8(None)
         self.send_command(0x2025, packet)
 
-
-
-    def do_set_advertising_parameters(self, min_interval=AdvertistingInterval.DEFAULT_TIME,
-                                      max_interval=AdvertistingInterval.DEFAULT_TIME, 
+    def do_set_advertising_parameters(self, min_interval=AdvertisingInterval.DEFAULT_TIME,
+                                      max_interval=AdvertisingInterval.DEFAULT_TIME, 
                                       adv_type=AdvertisingType.ADV_IND,
                                       own_addr_type=Address.PUBLIC,
-                                      peer_addr_type=PeerAddress.PUBLIC,
+                                      peer_addr_type=PeerAddress.PUBLIC_DEVICE,
                                       peer_addr='00:00:00:00:00:00',
                                       adv_channel_map=AdvertisingChannelMap.ALL_CHANNELS,
                                       adv_filter_policy=AdvertisingFilterPolicy.SCAN_CONNECT_ALL):
@@ -639,8 +612,8 @@ class BluetoothLEConnection:
         # Opcode 0x2006
         print(self.cmd_text, "LE Set Advertising Parameters")
         
-        packet =  bu.from_u16  (self.advertising_interval_conversion(min_interval))
-        packet += bu.from_u16  (self.advertising_interval_conversion(max_interval))
+        packet =  bu.from_u16  (AdvertisingInterval.conversion(min_interval))
+        packet += bu.from_u16  (AdvertisingInterval.conversion(max_interval))
         packet += bu.from_u8   (adv_type)
         packet += bu.from_u8   (own_addr_type)
         packet += bu.from_u8   (peer_addr_type)
@@ -675,82 +648,58 @@ class BluetoothLEConnection:
         packet = bu.from_u8(enabled_status)
         self.send_command(0x200a, packet)
 
-    def do_set_scan_parameters(self, scan_type=ScanningType.ACTIVE, scan_interval=ScanningTime.DEFAULT_TIME,
-                               scan_window=ScanningTime.DEFAULT_TIME, own_addr_type=Address.PUBLIC,
+    def do_set_scan_parameters(self, scan_type=ScanningType.ACTIVE,
+                               scan_interval=ScanningTime.DEFAULT_TIME,
+                               scan_window=ScanningTime.DEFAULT_TIME,
+                               own_addr_type=Address.PUBLIC,
                                scan_filter_policy=ScanningFilter.BASIC_UNFILTERED):
         # Specification v5.4  Vol 4 Part E 7.8.10 LE Set Scan Parameters
         # Opcode 0x200B
         print(self.cmd_text, "LE Set Scan Parameters")
         packet =  bu.from_u8  (scan_type)
-        packet += bu.from_u16 (self.scan_conversion(scan_interval))
-        packet += bu.from_u16 (self.scan_conversion(scan_window))
+        packet += bu.from_u16 (ScanningTime.conversion(scan_interval))
+        packet += bu.from_u16 (ScanningTime.conversion(scan_window))
         packet += bu.from_u8  (own_addr_type)
         packet += bu.from_u8  (scan_filter_policy)
         self.send_command(0x200b, packet)
 
-    def do_set_scan(self, enabled=False, duplicates=False):
-        # Specification v5.4  Vol 4 Part E 7.8.11 LE Set Scan Enable (p2364)
+    def do_set_scan(self, enabled_status=ScanningStatus.DISABLED,
+                    duplicates=ScanningFilterDuplicate.DISABLED):
+        # Specification v5.4  Vol 4 Part E 7.8.11 LE Set Scan Enable
         # Opcode 0x200c
-        #
-        #     [packet_type                                  1 octet]
-        #     [opcode                                       2 octets]
-        #     [packet length                                1 octet]
-        #     le scan enable                                1 octet
-        #     filter duplicates                             1 octet
-        #
-        # Response:
-        #     HCI Command Complete                          0x0e  0x200c
-        #     HCI LE Advertising Report                     0x3e  0x02      (one or more)
-
-        #enable = 0x01 if enabled else 0x00
-        #dups   = 0x01 if duplicates else 0x00
-
         print(self.cmd_text, "LE Set Scan Enable" if enabled else "LE Set Scan Disable")
         
-        packet =  bu.from_u8(0x01 if enabled else 0x00)
-        packet += bu.from_u8(0x01 if duplicates else 0x00)        
+        packet =  bu.from_u8(enabled_status)
+        packet += bu.from_u8(duplicates)        
         self.send_command(0x200c, packet)
 
-    def do_create_connection(self, addr, addr_type, interval=0x0060, window=0x0060, initiator_filter=0x00,
-                             own_addr_type=Address.PUBLIC, min_interval=0x0018, max_interval=0x0028, latency=0x0000,
-                             supervision_timeout=0x002a, min_ce_length=0x0000, max_ce_length = 0x0000):
-        # Specification v5.4  Vol 4 Part E 7.8.12 LE Create Connection (p2366)
+    def do_create_connection(self, scan_interval=ScanningTime.DEFAULT_TIME,
+                             scan_window=ScanningTime.DEFAULT_TIME,
+                             initiator_filter=InitiatorFilter.FILTER_ACCEPT_NOT_USED,
+                             peer_addr_type = PeerAddress.PUBLIC_DEVICE,
+                             peer_addr='00:00:00:00:00:00',
+                             own_addr_type=Address.PUBLIC,
+                             min_interval=ConnectionInterval.DEFAULT_TIME_MIN,
+                             max_interval=ConnectionInterval.DEFAULT_TIME_MAX,
+                             latency=MaxLatency.DEFAULT_TIME,
+                             supervision_timeout=SupervisionTimeout.DEFAULT_TIME,
+                             min_ce_length=ConnectionEventTime.DEFAULT_TIME,
+                             max_ce_length = ConnectionEventTime.DEFAULT_TIME):
+        # Specification v5.4  Vol 4 Part E 7.8.12 LE Create Connection
         # Opcode 0x200d
-        #
-        #     [packet_type                                  1 octet]
-        #     [opcode                                       2 octets]
-        #     [packet length                                1 octet]
-        #     le scan interval                              2 octets
-        #     le scan window                                2 octets
-        #     initiator filter policy                       1 octet
-        #     peer address type                             1 octet
-        #     peer address                                  6 octets
-        #     own address type                              1 octet
-        #     connection interval min                       2 octets
-        #     connection interval max                       2 octets
-        #     max latency                                   2 octets
-        #     supervision timeout                           2 octets
-        #     min ce length                                 2 octets
-        #     max ce length                                 2 octets
-        #
-        # Response:
-        #     HCI Command Complete                          0x0e  0x200d
-        #     HCI LE Connection Complete                    0x3e  0x01
-
         print(self.cmd_text, "LE Create Connection")
-        
-        packet =  bu.from_u16 (interval)
-        packet += bu.from_u16 (window)
+        packet =  bu.from_u16 (ScanningTime.conversion(scan_interval))
+        packet += bu.from_u16 (ScanningTime.conversion(scan_window))
         packet += bu.from_u8  (initiator_filter)
-        packet += bu.from_u8  (addr_type)
-        packet += bu.from_addr(addr)
+        packet += bu.from_u8  (peer_addr_type)
+        packet += bu.from_addr(peer_addr)
         packet += bu.from_u8  (own_addr_type)
-        packet += bu.from_u16 (min_interval)
-        packet += bu.from_u16 (max_interval)
-        packet += bu.from_u16 (latency)
-        packet += bu.from_u16 (supervision_timeout)
-        packet += bu.from_u16 (min_ce_length)
-        packet += bu.from_u16 (max_ce_length)
+        packet += bu.from_u16 (ConnectionInterval.conversion(min_interval))
+        packet += bu.from_u16 (ConnectionInterval.conversion(max_interval))
+        packet += bu.from_u16 (MaxLatency.conversion(latency))
+        packet += bu.from_u16 (SupervisionTimeout.conversion(supervision_timeout))
+        packet += bu.from_u16 (ConnectionEventTime.conversion(min_ce_length))
+        packet += bu.from_u16 (ConnectionEventTime.conversion(max_ce_length))
         self.send_command(0x200d, packet)
         
 
@@ -1110,7 +1059,9 @@ class BluetoothLEConnection:
 
 if __name__ == "__main__":
     bc = BluetoothLEConnection()
-    # bc.do_set_scan_parameters()
+    bc.do_set_scan_parameters()
+    bc.do_set_advertising_parameters()
     # bc.do_set_advertise_enable(Advertising.ENABLED)
     # bc.do_set_advertise_enable(Advertising.DISABLED)
     # bc.do_set_advertise_enable('ABC')
+    bc.do_create_connection()

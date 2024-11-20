@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-from ble_helper import ATTErrorCode
-from ble_helper import GATTAttributes
+from ble_enum import ATTErrorCode
+from ble_enum import GATTAttributes
 import byte_utils as bu
 import logging
 import time
