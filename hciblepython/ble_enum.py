@@ -149,6 +149,11 @@ class BLEErrorCode(IntEnum):
     TOO_LATE = 0x46
     TOO_EARLY = 0x47
 
+class BroadcastFlags(IntEnum):
+    POINT_POINT = 0b00
+    ACTIVE = 0b01
+    PARKED = 0b10
+
 class EventMask(IntEnum):
     INQUIRY_COMPLETE = 0
     INQUIRY_RESULT = 1
@@ -256,13 +261,23 @@ class GATTAttributes(Enum):
     CHARACTERISTIC_AGGREGATE_FORMAT = "2905"
 
 class HCIPacket(IntEnum):
+    ACK = 0x00
     COMMAND = 0x01
     ACL_DATA = 0x02
+    SYNC_DATA = 0x03
     EVENT = 0x04
+    ISO_DATA = 0x05
+    VENDOR_SPECIFIC = 0x14
+    LINK_CONTROL = 0x15
 
 class InitiatorFilter(IntEnum):
     FILTER_ACCEPT_NOT_USED = 0x00
     FILTER_ACCEPT_USED = 0x01
+
+class PacketBoundaryFlags(IntEnum):
+    CONTINUING_FRAGMENT = 0b00
+    FIRST_FRAGMENT = 0b01
+    COMPLETE_MESSAGE = 0b10
 
 class PeerAddress(IntEnum):
     PUBLIC_DEVICE = 0x00
