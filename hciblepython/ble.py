@@ -600,11 +600,15 @@ class BluetoothLEConnection:
         self.send_command(0x0C1A, packet)
 
     def read_local_commands(self):
+        # Specification v5.4  Vol 4 Part E 7.4.2 Read Local Supported Commands
+        # Opcode 0x1002
         print(self.cmd_text, "Read Local Supported Commands")
         packet = bu.from_u8(None)
         self.send_command(0x1002, packet)
 
     def read_local_board_address(self):
+        # Specification v5.4  Vol 4 Part E 7.4.2 Read BD_ADDR Commands
+        # Opcode 0x1009
         print(self.cmd_text, "Read Local Board Address")
         packet = bu.from_u8(None)
         self.send_command(0x1009, packet)

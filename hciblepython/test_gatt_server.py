@@ -214,7 +214,7 @@ class GattServer:
     def clear_connection_settings(self):
         for handle, attr in self.gatt_table.items():
             if attr.get('type') == 'descriptor' and attr.get('uuid') == GATTAttributes.CLIENT_CHAR_CONFIG.value:
-                attr['value'] = disabled
+                attr['value'] = 'disabled'
 
     def check_cccd(self, handle, value_string):
         if handle in self.gatt_table:
