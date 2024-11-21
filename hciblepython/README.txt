@@ -1,9 +1,11 @@
-This code is a BLE server written in Python but using a c socket.
+This code is a BLE server written in Python but using a c socket (see hci_socket.py).
 
 Code taken from the following repositories:
 https://github.com/petzval/btferret
 https://github.com/paulhamsh/HCI-BLE-Python
 
+BLE Reference is 5.4:
+https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Core-54/out/en/host-controller-interface/host-controller-interface-functional-specification.html
 
 
 GAP initiates the connection:

@@ -4,12 +4,14 @@ from random import randint
 from ble_enum import Address, Advertising, AdvertisingChannelMap
 from ble_enum import AdvertisingDataType, AdvertisingFilterPolicy, AdvertisingType
 from ble_enum import ATTChannelID, ATTErrorCode, BLEErrorCode
-from ble_enum import EventType
+from ble_enum import EventMask, EventType
 from ble_enum import GATTAttributes, HCIPacket, InitiatorFilter
 from ble_enum import PeerAddress, ScanningFilter, ScanningFilterDuplicate
 from ble_enum import ScanningStatus, ScanningType
-from ble_time import AdvertisingInterval, ConnectionInterval, MaxLatency
-from ble_time import ScanningTime, SupervisionTimeout, ConnectionEventTime
+from ble_time import AdvertisingInterval
+from ble_time import ConnectionAcceptTimeout, ConnectionEventTime, ConnectionInterval
+from ble_time import MaxLatency
+from ble_time import ScanningTime, SupervisionTimeout
 import byte_utils as bu
 
 class BluetoothLEConnection:
@@ -505,7 +507,6 @@ class BluetoothLEConnection:
         else:
             print("Unhandled packet type", packet_type)
 
-
     def create_advertising_packet(self, fields):
         packet = bytes()
         total_length = 0
@@ -532,47 +533,69 @@ class BluetoothLEConnection:
         packet += pad
         return bytes(packet)
 
-    def event_mask_conversion(self, event_types):
+    def event_mask_conversion(self, event_types, class_name):
         event_mask = [0] * 8
         for event_type in event_types:
-            if isinstance(event_type, EventType):
+            if isinstance(event_type, class_name):
                 bit_index = event_type.value
                 byte_index = bit_index // 8
                 bit_position = bit_index % 8
                 event_mask[byte_index] |= (1 << bit_position)
             else:
-                raise ValueError("Invalid EventType for event mask")
+                raise ValueError(f"Invalid {class_name} for event mask")
         print("".join(f"{byte:02X}" for byte in reversed(event_mask)))
         return bytes(event_mask)
 
     # HCI commands
 
+    def set_event_mask(self, event_mask=None):
+        # Specification v5.4  Vol 4 Part E 7.3.1 Set Event Mask Command
+        # Opcode 0x0C03
+        print(self.cmd_text, "General Event Mask")
+        # 8 byte event mask
+        if event_mask == None:
+            event_mask = []
+            for event_type in EventMask:
+                event_mask.append(event_type)
+        packet = self.event_mask_conversion(event_mask, EventMask)
+        self.send_command(0x0C01, packet)
+
     def reset(self):
+        # Specification v5.4  Vol 4 Part E 7.3.2 Reset Command
+        # Opcode 0x0C03
         print(self.cmd_text, "BLE Reset")
-        
         packet = bu.from_u8(None)
         self.send_command(0x0C03, packet)
 
-    def set_event_masks(self):
-        print(self.cmd_text, "General Event Mask")
-        # 8 byte event mask
-        packet = bytes([0xFF, 0xFF, 0xFB, 0xFF, 0x07, 0xF8, 0xBF, 0x3D])
-        self.send_command(0x0C01, packet)
+    def write_local_name(self, name_bytes):
+        # Specification v5.4  Vol 4 Part E 7.3.11 Write Local Name Command
+        # Opcode 0x0C13
+        self.local_name = name
+        print(self.cmd_text, "Write Local Name {}".format(name))
+        if not isinstance(name_bytes, (bytes, bytearray)):
+            raise TypeError("Expected 'name_bytes' to be of type 'bytes' or 'bytearray'")
+        if len(name_bytes) > 248:
+            raise ValueError("Name is too long, must be 248 bytes or less.")
+        packet = name_bytes.ljust(248, b'\x00')
+        self.send_command(0x0C13, packet)
 
-    def set_inquiry_timeouts(self):
-        print(self.cmd_text, "Set Page/Inquiry Scan and Tmeouts (10 secs)")
-        packet = bytes([0x03])
-        self.send_command(0x0C1A, packet)
-
-    def set_page_scan_activity(self):
-        print(self.cmd_text, "Set Page Scan Interval and Window (10 secs)")
-        packet = bytes([0xA0, 0x3F])
+    def write_connection_accept_timeout(self, connect_timeout = ConnectionAcceptTimeout.DEFAULT_TIME):
+        # Specification v5.4  Vol 4 Part E 7.3.14 Write Connection Accept Timeout Command
+        # Opcode 0x0C16
+        print(self.cmd_text, "Write Connection Accept Timeout Command")
+        packet_old = bytes([0xA0, 0x3F])
+        packet = bu.from_u16(ConnectionAcceptTimeout.conversion(connect_timeout))
         self.send_command(0x0C16, packet)
 
     def set_inquiry_scan_activity(self):
         print(self.cmd_text, "Set Inquiry Scan Interval and Window (10 secs)")
         packet = bytes([0x00, 0x40])
         self.send_command(0x0C18, packet)
+
+    def set_inquiry_timeouts(self):
+        print(self.cmd_text, "Set Page/Inquiry Scan and Tmeouts (10 secs)")
+        packet = bytes([0x03])
+        self.send_command(0x0C1A, packet)
 
     def read_local_commands(self):
         print(self.cmd_text, "Read Local Supported Commands")
@@ -584,35 +607,25 @@ class BluetoothLEConnection:
         packet = bu.from_u8(None)
         self.send_command(0x1009, packet)
 
-    def write_local_name(self, name):
-        self.local_name = name
-        print(self.cmd_text, "Write Local Name {}".format(name))
-        name_bytes = name.encode('utf-8')
-        if len(name_bytes) > 248:
-            raise ValueError("Name is too long, must be 248 bytes or less.")
-        packet = name_bytes.ljust(248, b'\x00')
-        self.send_command(0x0C13, packet)
-
-    def set_le_event_masks(self):
+    def set_le_event_mask(self, event_mask = None):
         # Specification v5.4  Vol 4 Part E 7.8.3 LE Set Event Mask Command
         # Opcode 0x2001
         print(self.cmd_text, "LE Event Mask")
-        # 8 byte event mask
-        packet_old = bytes([0xFF, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
-        packet = self.event_mask_conversion([
-            EventType.CONNECTION_COMPLETE,
-            EventType.ADVERTISING_REPORT,
-            EventType.CONNECTION_UPDATE_COMPLETE,
-            EventType.READ_REMOTE_FEATURES_COMPLETE,
-            EventType.LONG_TERM_KEY_REQUEST,
-            EventType.REMOTE_CONNECTION_PARAMETER_REQUEST,
-            EventType.DATA_LENGTH_CHANGE,
-            EventType.READ_LOCAL_P256_PUBLIC_KEY_COMPLETE,
-            EventType.GENERATE_DHKEY_COMPLETE,
-            EventType.DIRECTED_ADVERTISING_REPORT
-        ])
-        if packet != packet_old:
-            raise ValueError(f"Not the same event mask {packet} != {packet_old}")
+        # Default 8 byte event mask
+        if event_mask == None:
+            event_mask = [
+                EventType.CONNECTION_COMPLETE,
+                EventType.ADVERTISING_REPORT,
+                EventType.CONNECTION_UPDATE_COMPLETE,
+                EventType.READ_REMOTE_FEATURES_COMPLETE,
+                EventType.LONG_TERM_KEY_REQUEST,
+                EventType.REMOTE_CONNECTION_PARAMETER_REQUEST,
+                EventType.DATA_LENGTH_CHANGE,
+                EventType.READ_LOCAL_P256_PUBLIC_KEY_COMPLETE,
+                EventType.GENERATE_DHKEY_COMPLETE,
+                EventType.DIRECTED_ADVERTISING_REPORT
+            ]
+        packet = self.event_mask_conversion(event_mask, EventType)
         self.send_command(0x2001, packet)
 
     def read_le_buffer_size(self):
@@ -1083,17 +1096,6 @@ if __name__ == "__main__":
     # bc.do_set_advertise_enable(Advertising.DISABLED)
     # bc.do_set_advertise_enable('ABC')
     bc.do_create_connection()
-    bc.event_mask_conversion([
-        EventType.CONNECTION_COMPLETE,
-        EventType.ADVERTISING_REPORT,
-        EventType.CONNECTION_UPDATE_COMPLETE,
-        EventType.READ_REMOTE_FEATURES_COMPLETE,
-        EventType.LONG_TERM_KEY_REQUEST,
-        EventType.REMOTE_CONNECTION_PARAMETER_REQUEST,
-        EventType.DATA_LENGTH_CHANGE,
-        EventType.READ_LOCAL_P256_PUBLIC_KEY_COMPLETE,
-        EventType.GENERATE_DHKEY_COMPLETE,
-        EventType.DIRECTED_ADVERTISING_REPORT
-    ])
-
-    bc.set_le_event_masks()
+    bc.set_le_event_mask()
+    bc.set_event_mask()
+    bc.write_connection_accept_timeout()
