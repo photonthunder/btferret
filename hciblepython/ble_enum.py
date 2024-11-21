@@ -268,6 +268,12 @@ class PeerAddress(IntEnum):
     PUBLIC_DEVICE = 0x00
     RANDOM_DEVICE = 0x01
 
+class ScanEnable(IntEnum):
+    ALL_DISABLED = 0x00
+    INQUIRY_ENABLED_PAGE_DISABLED = 0x01
+    INQUIRY_DISABLED_PAGE_ENABLED = 0x02
+    ALL_ENABLED = 0x03
+
 class ScanningFilter(IntEnum):
     BASIC_UNFILTERED = 0x00
     BASIC_FILTERED = 0x01

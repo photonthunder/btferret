@@ -52,6 +52,13 @@ class MaxLatency(IntervalBase):
     BLE_DEFAULT = None
     DEFAULT_TIME = 0x0000
 
+class PageTimeout(IntervalBase):
+    MIN = 0.625
+    MAX = 40.9
+    CONSTANT = 0.625E-3
+    BLE_DEFAULT = 5.12
+    DEFAULT_TIME = 10.24
+
 class ScanningTime(IntervalBase):
     MIN = 0.0025
     MAX = 10.24

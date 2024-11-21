@@ -7,10 +7,11 @@ from ble_enum import ATTChannelID, ATTErrorCode, BLEErrorCode
 from ble_enum import EventMask, EventType
 from ble_enum import GATTAttributes, HCIPacket, InitiatorFilter
 from ble_enum import PeerAddress, ScanningFilter, ScanningFilterDuplicate
-from ble_enum import ScanningStatus, ScanningType
+from ble_enum import ScanEnable, ScanningStatus, ScanningType
 from ble_time import AdvertisingInterval
 from ble_time import ConnectionAcceptTimeout, ConnectionEventTime, ConnectionInterval
 from ble_time import MaxLatency
+from ble_time import PageTimeout
 from ble_time import ScanningTime, SupervisionTimeout
 import byte_utils as bu
 
@@ -33,7 +34,6 @@ class BluetoothLEConnection:
         self.local_board_address = None
         self.hc_le_data_packet_length = None
         self.hc_le_data_buffer = None
-        self.local_name = None
         self.client_connected = False
         self.command_timeout = 0.1
         self.data_timeout = 0.005
@@ -551,7 +551,7 @@ class BluetoothLEConnection:
     def set_event_mask(self, event_mask=None):
         # Specification v5.4  Vol 4 Part E 7.3.1 Set Event Mask Command
         # Opcode 0x0C03
-        print(self.cmd_text, "General Event Mask")
+        print(self.cmd_text, "Set Event Mask")
         # 8 byte event mask
         if event_mask == None:
             event_mask = []
@@ -570,8 +570,7 @@ class BluetoothLEConnection:
     def write_local_name(self, name_bytes):
         # Specification v5.4  Vol 4 Part E 7.3.11 Write Local Name Command
         # Opcode 0x0C13
-        self.local_name = name
-        print(self.cmd_text, "Write Local Name {}".format(name))
+        print(self.cmd_text, "Write Local Name {}".format(name_bytes))
         if not isinstance(name_bytes, (bytes, bytearray)):
             raise TypeError("Expected 'name_bytes' to be of type 'bytes' or 'bytearray'")
         if len(name_bytes) > 248:
@@ -583,18 +582,21 @@ class BluetoothLEConnection:
         # Specification v5.4  Vol 4 Part E 7.3.14 Write Connection Accept Timeout Command
         # Opcode 0x0C16
         print(self.cmd_text, "Write Connection Accept Timeout Command")
-        packet_old = bytes([0xA0, 0x3F])
         packet = bu.from_u16(ConnectionAcceptTimeout.conversion(connect_timeout))
         self.send_command(0x0C16, packet)
 
-    def set_inquiry_scan_activity(self):
-        print(self.cmd_text, "Set Inquiry Scan Interval and Window (10 secs)")
-        packet = bytes([0x00, 0x40])
+    def write_page_timeout_command(self, page_timeout = PageTimeout.DEFAULT_TIME):
+        # Specification v5.4  Vol 4 Part E 7.3.16 Write Page Timeout Command
+        # Opcode 0x0C18
+        print(self.cmd_text, "Write Page Timeout Command")
+        packet = bu.from_u16(ConnectionAcceptTimeout.conversion(page_timeout))
         self.send_command(0x0C18, packet)
 
-    def set_inquiry_timeouts(self):
-        print(self.cmd_text, "Set Page/Inquiry Scan and Tmeouts (10 secs)")
-        packet = bytes([0x03])
+    def write_scan_enable(self, scan_enable = ScanEnable.ALL_ENABLED):
+        # Specification v5.4  Vol 4 Part E 7.3.18 Write Scan Enable Command
+        # Opcode 0x0C1A
+        print(self.cmd_text, "Write Scan Enable Command")
+        packet = bu.from_u8(scan_enable)
         self.send_command(0x0C1A, packet)
 
     def read_local_commands(self):
@@ -1099,3 +1101,5 @@ if __name__ == "__main__":
     bc.set_le_event_mask()
     bc.set_event_mask()
     bc.write_connection_accept_timeout()
+    bc.write_page_timeout_command()
+    bc.write_scan_enable()
