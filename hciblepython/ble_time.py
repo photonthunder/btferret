@@ -15,7 +15,8 @@ class IntervalBase:
         interval_conversion = int(interval_time / constant)
         # print(f"Interval {interval_time} -> 0x{interval_conversion:04X}")
         return interval_conversion.to_bytes(2, byteorder='little')
-
+        
+    @classmethod
     def to_time(cls, interval):
         min_value = cls.MIN
         max_value = cls.MAX

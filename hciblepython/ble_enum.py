@@ -157,6 +157,16 @@ class BroadcastFlags(IntEnum):
     ACTIVE = 0b01
     PARKED = 0b10
 
+class CentralClockAccuracy(IntEnum):
+    PPM_500 = 0x00
+    PPM_250 = 0x01
+    PPM_150 = 0x02
+    PPM_100 = 0x03
+    PPM_75 = 0x04
+    PPM_50 = 0x05
+    PPM_30 = 0x06
+    PPM_20 = 0x07
+
 @unique
 class EventMask(IntEnum):
     INQUIRY_COMPLETE = 0

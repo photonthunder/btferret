@@ -5,6 +5,7 @@ from ble_enum import Address, Advertising, AdvertisingChannelMap
 from ble_enum import AdvertisingDataType, AdvertisingFilterPolicy, AdvertisingType
 from ble_enum import ATTChannelID, ATTErrorCode
 from ble_enum import BLEErrorCode, BroadcastFlags
+from ble_enum import CentralClockAccuracy
 from ble_enum import EventMask, EventType
 from ble_enum import GATTAttributes
 from ble_enum import HCIEvents, HCIPacket
@@ -160,17 +161,19 @@ class BluetoothLEConnection:
         role = bu.to_u8(data, 7)
         peer_addr_type = bu.to_u8(data, 8)
         address = bu.to_addr(data, 9)
-        connection_interval = bu.to_u16(data, 10)
-        peripheral_latency = bu.to_u16(data, 12)
-        supervision_timeout = bu.to_u16(data, 14)
-        central_clock_accuracy = bu.to_u8(data, 16)
+        connection_interval = bu.to_u16(data, 15)
+        peripheral_latency = bu.to_u16(data, 17)
+        supervision_timeout = bu.to_u16(data, 19)
+        central_clock_accuracy = bu.to_u8(data, 21)
         self.connection_handle = handle 
         self.total_connections.append((handle, 0))
         self.client_connected = True
         print(f"Connection Complete 0x{handle:04X}, Role: {Role(role).name}")
         print(f"Peer: Type {PeerAddressType(peer_addr_type)}. Address: {address}")
         print(f"Connection Interval {ConnectionInterval.to_time(connection_interval)} seconds")
-
+        print(f"Peripheral Latency 0x{peripheral_latency:04X} connection events")
+        print(f"Supervision Timeout {SupervisionTimeout.to_time(supervision_timeout)} seconds")
+        print(f"Central Clock Accuracy = {CentralClockAccuracy(central_clock_accuracy).name} ppm")
 
     @register_event(MetaEvent.ADVERTISING_REPORT, meta_event_handlers)
     def on_le_advertising_report(self, data):
