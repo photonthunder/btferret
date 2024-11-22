@@ -8,7 +8,7 @@ from ble_enum import BLEErrorCode, BroadcastFlags
 from ble_enum import EventMask, EventType
 from ble_enum import GATTAttributes
 from ble_enum import HCIEvents, HCIPacket
-from ble_enum import InitiatorFilter
+from ble_enum import InitiatorFilter, MetaEvent
 from ble_enum import PacketBoundaryFlags, PeerAddress
 from ble_enum import ScanningFilter, ScanningFilterDuplicate
 from ble_enum import ScanEnable, ScanningStatus, ScanningType
@@ -19,12 +19,13 @@ from ble_time import PageTimeout
 from ble_time import ScanningTime, SupervisionTimeout
 import byte_utils as bu
 
-event_handlers = {}
+hci_event_handlers = {}
+meta_event_handlers = {}
 
-def register_hci_event(event_code):
+def register_event(event_code, registry=hci_event_handlers):
     def decorator(func):
-        func._event_code = event_code  # Attach event code to the function
-        event_handlers[event_code] = func
+        func._event_code = event_code
+        registry[event_code] = func
         return func
     return decorator
 
@@ -167,6 +168,7 @@ class BluetoothLEConnection:
         
         self.connection_handle = handle         # save this for other commands to use
         self.total_connections.append((handle, 0))
+        self.client_connected = True
         print(f"Event: LE Connection Complete 0x{handle:04X}")
         print("Status: {:02x} Address: {}".format(status, address))
 
@@ -313,7 +315,7 @@ class BluetoothLEConnection:
         else:
             print(f'Unknown Event: {cmd} ({hex(cmd)}), {status_text}')
 
-    @register_hci_event(HCIEvents.COMPLETED_PACKETS)
+    @register_event(HCIEvents.COMPLETED_PACKETS, hci_event_handlers)
     def on_hci_event_disconnect_complete(self, data):
         # Specification v5.4  Vol 4 Part E 7.7.5 HCI_Disconnection_Complete (p2163)
         # HCI_Disconnection_Complete = 0x05
@@ -339,7 +341,7 @@ class BluetoothLEConnection:
             print("Disconnect Reason: 0x{:02X}".format(reason))
         self.gatt_server.clear_connection_settings()
 
-    @register_hci_event(HCIEvents.COMMAND_COMPLETE)
+    @register_event(HCIEvents.COMMAND_COMPLETE, hci_event_handlers)
     def on_hci_event_command_complete(self, data):
         # Specification v5.4  Vol 4 Part E 7.7.14 HCI Command Complete (p2177)
         #     [packet_type                                   1 octet]
@@ -360,7 +362,7 @@ class BluetoothLEConnection:
         self.command_status =   status
         self.handle_le_command(cmd, status, data)
 
-    @register_hci_event(HCIEvents.COMMAND_STATUS)
+    @register_event(HCIEvents.COMMAND_STATUS, hci_event_handlers)
     def on_hci_event_command_status(self, data):
         # Specification v5.4  Vol 4 Part E 7.7.15 HCI_Command_Status (p2179)
         # HCI_Command_Status = 0x0f
@@ -379,7 +381,7 @@ class BluetoothLEConnection:
         else:
             print(self.event_text, "Unknown Opcode: {:02x} status: {:02x}".format(opcode, status))
 
-    @register_hci_event(HCIEvents.COMPLETED_PACKETS)
+    @register_event(HCIEvents.COMPLETED_PACKETS, hci_event_handlers)
     def on_hci_event_number_of_completed_packets(self, data):
         # Specification v5.4  Vol 4 Part E 7.7.19 HCI Number Of Completed Packets
         length = bu.to_u8(data, 2)
@@ -403,20 +405,14 @@ class BluetoothLEConnection:
         # Appears that some use this as an ack to indication
         self.gatt_server.clear_ack()  
 
-    @register_hci_event(HCIEvents.META_EVENT)
+    @register_event(HCIEvents.META_EVENT, hci_event_handlers)
     def on_hci_meta_event(self, data):
-        # Specification v5.4  Vol 4 Part E 7.7.65 LE Meta event (p2235)
-        # Event_code = 0x3e
-        #     [packet_type                                   1 octet]
-        #     [event_code                                    1 octet]
-        #     [parameter_length                              1 octet]
-        #     subevent_code                                  1 octet
-        #     data                                           n octets
+        # Specification v5.4  Vol 4 Part E 7.7.65 LE Meta event
+        # Event_code = 0x3E
 
         subevent_code = bu.to_u8(data, 3)
         # print(self.event_text, "LE Meta event: ", hex(subevent_code))
         if   subevent_code == 0x01:                 # LE Connection Complete
-            self.client_connected = True
             self.on_le_connection_complete(data)
         elif subevent_code == 0x02:                 # LE Advertising Report
             self.on_le_advertising_report(data)
@@ -429,9 +425,9 @@ class BluetoothLEConnection:
         elif subevent_code == 0x08:
             self.on_le_read_local_public_key(data)
         else:
-            print("LE Meta Event: Unhandled:", hex(subevent_code))
+            print(f"LE Meta Event: Unhandled: {hex(subevent_code)}")
         
-    @register_hci_event(HCIEvents.VENDOR_SPECIFIC)
+    @register_event(HCIEvents.VENDOR_SPECIFIC, hci_event_handlers)
     def on_hci_event_vendor_specific (self, data):
         # Specification v5.4  Vol 4 Part E 5.4.4 Mentions Vendor Specific Debugging Event
         print(self.event_text, "Vendor Specific")
@@ -444,7 +440,7 @@ class BluetoothLEConnection:
             print(self.event_text, f"Event 0x{event_code:02X} not in HCIEvents List")
             return
         
-        handler = event_handlers.get(event)
+        handler = hci_event_handlers.get(event)
         if handler:
             handler(self, data)
         else:
