@@ -2,6 +2,7 @@
 
 from enum import IntEnum
 from enum import Enum
+from enum import unique
 
 class Address(IntEnum):
     PUBLIC = 0x00
@@ -49,6 +50,7 @@ class AdvertisingType(IntEnum):
 class ATTChannelID(IntEnum):
     BLE = 0x0004
 
+@unique
 class ATTErrorCode(IntEnum):
     SUCCESS = 0x00
     INVALID_HANDLE = 0x01  # The attribute handle given was not valid on this server.
@@ -75,6 +77,7 @@ class ATTErrorCode(IntEnum):
     COMMON_PROFILE_SERVICE_ERROR_START = 0xE0  # Common profile and service error codes start here (0xE0 to 0xFF).
     COMMON_PROFILE_SERVICE_ERROR_END = 0xFF
 
+@unique
 class BLEErrorCode(IntEnum):
     SUCCESS = 0x00
     UNKNOWN_HCI_COMMAND = 0x01
@@ -154,6 +157,7 @@ class BroadcastFlags(IntEnum):
     ACTIVE = 0b01
     PARKED = 0b10
 
+@unique
 class EventMask(IntEnum):
     INQUIRY_COMPLETE = 0
     INQUIRY_RESULT = 1
@@ -205,6 +209,7 @@ class EventMask(IntEnum):
     REMOTE_HOST_SUPPORTED_FEATURES_NOTIFICATION = 60
     LE_META_EVENT = 61
 
+@unique
 class EventType(IntEnum):
     CONNECTION_COMPLETE = 0
     ADVERTISING_REPORT = 1
@@ -260,6 +265,18 @@ class GATTAttributes(Enum):
     CHARACTERISTIC_PRESENTATION_FORMAT = "2904"
     CHARACTERISTIC_AGGREGATE_FORMAT = "2905"
 
+# Not Complete list of HCI Events,
+# see Specification v5.4 Vol 4 Part E 7.7
+@unique
+class HCIEvents(IntEnum):
+    DISCONNECTION_COMPLETE = 0x05
+    COMMAND_COMPLETE = 0x0E
+    COMMAND_STATUS = 0x0F
+    COMPLETED_PACKETS = 0x13
+    META_EVENT = 0x3E
+    VENDOR_SPECIFIC = 0xFF
+
+@unique
 class HCIPacket(IntEnum):
     ACK = 0x00
     COMMAND = 0x01
