@@ -10,12 +10,12 @@ class IntervalBase:
         constant = cls.CONSTANT
 
         if interval_time < min_value or interval_time > max_value:
-            raise ValueError(f"Interval Time {interval_time} needs to be between {min_value * 1000} ms and {max_value} s")
+            raise ValueError(f"Error: Interval Time {interval_time} needs to be between {min_value * 1000} ms and {max_value} s")
         
         interval_conversion = int(interval_time / constant)
         # print(f"Interval {interval_time} -> 0x{interval_conversion:04X}")
         return interval_conversion.to_bytes(2, byteorder='little')
-        
+
     @classmethod
     def to_time(cls, interval):
         min_value = cls.MIN
@@ -25,7 +25,8 @@ class IntervalBase:
         interval_time = interval * constant
 
         if interval_time < min_value or interval_time > max_value:
-            raise ValueError(f"Interval Time {interval_time} needs to be between {min_value * 1000} ms and {max_value} s")
+            print(f"Error: Interval Time {interval_time} needs to be between {min_value * 1000} ms and {max_value} s")
+            return None
         print(f"Interval {interval_time} -> 0x{interval:04X}")
         return interval_time
 

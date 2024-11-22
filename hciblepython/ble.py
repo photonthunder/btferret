@@ -365,14 +365,13 @@ class BluetoothLEConnection:
             print(f"Error: Incorrect packet length {length} or number of handles {number_handles}")
         for i in range(0, length - 1, chunk_size):
             handle = bu.to_u16(data, 4 + i)
-            print(hex(handle))
             connections = bu.to_u16(data, 6 + i)
             for i, (ihandle, count) in enumerate(self.total_connections):
                 if ihandle == handle:
                     new_count = count + connections
                     self.total_connections[i] = (handle, new_count)
                     break
-            print(f"Handle 0x{handle:04X}, Connection since last packet {connections}, Total Connections = {new_count}")
+            print(f"Handle 0x{handle:04X}, Connections = {connections}, Total Connections = {new_count}")
 
         # Appears that some use this as an ack to indication
         self.gatt_server.clear_ack()  
@@ -382,22 +381,34 @@ class BluetoothLEConnection:
         # Specification v5.4  Vol 4 Part E 7.7.65 LE Meta event
         # Event_code = 0x3E
 
-        subevent_code = bu.to_u8(data, 3)
-        # print(self.event_text, "LE Meta event: ", hex(subevent_code))
-        if   subevent_code == 0x01:                 # LE Connection Complete
-            self.on_le_connection_complete(data)
-        elif subevent_code == 0x02:                 # LE Advertising Report
-            self.on_le_advertising_report(data)
-        elif subevent_code == 0x03:                 # LE Connection Update Complete
-            self.on_le_update_complete(data)
-        elif subevent_code == 0x04:                 # LE Read Remove Features Complete
-            self.on_le_read_remote_features_complete(data)
-        elif subevent_code == 0x07:           
-            self.on_le_data_length_change(data)
-        elif subevent_code == 0x08:
-            self.on_le_read_local_public_key(data)
+        # subevent_code = bu.to_u8(data, 3)
+        # # print(self.event_text, "LE Meta event: ", hex(subevent_code))
+        # if   subevent_code == 0x01:                 # LE Connection Complete
+        #     self.on_le_connection_complete(data)
+        # elif subevent_code == 0x02:                 # LE Advertising Report
+        #     self.on_le_advertising_report(data)
+        # elif subevent_code == 0x03:                 # LE Connection Update Complete
+        #     self.on_le_update_complete(data)
+        # elif subevent_code == 0x04:                 # LE Read Remove Features Complete
+        #     self.on_le_read_remote_features_complete(data)
+        # elif subevent_code == 0x07:           
+        #     self.on_le_data_length_change(data)
+        # elif subevent_code == 0x08:
+        #     self.on_le_read_local_public_key(data)
+        # else:
+        #     print(f"LE Meta Event: Unhandled: {hex(subevent_code)}")
+
+        event_code = bu.to_u8(data, 3)
+        try:
+            event = MetaEvent(event_code)
+        except ValueError:
+            print(self.event_text, f"Event 0x{event_code:02X} not in MetaEvents List")
+            return
+        handler = meta_event_handlers.get(event)
+        if handler:
+            handler(self, data)
         else:
-            print(f"LE Meta Event: Unhandled: {hex(subevent_code)}")
+            print(self.event_text, f"Unhandled 0x{event:02X}")
         
     @register_event(HCIEvents.VENDOR_SPECIFIC, hci_event_handlers)
     def on_hci_event_vendor_specific (self, data):
@@ -411,30 +422,11 @@ class BluetoothLEConnection:
         except ValueError:
             print(self.event_text, f"Event 0x{event_code:02X} not in HCIEvents List")
             return
-        
         handler = hci_event_handlers.get(event)
         if handler:
             handler(self, data)
         else:
             print(self.event_text, f"Unhandled 0x{event:02X}")
-
-    # def on_hci_event(self, data):
-    #     # Specification v5.4  Vol 4 Part E 5.4.4 HCI Event Packet
-    #     event = bu.to_u8(data, 1)         
-    #     if   event == 0x0f:                                   # Command Status
-    #         self.on_hci_event_command_status(data)
-    #     elif event == 0x05:                                   # Disconnection Complete
-    #         self.on_hci_event_disconnect_complete(data)
-    #     elif event == 0x3e:                                   # LE Meta Event
-    #         self.on_hci_meta_event(data)
-    #     elif event == 0x0e:                                   # Command complete
-    #         self.on_hci_event_command_complete(data)
-    #     elif event == 0x13:                                   # Number of Completed Packets
-    #         self.on_hci_event_number_of_completed_packets(data)
-    #     elif event == 0xFF:                         
-    #         self.on_hci_event_vendor_specific(data)
-    #     else:
-    #         print(self.event_text, "Unhandled", hex(event))
 
     def on_acl_packet(self, data):
         # Specification v5.4  Vol 4 Part E 5.4.2 HCI ACL Packet
@@ -521,7 +513,7 @@ class BluetoothLEConnection:
                 event_mask[byte_index] |= (1 << bit_position)
             else:
                 raise ValueError(f"Invalid {class_name} for event mask")
-        print("".join(f"{byte:02X}" for byte in reversed(event_mask)))
+        # print("".join(f"{byte:02X}" for byte in reversed(event_mask)))
         return bytes(event_mask)
 
     # HCI commands
