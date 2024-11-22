@@ -4,7 +4,7 @@
 # DEFAULT_TIME is the default used in this code
 class IntervalBase:
     @classmethod
-    def conversion(cls, interval_time):
+    def from_time(cls, interval_time):
         min_value = cls.MIN
         max_value = cls.MAX
         constant = cls.CONSTANT
@@ -14,7 +14,20 @@ class IntervalBase:
         
         interval_conversion = int(interval_time / constant)
         # print(f"Interval {interval_time} -> 0x{interval_conversion:04X}")
-        return interval_conversion
+        return interval_conversion.to_bytes(2, byteorder='little')
+
+    def to_time(cls, interval):
+        min_value = cls.MIN
+        max_value = cls.MAX
+        constant = cls.CONSTANT
+
+        interval_time = interval * constant
+
+        if interval_time < min_value or interval_time > max_value:
+            raise ValueError(f"Interval Time {interval_time} needs to be between {min_value * 1000} ms and {max_value} s")
+        print(f"Interval {interval_time} -> 0x{interval:04X}")
+        return interval_time
+
 
 class AdvertisingInterval(IntervalBase):
     MIN = 0.02  

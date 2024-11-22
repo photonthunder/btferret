@@ -9,7 +9,7 @@ from ble_enum import EventMask, EventType
 from ble_enum import GATTAttributes
 from ble_enum import HCIEvents, HCIPacket
 from ble_enum import InitiatorFilter, MetaEvent
-from ble_enum import PacketBoundaryFlags, PeerAddress
+from ble_enum import PacketBoundaryFlags, PeerAddressType, Role
 from ble_enum import ScanningFilter, ScanningFilterDuplicate
 from ble_enum import ScanEnable, ScanningStatus, ScanningType
 from ble_time import AdvertisingInterval
@@ -113,6 +113,13 @@ class BluetoothLEConnection:
         cmd = self.make_cmd(command, len(packet)) + packet
         self.send(cmd)
 
+    def ble_error_check(self, return_code):       
+        if return_code == BLEErrorCode.SUCCESS:
+            return True
+        else:
+            print(f"BLE Error = {BLEErrorCode(return_code).name}")
+            return False
+
     def check_le_compatable(self, data):
         if (bu.to_u8(data, 32) & 0xA2 == 0xA2) and (bu.to_u8(data, 33) & 0x3E == 0x3E):
             print("LE Compatable")
@@ -138,58 +145,40 @@ class BluetoothLEConnection:
     def read_buffer_size(self, data):
         self.hc_le_data_packet_length = bu.to_u16(data, 7)
         print("le data length = {}".format(self.hc_le_data_packet_length))
-        self.hc_le_data_buffer = bu.to_u8(data, 9)
+        self.hc_le_data_buffer = bu.to_u16(data, 9)
         print("le data buffer = {}".format(self.hc_le_data_buffer))
-        
 
-    # Handle HCI meta event types
-
+    @register_event(MetaEvent.CONNECTION_COMPLETE, meta_event_handlers)
     def on_le_connection_complete(self, data):
-        # Specification v5.4  Vol 4 Part E 7.7.65.1 LE Connection Complete (p2235)
-        # Event_code = 0x3e
-        # HCI_LE_Connection_Complete = 0x01
-        #     [packet_type                                   1 octet]
-        #     [event_code                                    1 octet]
-        #     [parameter_length                              1 octet]
-        #     subevent code                                  1 octet
-        #     status                                         1 octet
-        #     connection_handle                              2 octets
-        #     role                                           1 octets
-        #     peer_address_type                              1 octet
-        #     peer_address                                   6 octets
-        #     connection_interval                            2 octets
-        #     peripheral_latency                             2 octets
-        #     supervision_timeout                            2 octets
-        #     central_clock_accuracy                         1 octet
-      
+        # Specification v5.4  Vol 4 Part E 7.7.65.1 LE Connection Complete
+        # Subevent Code =  0x01
         status = bu.to_u8(data, 4)
+        if self.ble_error_check(status) == False:
+            print("Connection did not complete")
+            return
         handle = bu.to_u16(data, 5)
+        role = bu.to_u8(data, 7)
+        peer_addr_type = bu.to_u8(data, 8)
         address = bu.to_addr(data, 9)
-        
-        self.connection_handle = handle         # save this for other commands to use
+        connection_interval = bu.to_u16(data, 10)
+        peripheral_latency = bu.to_u16(data, 12)
+        supervision_timeout = bu.to_u16(data, 14)
+        central_clock_accuracy = bu.to_u8(data, 16)
+        self.connection_handle = handle 
         self.total_connections.append((handle, 0))
         self.client_connected = True
-        print(f"Event: LE Connection Complete 0x{handle:04X}")
-        print("Status: {:02x} Address: {}".format(status, address))
+        print(f"Connection Complete 0x{handle:04X}, Role: {Role(role).name}")
+        print(f"Peer: Type {PeerAddressType(peer_addr_type)}. Address: {address}")
+        print(f"Connection Interval {ConnectionInterval.to_time(connection_interval)} seconds")
 
+
+    @register_event(MetaEvent.ADVERTISING_REPORT, meta_event_handlers)
     def on_le_advertising_report(self, data):
-        # Specification v5.4  Vol 4 Part E 7.7.65.2 LE Advertising Report (p2238)
-        # Event_code = 0x3e
-        # HCI_LE_Advertising_Report = 0x02
-        #     [packet_type                                   1 octet]
-        #     [event_code                                    1 octet]
-        #     [parameter_length                              1 octet]
-        #     subevent_code                                  1 octet
-        #     num_reports                                    1 octet
-        #         event_type[i]                              1 octet
-        #         address_type[i]                            1 octet
-        #         address[i]                                 6 octets
-        #         data_length[i]                             1 octet
-        #         data[i]                                    data_length octets
-        #         rssi[i]                                    1 octet
+        # Specification v5.4  Vol 4 Part E 7.7.65.2 LE Advertising Report
+        # Subevent Code = 0x02
         
         # These lines double the report to test for num_reports = 2
-        # num_reports = bu.to_u8       (data, 4)
+        # num_reports = bu.to_u8      (data, 4)
         # reports =     bu.to_data_rest(data, 5)
         # data = data[0:4] + bu.from_u8(2) + reports + reports
 
@@ -201,57 +190,38 @@ class BluetoothLEConnection:
             address =     bu.to_addr (reports, report_offset+2)
             data_len =    bu.to_u8   (reports, report_offset+8)
             report_data = bu.to_data (reports, report_offset+9, data_len)
-            rssi =        bu.to_u8   (reports, report_offset+9+data_len)
-            
+            rssi =        bu.to_u8  (reports, report_offset+9+data_len)
+            printf("Advertising Report")
             print("Address: {}      RSSI: {}".format(address, rssi))
             i = 0
             while i < data_len:
                 entry_len = bu.to_u8(report_data, i) 
                 if entry_len > 0:
-                    typ = bu.to_u8  (report_data, i+1)
+                    typ = bu.to_u8(report_data, i+1)
                     dat = bu.to_data(report_data, i+2, entry_len-1)
                     print("Length: {:3} Type: {:02x}  Data: {}      {}".format(entry_len, typ, bu.as_hex(dat), bu.as_printable(dat)))
                     i += entry_len
                 i += 1
             report_offset += data_len+10                     # move on to next entry
                   
-    def on_le_connection_update_complete(self, data):
-        # Specification v5.4  Vol 4 Part E 7.7.65.3 LE Connection Update Complete (p2240)
-        # Event_code = 0x3e
-        # HCI_LE_Connection_Update_Complete = 0x03
-        #     [packet_type                                   1 octet]
-        #     [event_code                                    1 octet]
-        #     [parameter_length                              1 octet]
-        #     subevent code                                  1 octet
-        #     status                                         1 octet
-        #     connection_handle                              2 octets
-        #     connection_interval                            2 octets
-        #     peripheral_latency                             2 octets
-        #     supervision_timeout                            2 octets
+    @register_event(MetaEvent.UPDATE_COMPLETE, meta_event_handlers)
+    def on_le_update_complete(self, data):
+        # Specification v5.4  Vol 4 Part E 7.7.65.3 LE Connection Update Complete
+        # Subevent Code = 0x03
 
         status =   bu.to_u8(data, 4)
         handle =   bu.to_u16(data, 5)
-        interval = bu.to_u16(data, 7)
-        latency = bu.to_u16(data, 9)
-        timeout =  bu.to_u16(data, 11)
-        
-        print("LE Connection Update Complete")
+        connection_interval = bu.to_u16(data, 7)
+        peripheral_latency = bu.to_u16(data, 9)
+        supervision_timeout =  bu.to_u16(data, 11)
+        print("Connection Update Complete")
         print("Handle: {:04x} Status: {02x}".format(handle, status))
+
         
-        #self.connection_handle = handle         # save this for other commands to use
-
+    @register_event(MetaEvent.READ_REMOTE, meta_event_handlers)
     def on_le_read_remote_features_complete(self, data):
-        # Specification v5.4  Vol 4 Part E 7.7.65.4 LE Meta event (p2242)
-        # Event_code = 0x3e
-        # HCI_LE_Read_Remote_Features_Complete = 0x04
-        #     [packet_type                                   1 octet]
-        #     [event_code                                    1 octet]
-        #     [parameter_length                              1 octet]
-        #     subevent_code                                  1 octet
-        #     status                                         1 octet
-        #     connection_handle                              2 octets
-        #     le features                                    8 octets      # need to update templates for this!!
-
+        # Specification v5.4  Vol 4 Part E 7.7.65.4 LE Read Remote Features Complete
+        # Subevent Code = 0x04
         print("Read Remote Features Complete")
         
         handle = bu.to_u16(data, 5)
@@ -259,7 +229,10 @@ class BluetoothLEConnection:
         
         print("Handle: {} Features {}".format(handle, bu.as_hex(features)))
 
+    @register_event(MetaEvent.DATA_LENGTH_CHANGE, meta_event_handlers)
     def on_le_data_length_change(self, data):
+        # Specification v5.4  Vol 4 Part E 7.7.65.7 LE Data Length CHange Event
+        # Subevent Code = 0x07
         handle = bu.to_u16(data, 4)
         max_tx_octets = bu.to_u16(data, 6) # 0x001B to 0x00FB
         max_tx_time = bu.to_u16(data, 8) # 0x0148 to 0x4290
@@ -267,18 +240,14 @@ class BluetoothLEConnection:
         max_rx_time = bu.to_u16(data, 12) # 0x0148 to 0x4290
         print(self.event_text, "Data length changed for 0x{:04X}".format(handle))
 
+    @register_event(MetaEvent.READ_PUBLIC_KEY, meta_event_handlers)
     def on_le_read_local_public_key(self, data):
+        # Specification v5.4  Vol 4 Part E 7.7.65.8 LE Read Local P-256 Public Key Complete
+        # Subevent Code = 0x08
         status = bu.to_u8(data, 4)
         key_x_coordinate = bu.to_data(data, 5, 37)  # 32 octets
         key_y_coordinate = bu.to_data(data, 37, 69) # 32 octets
         print(self.event_text, "Read Local Public Key Complete")
-
-    def on_le_update_complete(self, data):
-        status = bu.to_u8(data, 4)
-        handle = bu.to_u16(data, 5)
-        connection_interval = bu.to_u16(data, 7)
-        supervision_timeout = bu.to_u16(data, 9)
-        print(self.event_text, "Connection Update Complete")
 
     def handle_le_command(self, cmd, status_text, data=None):
         # Define a dictionary to map command values to their corresponding messages or functions
@@ -588,14 +557,14 @@ class BluetoothLEConnection:
         # Specification v5.4  Vol 4 Part E 7.3.14 Write Connection Accept Timeout Command
         # Opcode 0x0C16
         print(self.cmd_text, "Write Connection Accept Timeout Command")
-        packet = bu.from_u16(ConnectionAcceptTimeout.conversion(connect_timeout))
+        packet = ConnectionAcceptTimeout.from_time(connect_timeout)
         self.send_command(0x0C16, packet)
 
     def write_page_timeout_command(self, page_timeout = PageTimeout.DEFAULT_TIME):
         # Specification v5.4  Vol 4 Part E 7.3.16 Write Page Timeout Command
         # Opcode 0x0C18
         print(self.cmd_text, "Write Page Timeout Command")
-        packet = bu.from_u16(ConnectionAcceptTimeout.conversion(page_timeout))
+        packet = ConnectionAcceptTimeout.from_time(page_timeout)
         self.send_command(0x0C18, packet)
 
     def write_scan_enable(self, scan_enable = ScanEnable.ALL_ENABLED):
@@ -659,7 +628,7 @@ class BluetoothLEConnection:
                                       max_interval=AdvertisingInterval.DEFAULT_TIME, 
                                       adv_type=AdvertisingType.ADV_IND,
                                       own_addr_type=Address.PUBLIC,
-                                      peer_addr_type=PeerAddress.PUBLIC_DEVICE,
+                                      peer_addr_type=PeerAddressType.PUBLIC_DEVICE,
                                       peer_addr='00:00:00:00:00:00',
                                       adv_channel_map=AdvertisingChannelMap.ALL_CHANNELS,
                                       adv_filter_policy=AdvertisingFilterPolicy.SCAN_CONNECT_ALL):
@@ -667,8 +636,8 @@ class BluetoothLEConnection:
         # Opcode 0x2006
         print(self.cmd_text, "LE Set Advertising Parameters")
         
-        packet =  bu.from_u16  (AdvertisingInterval.conversion(min_interval))
-        packet += bu.from_u16  (AdvertisingInterval.conversion(max_interval))
+        packet = AdvertisingInterval.from_time(min_interval)
+        packet += AdvertisingInterval.from_time(max_interval)
         packet += bu.from_u8   (adv_type)
         packet += bu.from_u8   (own_addr_type)
         packet += bu.from_u8   (peer_addr_type)
@@ -712,8 +681,8 @@ class BluetoothLEConnection:
         # Opcode 0x200B
         print(self.cmd_text, "LE Set Scan Parameters")
         packet =  bu.from_u8  (scan_type)
-        packet += bu.from_u16 (ScanningTime.conversion(scan_interval))
-        packet += bu.from_u16 (ScanningTime.conversion(scan_window))
+        packet += ScanningTime.from_time(scan_interval)
+        packet += ScanningTime.from_time(scan_window)
         packet += bu.from_u8  (own_addr_type)
         packet += bu.from_u8  (scan_filter_policy)
         self.send_command(0x200b, packet)
@@ -731,7 +700,7 @@ class BluetoothLEConnection:
     def do_create_connection(self, scan_interval=ScanningTime.DEFAULT_TIME,
                              scan_window=ScanningTime.DEFAULT_TIME,
                              initiator_filter=InitiatorFilter.FILTER_ACCEPT_NOT_USED,
-                             peer_addr_type = PeerAddress.PUBLIC_DEVICE,
+                             peer_addr_type = PeerAddressType.PUBLIC_DEVICE,
                              peer_addr='00:00:00:00:00:00',
                              own_addr_type=Address.PUBLIC,
                              min_interval=ConnectionInterval.DEFAULT_TIME_MIN,
@@ -743,20 +712,19 @@ class BluetoothLEConnection:
         # Specification v5.4  Vol 4 Part E 7.8.12 LE Create Connection
         # Opcode 0x200d
         print(self.cmd_text, "LE Create Connection")
-        packet =  bu.from_u16 (ScanningTime.conversion(scan_interval))
-        packet += bu.from_u16 (ScanningTime.conversion(scan_window))
+        packet =  ScanningTime.from_time(scan_interval)
+        packet += ScanningTime.from_time(scan_window)
         packet += bu.from_u8  (initiator_filter)
         packet += bu.from_u8  (peer_addr_type)
         packet += bu.from_addr(peer_addr)
         packet += bu.from_u8  (own_addr_type)
-        packet += bu.from_u16 (ConnectionInterval.conversion(min_interval))
-        packet += bu.from_u16 (ConnectionInterval.conversion(max_interval))
-        packet += bu.from_u16 (MaxLatency.conversion(latency))
-        packet += bu.from_u16 (SupervisionTimeout.conversion(supervision_timeout))
-        packet += bu.from_u16 (ConnectionEventTime.conversion(min_ce_length))
-        packet += bu.from_u16 (ConnectionEventTime.conversion(max_ce_length))
+        packet += ConnectionInterval.from_time(min_interval)
+        packet += ConnectionInterval.from_time(max_interval)
+        packet += MaxLatency.from_time(latency)
+        packet += SupervisionTimeout.from_time(supervision_timeout)
+        packet += ConnectionEventTime.from_time(min_ce_length)
+        packet += ConnectionEventTime.from_time(max_ce_length)
         self.send_command(0x200d, packet)
-        
 
     def do_add_device_to_accept_list(self, addr=Address.PUBLIC, addr_type='00:00:00:00:00:00'):
         # Specification v5.4  Vol 4 Part E 7.8.16 LE Add Device To Filter Accept List
@@ -783,10 +751,6 @@ class BluetoothLEConnection:
         print(self.cmd_text, "Read Local Public Key")
         packet = bu.from_u8(None)
         self.send_command(0x2025, packet)
-
-    #
-    # ACL commands
-    #
     
     def do_att_error_rsp(self, request_opcode, handle, error_code):
         print(self.att_rsp_text, "Error")
@@ -1091,4 +1055,5 @@ if __name__ == "__main__":
     bc.write_connection_accept_timeout()
     bc.write_page_timeout_command()
     bc.write_scan_enable()
-    bc.on_acl_packet(bytes([0x02, 0x40, 0x60, 0x07, 0x00, 0x03, 0x00, 0x04, 0x00, 0x0a, 0x16, 0x00]))
+    # bc.on_acl_packet(bytes([0x02, 0x40, 0x60, 0x07, 0x00, 0x03, 0x00, 0x04, 0x00, 0x0a, 0x16, 0x00]))
+    # print(bc.ble_error_check(0x04))

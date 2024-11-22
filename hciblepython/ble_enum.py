@@ -306,9 +306,13 @@ class PacketBoundaryFlags(IntEnum):
     FIRST_FRAGMENT = 0b01
     COMPLETE_MESSAGE = 0b10
 
-class PeerAddress(IntEnum):
+class PeerAddressType(IntEnum):
     PUBLIC_DEVICE = 0x00
     RANDOM_DEVICE = 0x01
+
+class Role(IntEnum):
+    CENTRAL = 0x00
+    PERIPHERAL = 0x01
 
 class ScanEnable(IntEnum):
     ALL_DISABLED = 0x00
