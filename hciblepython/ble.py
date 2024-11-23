@@ -207,12 +207,19 @@ class BluetoothLEConnection:
         # Specification v5.4  Vol 4 Part E 7.7.65.3 LE Connection Update Complete
         # Subevent Code = 0x03
         status =   bu.to_u8(data, 4)
+        if self.ble_error_check(status) == False:
+            print("Update did not complete")
+            return
         handle =   bu.to_u16(data, 5)
         connection_interval = bu.to_u16(data, 7)
         peripheral_latency = bu.to_u16(data, 9)
         supervision_timeout =  bu.to_u16(data, 11)
         print("Connection Update Complete")
         print("Handle: {:04x} Status: {02x}".format(handle, status))
+        print("Connection Interval {ConnectionInterval.to_time(connection_interval)} seconds}")
+        print("Peripheral Latency 0x{peripheral_latency:04X} connection events}")
+        print("Supervision Timeout {SupervisionTimeout.to_time(supervision_timeout)} seconds}")
+
 
     @register_event(MetaEvent.READ_REMOTE, meta_event_handlers)
     def on_le_read_remote_features_complete(self, data):
