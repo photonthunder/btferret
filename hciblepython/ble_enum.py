@@ -40,6 +40,13 @@ class AdvertisingFilterPolicy(IntEnum):
     SCAN_ALL_CONNECT_FILTER = 0x02
     SCAN_CONNECT_FILTER_ONLY = 0x03
 
+class AdvertisingEventType(IntEnum):
+    ADV_IND = 0x00
+    ADV_DIRECT_IND_HIGH = 0x01
+    ADV_SCAN_IND = 0x02
+    ADV_NONCONN_IND = 0x03
+    SCAN_RSP = 0x04
+
 class AdvertisingType(IntEnum):
     ADV_IND = 0x00
     ADV_DIRECT_IND_HIGH = 0x01

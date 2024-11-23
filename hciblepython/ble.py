@@ -2,7 +2,8 @@ from time import sleep
 from hci_socket import HCI
 from random import randint
 from ble_enum import Address, Advertising, AdvertisingChannelMap
-from ble_enum import AdvertisingDataType, AdvertisingFilterPolicy, AdvertisingType
+from ble_enum import AdvertisingDataType, AdvertisingFilterPolicy
+from ble_enum import AdvertisingEventType, AdvertisingType
 from ble_enum import ATTChannelID, ATTErrorCode
 from ble_enum import BLEErrorCode, BroadcastFlags
 from ble_enum import CentralClockAccuracy
@@ -177,41 +178,34 @@ class BluetoothLEConnection:
 
     @register_event(MetaEvent.ADVERTISING_REPORT, meta_event_handlers)
     def on_le_advertising_report(self, data):
-        # Specification v5.4  Vol 4 Part E 7.7.65.2 LE Advertising Report
+        # Specification v5.4 Vol 4 Part E 7.7.65.2 LE Advertising Report
         # Subevent Code = 0x02
+        num_reports = bu.to_u8(data, 4)
+        if num_reports > 0x19:
+            print(f"Error, too many reports 0x{num_reports:X} > 0x19")
+            return
         
-        # These lines double the report to test for num_reports = 2
-        # num_reports = bu.to_u8      (data, 4)
-        # reports =     bu.to_data_rest(data, 5)
-        # data = data[0:4] + bu.from_u8(2) + reports + reports
-
-        num_reports = bu.to_u8       (data, 4)
-        reports =     bu.to_data_rest(data, 5)                  # the actual 'reports'
-        
-        report_offset = 0                                    # start of this entry in 'reports'
-        for rep in range(0, num_reports):
-            address =     bu.to_addr (reports, report_offset+2)
-            data_len =    bu.to_u8   (reports, report_offset+8)
-            report_data = bu.to_data (reports, report_offset+9, data_len)
-            rssi =        bu.to_u8  (reports, report_offset+9+data_len)
-            printf("Advertising Report")
-            print("Address: {}      RSSI: {}".format(address, rssi))
-            i = 0
-            while i < data_len:
-                entry_len = bu.to_u8(report_data, i) 
-                if entry_len > 0:
-                    typ = bu.to_u8(report_data, i+1)
-                    dat = bu.to_data(report_data, i+2, entry_len-1)
-                    print("Length: {:3} Type: {:02x}  Data: {}      {}".format(entry_len, typ, bu.as_hex(dat), bu.as_printable(dat)))
-                    i += entry_len
-                i += 1
-            report_offset += data_len+10                     # move on to next entry
-                  
+        reports = bu.to_data_rest(data, 5)  # Get the payload after the Number of Reports byte
+        report_offset = 0
+        for rep in range(num_reports):
+            event_type = bu.to_u8(reports, report_offset)
+            address_type = bu.to_u8(reports, report_offset + 1)
+            address = bu.to_addr(reports, report_offset + 2)
+            data_len = bu.to_u8(reports, report_offset + 8)
+            report_data = bu.to_data(reports, report_offset + 9, data_len)
+            rssi = bu.to_u8(reports, report_offset + 8 + data_len)
+            
+            print(f"Advertising Report {rep}:")
+            print(f"Event Type: {AdvertisingEventType(event_type).name}")
+            print(f"Address Type: {Address(address_type).name}")
+            print(f"Address: {address}")
+            print(f"Report Data: {report_data}")
+            print(f"RSSI: {rssi} dBm")
+              
     @register_event(MetaEvent.UPDATE_COMPLETE, meta_event_handlers)
     def on_le_update_complete(self, data):
         # Specification v5.4  Vol 4 Part E 7.7.65.3 LE Connection Update Complete
         # Subevent Code = 0x03
-
         status =   bu.to_u8(data, 4)
         handle =   bu.to_u16(data, 5)
         connection_interval = bu.to_u16(data, 7)
@@ -220,7 +214,6 @@ class BluetoothLEConnection:
         print("Connection Update Complete")
         print("Handle: {:04x} Status: {02x}".format(handle, status))
 
-        
     @register_event(MetaEvent.READ_REMOTE, meta_event_handlers)
     def on_le_read_remote_features_complete(self, data):
         # Specification v5.4  Vol 4 Part E 7.7.65.4 LE Read Remote Features Complete
@@ -380,24 +373,6 @@ class BluetoothLEConnection:
     def on_hci_meta_event(self, data):
         # Specification v5.4  Vol 4 Part E 7.7.65 LE Meta event
         # Event_code = 0x3E
-
-        # subevent_code = bu.to_u8(data, 3)
-        # # print(self.event_text, "LE Meta event: ", hex(subevent_code))
-        # if   subevent_code == 0x01:                 # LE Connection Complete
-        #     self.on_le_connection_complete(data)
-        # elif subevent_code == 0x02:                 # LE Advertising Report
-        #     self.on_le_advertising_report(data)
-        # elif subevent_code == 0x03:                 # LE Connection Update Complete
-        #     self.on_le_update_complete(data)
-        # elif subevent_code == 0x04:                 # LE Read Remove Features Complete
-        #     self.on_le_read_remote_features_complete(data)
-        # elif subevent_code == 0x07:           
-        #     self.on_le_data_length_change(data)
-        # elif subevent_code == 0x08:
-        #     self.on_le_read_local_public_key(data)
-        # else:
-        #     print(f"LE Meta Event: Unhandled: {hex(subevent_code)}")
-
         event_code = bu.to_u8(data, 3)
         try:
             event = MetaEvent(event_code)
@@ -408,7 +383,7 @@ class BluetoothLEConnection:
         if handler:
             handler(self, data)
         else:
-            print(self.event_text, f"Unhandled 0x{event:02X}")
+            print(self.event_text, f"Unhandled MetaEvent 0x{event:02X}")
         
     @register_event(HCIEvents.VENDOR_SPECIFIC, hci_event_handlers)
     def on_hci_event_vendor_specific (self, data):
@@ -515,8 +490,6 @@ class BluetoothLEConnection:
                 raise ValueError(f"Invalid {class_name} for event mask")
         # print("".join(f"{byte:02X}" for byte in reversed(event_mask)))
         return bytes(event_mask)
-
-    # HCI commands
 
     def set_event_mask(self, event_mask=None):
         # Specification v5.4  Vol 4 Part E 7.3.1 Set Event Mask Command
@@ -1052,3 +1025,4 @@ if __name__ == "__main__":
     bc.write_scan_enable()
     # bc.on_acl_packet(bytes([0x02, 0x40, 0x60, 0x07, 0x00, 0x03, 0x00, 0x04, 0x00, 0x0a, 0x16, 0x00]))
     # print(bc.ble_error_check(0x04))
+    bc.on_le_advertising_report([0x04,0x3E,0x1E,0x02,0x01,0x00,0x01,0x66,0x55,0x44,0x33,0x22,0x11,0x05,0x02,0x01,0x06,0x03,0x19,0xC1,0x03,0xC5])
