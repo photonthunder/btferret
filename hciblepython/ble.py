@@ -24,7 +24,7 @@ import byte_utils as bu
 hci_event_handlers = {}
 meta_event_handlers = {}
 
-def register_event(event_code, registry=hci_event_handlers):
+def register_event(event_code, registry):
     def decorator(func):
         func._event_code = event_code
         registry[event_code] = func
@@ -38,22 +38,16 @@ class BluetoothLEConnection:
         self.user_socket = HCI(dev_id)
         self.gatt_server = gatt_server
 
-        # ACL packet being constructed
         self.acl_packet = None
         self.acl_length = 0
         self.acl_total_length = 0
 
-        # Last command complete information
-        self.command_complete = None
-        self.command_status = None
-
-        self.local_board_address = None
-        self.hc_le_data_packet_length = None
-        self.hc_le_data_buffer = None
         self.client_connected = False
         self.command_timeout = 0.1
         self.data_timeout = 0.005
         self.total_connections = []
+        
+        self.hci_cc_event_handler = {}
 
         self.cmd_text = "\nCommand:"
         self.att_rsp_text = "\nATT RSP:"
@@ -71,6 +65,9 @@ class BluetoothLEConnection:
     def send_acl(self, sub_packet, handle = None):
         packet =  bu.from_u8 (HCIPacket.ACL_DATA)       # hci command prefix for ACL
         if handle == None:
+            if self.connection_handle == None:
+                print("No Connection, can't send ACL")
+                return
             handle = self.connection_handle
         flag_handle = (handle & 0x0EFF) | \
                       (PacketBoundaryFlags.COMPLETE_MESSAGE << 12) | \
@@ -111,9 +108,11 @@ class BluetoothLEConnection:
             self.check_indication()
             sleep(quanta)
 
-    def send_command(self, command, packet):
-        cmd = self.make_cmd(command, len(packet)) + packet
+    def send_command(self, opcode, cmd_name, packet, function = None):
+        cmd = self.make_cmd(opcode, len(packet)) + packet
         self.send(cmd)
+        if opcode not in self.hci_cc_event_handler:
+            self.hci_cc_event_handler[opcode] = (cmd_name, function)
 
     def ble_error_check(self, return_code):       
         if return_code == BLEErrorCode.SUCCESS:
@@ -122,64 +121,10 @@ class BluetoothLEConnection:
             print(f"BLE Error = {BLEErrorCode(return_code).name}")
             return False
 
-    def check_le_compatable(self, data):
-        if (bu.to_u8(data, 32) & 0xA2 == 0xA2) and (bu.to_u8(data, 33) & 0x3E == 0x3E):
-            print("LE Compatable")
-        else:
-            print("Error: Not LE Compatable")
-            exit(0)
-
-    def board_address(self, data):
-        # The local board address is typically the last 6 bytes of the received data
-        if len(data) < 6:
-            self.local_board_address = None
-            print("Error: not enough data bytes")
-            return None  # Not enough data to extract address
-        
-        # Extract the last 6 bytes
-        self.local_board_address = data[-6:]
-        
-        # Format the address as a hex string, usually shown in reversed order (little-endian)
-        formatted_address = ':'.join(f'{byte:02X}' for byte in reversed(self.local_board_address))
-        print('Local Board Address:', formatted_address)
-        return formatted_address
-
-    def read_buffer_size(self, data):
-        self.hc_le_data_packet_length = bu.to_u16(data, 7)
-        print("le data length = {}".format(self.hc_le_data_packet_length))
-        self.hc_le_data_buffer = bu.to_u16(data, 9)
-        print("le data buffer = {}".format(self.hc_le_data_buffer))
-
-    def handle_le_command(self, cmd, status_text, data=None):
-        # Define a dictionary to map command values to their corresponding messages or functions
-        command_map = {
-            0x0C01: ('General Event Mask Complete', None),
-            0x0C03: ('Reset Complete', None),
-            0x0C13: ('Write Local Name Complete', None),
-            0x0C16: ('Set Page Scan Interval and Window', None),
-            0x0C18: ('Set Inquiry Interval and Window', None),
-            0x0C1A: ('Set Page/Inquiry Scan Timeout Complete', None),
-            0x1002: ('Read Local Supported Commands', 'check_le_compatable'),
-            0x1009: ('Read Local Board Address', 'board_address'),
-            0x2001: ('LE Event Mask Complete', None),
-            0x2002: ('LE Read Buffer Size', 'read_buffer_size'),
-            0x2005: ('LE Set Random Address', None),
-            0x200b: ('LE Scan Parameters Set', None),
-            0x200c: ('LE Scan Enable Set', None),
-            0x2006: ('LE Advertising Parameters Set', None),
-            0x2008: ('LE Advertising Data Set', None),
-            0x2009: ('LE Scan Response Data Set', None),
-            0x200a: ('LE Advertising Set', None),
-            0x2025: ('LE Get Extended Advertising', None),
-
-        }
-
-        # Check if the command exists in the map
-        if cmd in command_map:
-            message, function_name = command_map[cmd]
-            print(self.event_text, "{}: {}".format(message, status_text))
-
-            # If there's a function to call, do so with data
+    def handle_le_command(self, cmd, data):
+        if cmd in self.hci_cc_event_handler:
+            message, function_name = self.hci_cc_event_handler[cmd]
+            print(self.event_text, f"{message} Complete {data}")
             if function_name and hasattr(self, function_name):
                 getattr(self, function_name)(data)
         else:
@@ -293,44 +238,48 @@ class BluetoothLEConnection:
         key_y_coordinate = bu.to_data(data, 37, 69) # 32 octets
         print(self.event_text, "Read Local Public Key Complete")
 
-    @register_event(HCIEvents.COMPLETED_PACKETS, hci_event_handlers)
-    def on_hci_event_disconnect_complete(self, data):
-        # Specification v5.4  Vol 4 Part E 7.7.5 HCI_Disconnection_Complete (p2163)
-        # HCI_Disconnection_Complete = 0x05
+    @register_event(HCIEvents.INQUIRY_COMPLETE, hci_event_handlers)
+    def on_hci_inquiry_complete(self, data):
+        # Specification v5.4  Vol 4 Part E 7.7.1 HCI Inquiry Complete
+        # Event Code = 0x01
         status = bu.to_u8  (data, 3)
+        if self.ble_error_check(status) == False:
+            print("HCI Inquiry did not complete")
+            return
+        else:
+            print("HCI Inquiry Complete")
+
+    @register_event(HCIEvents.DISCONNECTION_COMPLETE, hci_event_handlers)
+    def on_hci_event_disconnect_complete(self, data):
+        # Specification v5.4  Vol 4 Part E 7.7.5 HCI Disconnection Complete
+        # Event Code = 0x05
+        status = bu.to_u8  (data, 3)
+        if self.ble_error_check(status) == False:
+            print("Disconnection Failed")
+            return
         handle = bu.to_u16 (data, 4)
         reason = bu.to_u8  (data, 6)
         self.client_connected = False
-        if status == 0:
-            print("HCI Disconnection Complete, Handle = 0x{:04X}".format(handle))
-        else:
-            print("Error: Disconnection Not successful!!!")
-        if reason == 0x13:
+        print("HCI Disconnection Complete, Handle = 0x{:04X}".format(handle))
+        if reason == BLEErrorCode.REMOTE_USER_TERMINATED_CONNECTION:
             print("Remote User terminated Connection")
         else:
-            print("Disconnect Reason: 0x{:02X}".format(reason))
+            print("Disconnect Reason: {BLEErrorCode(reason).name}")
         self.gatt_server.clear_connection_settings()
 
     @register_event(HCIEvents.COMMAND_COMPLETE, hci_event_handlers)
     def on_hci_event_command_complete(self, data):
-        # Specification v5.4  Vol 4 Part E 7.7.14 HCI Command Complete (p2177)
-        #     [packet_type                                   1 octet]
-        #     [event_code                                    1 octet]
-        #     [parameter_length                              1 octet]
-        #     num_hci_command_packets                        1 octet
-        #     command_opcode                                 2 octets
-        #     return_parameters                              n octets
-        
-        # First return_parameters field is usually
-        #     status                                         1 octet
-
-        # print(self.event_text, "HCI Command Complete")
-        cmd =    bu.to_u16 (data, 4)
-        status = bu.to_u8  (data, 6)
-        status_text = "Success" if status == ATTErrorCode.SUCCESS else "Failure"
-        self.command_complete = cmd
-        self.command_status =   status
-        self.handle_le_command(cmd, status, data)
+        # Specification v5.4  Vol 4 Part E 7.7.14 HCI Command Complete
+        # Event Code = 0x0E
+        num_hci_command_packets = bu.to_u8(data, 3)
+        if num_hci_command_packets == 0x00:
+            print("Error: Controller not ready for more commands")
+            return
+        cmd = bu.to_u16 (data, 4)
+        if cmd == 0x0000:
+            print(f"Controller ready for {num_hci_command_packets} new Commands")
+            return
+        self.handle_le_command(cmd, data[6:])
 
     @register_event(HCIEvents.COMMAND_STATUS, hci_event_handlers)
     def on_hci_event_command_status(self, data):
@@ -354,6 +303,7 @@ class BluetoothLEConnection:
     @register_event(HCIEvents.COMPLETED_PACKETS, hci_event_handlers)
     def on_hci_event_number_of_completed_packets(self, data):
         # Specification v5.4  Vol 4 Part E 7.7.19 HCI Number Of Completed Packets
+
         length = bu.to_u8(data, 2)
         number_handles = bu.to_u8(data, 3)
         # two byte handle and two byte completed packet + number_handles byte
@@ -377,7 +327,7 @@ class BluetoothLEConnection:
     @register_event(HCIEvents.META_EVENT, hci_event_handlers)
     def on_hci_meta_event(self, data):
         # Specification v5.4  Vol 4 Part E 7.7.65 LE Meta event
-        # Event_code = 0x3E
+        # Event Code = 0x3E
         event_code = bu.to_u8(data, 3)
         try:
             event = MetaEvent(event_code)
@@ -393,6 +343,7 @@ class BluetoothLEConnection:
     @register_event(HCIEvents.VENDOR_SPECIFIC, hci_event_handlers)
     def on_hci_event_vendor_specific (self, data):
         # Specification v5.4  Vol 4 Part E 5.4.4 Mentions Vendor Specific Debugging Event
+        # Event Code = 0xFF
         print(self.event_text, "Vendor Specific")
 
     def on_hci_event(self, data):
@@ -448,8 +399,6 @@ class BluetoothLEConnection:
         # Specification v5.4  Vol 4 Part E 5.4.4 HCI Event Packet
         # Specification v5.4  Vol 4 Part E 5.4.2 HCI ACL Packet
         packet_type = bu.to_u8(data, 0)
-        self.command_complete = None
-        self.command_status = None
         if   packet_type == HCIPacket.EVENT: 
             self.on_hci_event(data)
         elif packet_type == HCIPacket.ACL_DATA:
@@ -498,73 +447,98 @@ class BluetoothLEConnection:
 
     def set_event_mask(self, event_mask=None):
         # Specification v5.4  Vol 4 Part E 7.3.1 Set Event Mask Command
-        # Opcode 0x0C03
-        print(self.cmd_text, "Set Event Mask")
+        opcode = 0x0C01
+        cmd_name = "Set Event Mask"
+        print(self.cmd_text, cmd_name)
         # 8 byte event mask
         if event_mask == None:
             event_mask = []
             for event_type in EventMask:
                 event_mask.append(event_type)
         packet = self.event_mask_conversion(event_mask, EventMask)
-        self.send_command(0x0C01, packet)
+        self.send_command(opcode, cmd_name, packet)
 
     def reset(self):
         # Specification v5.4  Vol 4 Part E 7.3.2 Reset Command
-        # Opcode 0x0C03
-        print(self.cmd_text, "BLE Reset")
+        opcode = 0x0C03
+        cmd_name = "BLE Reset"
+        print(self.cmd_text, cmd_name)
         packet = bu.from_u8(None)
-        self.send_command(0x0C03, packet)
+        self.send_command(opcode, cmd_name, packet)
 
     def write_local_name(self, name_bytes):
         # Specification v5.4  Vol 4 Part E 7.3.11 Write Local Name Command
-        # Opcode 0x0C13
-        print(self.cmd_text, "Write Local Name {}".format(name_bytes))
+        opcode = 0x0C13
+        cmd_name = "Write Local Name"
+        print(self.cmd_text, f"{cmd_name} {name_bytes}")
         if not isinstance(name_bytes, (bytes, bytearray)):
             raise TypeError("Expected 'name_bytes' to be of type 'bytes' or 'bytearray'")
         if len(name_bytes) > 248:
             raise ValueError("Name is too long, must be 248 bytes or less.")
         packet = name_bytes.ljust(248, b'\x00')
-        self.send_command(0x0C13, packet)
+        self.send_command(opcode, cmd_name, packet)
 
     def write_connection_accept_timeout(self, connect_timeout = ConnectionAcceptTimeout.DEFAULT_TIME):
         # Specification v5.4  Vol 4 Part E 7.3.14 Write Connection Accept Timeout Command
-        # Opcode 0x0C16
-        print(self.cmd_text, "Write Connection Accept Timeout Command")
+        opcode = 0x0C16
+        cmd_name = "Write Connection Accept Timeout Command"
+        print(self.cmd_text, cmd_name)
         packet = ConnectionAcceptTimeout.from_time(connect_timeout)
-        self.send_command(0x0C16, packet)
+        self.send_command(opcode, cmd_name, packet)
 
     def write_page_timeout_command(self, page_timeout = PageTimeout.DEFAULT_TIME):
         # Specification v5.4  Vol 4 Part E 7.3.16 Write Page Timeout Command
-        # Opcode 0x0C18
-        print(self.cmd_text, "Write Page Timeout Command")
+        opcode = 0x0C18
+        cmd_name = "Write Page Timeout Command"
+        print(self.cmd_text, cmd_name)
         packet = ConnectionAcceptTimeout.from_time(page_timeout)
-        self.send_command(0x0C18, packet)
+        self.send_command(opcode, cmd_name, packet)
 
     def write_scan_enable(self, scan_enable = ScanEnable.ALL_ENABLED):
         # Specification v5.4  Vol 4 Part E 7.3.18 Write Scan Enable Command
-        # Opcode 0x0C1A
-        print(self.cmd_text, "Write Scan Enable Command")
+        opcode = 0x0C1A
+        cmd_name = "Write Scan Enable Command"
+        print(self.cmd_text, cmd_name)
         packet = bu.from_u8(scan_enable)
-        self.send_command(0x0C1A, packet)
+        self.send_command(opcode, cmd_name, packet)
 
     def read_local_commands(self):
         # Specification v5.4  Vol 4 Part E 7.4.2 Read Local Supported Commands
-        # Opcode 0x1002
-        print(self.cmd_text, "Read Local Supported Commands")
+        opcode = 0x1002
+        cmd_name = "Read Local Supported Commands"
+        print(self.cmd_text, cmd_name)
         packet = bu.from_u8(None)
-        self.send_command(0x1002, packet)
+        self.send_command(opcode, cmd_name, packet, "check_le_compatible")
+
+    def check_le_compatible(self, data):
+        if (bu.to_u8(data, 32) & 0xA2 == 0xA2) and (bu.to_u8(data, 33) & 0x3E == 0x3E):
+            print("LE Compatible")
+        else:
+            raise ValueError("Error: Not LE Compatible")
 
     def read_local_board_address(self):
         # Specification v5.4  Vol 4 Part E 7.4.2 Read BD_ADDR Commands
-        # Opcode 0x1009
-        print(self.cmd_text, "Read Local Board Address")
+        opcode = 0x1009
+        cmd_name = "Read Local Board Address"
+        print(self.cmd_text, cmd_name)
         packet = bu.from_u8(None)
-        self.send_command(0x1009, packet)
+        self.send_command(opcode, cmd_name, packet, "board_address")
+
+    def board_address(self, data):
+        if len(data) < 6:
+            self.local_board_address = None
+            print("Error: not enough data bytes")
+            return None  # Not enough data to extract address
+        self.local_board_address = data[-6:]
+        formatted_address = ':'.join(f'{byte:02X}' for byte in reversed(self.local_board_address))
+        print('Local Board Address:', formatted_address)
+        return formatted_address
 
     def set_le_event_mask(self, event_mask = None):
         # Specification v5.4  Vol 4 Part E 7.8.3 LE Set Event Mask Command
-        # Opcode 0x2001
-        print(self.cmd_text, "LE Event Mask")
+        opcode = 0x2001
+        cmd_name = "LE Event Mask"
+        print(self.cmd_text, cmd_name)
         # Default 8 byte event mask
         if event_mask == None:
             event_mask = [
@@ -580,22 +554,30 @@ class BluetoothLEConnection:
                 EventType.DIRECTED_ADVERTISING_REPORT
             ]
         packet = self.event_mask_conversion(event_mask, EventType)
-        self.send_command(0x2001, packet)
+        self.send_command(opcode, cmd_name, packet)
 
     def read_le_buffer_size(self):
         # Specification v5.4  Vol 4 Part E 7.8.3 LE Read Buffer Size Command
-        # Opcode 0x2002
-        print(self.cmd_text, "Read LE Buffer Size")
+        opcode = 0x2002
+        cmd_name = "Read LE Buffer Size"
+        print(self.cmd_text, cmd_name)
         packet = bu.from_u8(None)
-        self.send_command(0x2002, packet)
+        self.send_command(opcode, cmd_name, packet, "read_buffer_size")
+
+    def read_buffer_size(self, data):
+        hc_le_data_packet_length = bu.to_u16(data, 7)
+        print("le data length = {}".format(hc_le_data_packet_length))
+        hc_le_data_buffer = bu.to_u16(data, 9)
+        print("le data buffer = {}".format(hc_le_data_buffer))
 
     def set_random_address(self):
         # Specification v5.4  Vol 4 Part E 7.8.4 LE Set Random Address Command
-        # Opcode 0x2005
+        opcode = 0x2005
+        cmd_name = "Set Random Bluetooth Address"
         random_address = bytes([randint(0x00, 0xFF) for _ in range(6)])
         random_address_str = ':'.join(f'{byte:02X}' for byte in reversed(random_address))
-        print(self.cmd_text, "Generated Random Bluetooth Address: {}".format(random_address_str))
-        self.send_command(0x2005, random_address)
+        print(self.cmd_text, f"{cmd_name}: {random_address_str}")
+        self.send_command(opcode, cmd_name, random_address)
 
     def do_set_advertising_parameters(self, min_interval=AdvertisingInterval.DEFAULT_TIME,
                                       max_interval=AdvertisingInterval.DEFAULT_TIME, 
@@ -606,9 +588,9 @@ class BluetoothLEConnection:
                                       adv_channel_map=AdvertisingChannelMap.ALL_CHANNELS,
                                       adv_filter_policy=AdvertisingFilterPolicy.SCAN_CONNECT_ALL):
         # Specification v5.4  Vol 4 Part E 7.8.5 LE Set Advertising Parameters
-        # Opcode 0x2006
-        print(self.cmd_text, "LE Set Advertising Parameters")
-        
+        opcode = 0x2006
+        cmd_name = "LE Set Advertising Parameters"
+        print(self.cmd_text, cmd_name)
         packet = AdvertisingInterval.from_time(min_interval)
         packet += AdvertisingInterval.from_time(max_interval)
         packet += bu.from_u8   (adv_type)
@@ -617,33 +599,36 @@ class BluetoothLEConnection:
         packet += bu.from_addr (peer_addr)
         packet += bu.from_u8   (adv_channel_map)
         packet += bu.from_u8   (adv_filter_policy)
-        self.send_command(0x2006, packet)
+        self.send_command(opcode, cmd_name, packet)
 
     def do_set_advertising_data(self, fields):
         # Specification v5.4  Vol 4 Part E 7.8.7 LE Set Advertising Data
-        # Opcode 0x2008
+        opcode = 0x2008
+        cmd_name = "LE Set Advertising Data"
         packet = self.create_advertising_packet(fields)
-        print(self.cmd_text, "LE Set Advertising Data")
-        self.send_command(0x2008, packet)
+        print(self.cmd_text, cmd_name)
+        self.send_command(opcode, cmd_name, packet)
 
     def do_set_scan_response_data(self, fields):
         # Specification v5.4  Vol 4 Part E 7.8.8 LE Set Scan Response Data
-        # Opcode 0x2009
+        opcode = 0x2009
+        cmd_name = "LE Set Scan Response Data"
         packet = self.create_advertising_packet(fields)
-        print(self.cmd_text, "LE Set Scan Response Data")
-        self.send_command(0x2009, packet)
+        print(self.cmd_text, cmd_name)
+        self.send_command(opcode, cmd_name, packet)
 
     def do_set_advertise_enable(self, enabled_status:Advertising):
         # Specification v5.4  Vol 4 Part E 7.8.9 LE Set Advertising Enable
-        # Opcode 0x200a
+        opcode = 0x200A
         if enabled_status == Advertising.ENABLED:
-            print(self.cmd_text, "LE Set Advertising: Enabled")
+            cmd_name = "LE Set Advertising: Enabled"
         elif enabled_status == Advertising.DISABLED:
-            print(self.cmd_text, "LE Set Advertising: Disabled")
+            cmd_name = "LE Set Advertising: Disabled"
         else:
             raise ValueError("Invalid advertising parameter {}".format(enabled_status))
+        print(self.cmd_text, cmd_name)
         packet = bu.from_u8(enabled_status)
-        self.send_command(0x200a, packet)
+        self.send_command(opcode, cmd_name, packet)
 
     def do_set_scan_parameters(self, scan_type=ScanningType.ACTIVE,
                                scan_interval=ScanningTime.DEFAULT_TIME,
@@ -651,24 +636,28 @@ class BluetoothLEConnection:
                                own_addr_type=Address.PUBLIC,
                                scan_filter_policy=ScanningFilter.BASIC_UNFILTERED):
         # Specification v5.4  Vol 4 Part E 7.8.10 LE Set Scan Parameters
-        # Opcode 0x200B
-        print(self.cmd_text, "LE Set Scan Parameters")
+        opcode = 0x200B
+        cmd_name = "LE Set Scan Parameters"
+        print(self.cmd_text, cmd_name)
         packet =  bu.from_u8  (scan_type)
         packet += ScanningTime.from_time(scan_interval)
         packet += ScanningTime.from_time(scan_window)
         packet += bu.from_u8  (own_addr_type)
         packet += bu.from_u8  (scan_filter_policy)
-        self.send_command(0x200b, packet)
+        self.send_command(opcode, cmd_name, packet)
 
     def do_set_scan(self, enabled_status=ScanningStatus.DISABLED,
                     duplicates=ScanningFilterDuplicate.DISABLED):
         # Specification v5.4  Vol 4 Part E 7.8.11 LE Set Scan Enable
-        # Opcode 0x200c
-        print(self.cmd_text, "LE Set Scan Enable" if enabled else "LE Set Scan Disable")
-        
+        opcode = 0x200C
+        if enabled:
+            cmd_name = "LE Set Scan Enable"
+        else:
+            cmd_name = "LE Set Scan Disable"
+        print(self.cmd_text, cmd_name)
         packet =  bu.from_u8(enabled_status)
         packet += bu.from_u8(duplicates)        
-        self.send_command(0x200c, packet)
+        self.send_command(opcode, cmd_name, packet)
 
     def do_create_connection(self, scan_interval=ScanningTime.DEFAULT_TIME,
                              scan_window=ScanningTime.DEFAULT_TIME,
@@ -683,8 +672,9 @@ class BluetoothLEConnection:
                              min_ce_length=ConnectionEventTime.DEFAULT_TIME,
                              max_ce_length = ConnectionEventTime.DEFAULT_TIME):
         # Specification v5.4  Vol 4 Part E 7.8.12 LE Create Connection
-        # Opcode 0x200d
-        print(self.cmd_text, "LE Create Connection")
+        opcode = 0x200d
+        cmd_name = "LE Create Connection"
+        print(self.cmd_text, cmd_name)
         packet =  ScanningTime.from_time(scan_interval)
         packet += ScanningTime.from_time(scan_window)
         packet += bu.from_u8  (initiator_filter)
@@ -697,33 +687,36 @@ class BluetoothLEConnection:
         packet += SupervisionTimeout.from_time(supervision_timeout)
         packet += ConnectionEventTime.from_time(min_ce_length)
         packet += ConnectionEventTime.from_time(max_ce_length)
-        self.send_command(0x200d, packet)
+        self.send_command(opcode, cmd_name, packet)
 
     def do_add_device_to_accept_list(self, addr=Address.PUBLIC, addr_type='00:00:00:00:00:00'):
         # Specification v5.4  Vol 4 Part E 7.8.16 LE Add Device To Filter Accept List
-        # Opcode 0x2011
-        print(self.cmd_text, "LE Add Device To Filter Accept List")
-        
+        opcode = 0x2011
+        cmd_name = "LE Add Device To Filter Accept List"
+        print(self.cmd_text, cmd_name)
         packet =  bu.from_u8(addr_type)
         packet += bu.from_addr(addr)
-        self.send_command(0x2011, packet)
+        self.send_command(opcode, cmd_name, packet)
 
     def do_read_remote_used_features(self):
         # Specification v5.4  Vol 4 Part E 7.8.21 LE Read Remote Features
-        # Opcode 0x2016 
-        print(self.cmd_text, "LE Read Remote Features")
+        opcode = 0x2016 
+        cmd_name = "LE Read Remote Features"
+        print(self.cmd_text, cmd_name)
         if self.connection_handle == None:
             print("Error: No connection handle")
             return
         packet = bu.from_u16(self.connection_handle)
-        self.send_command(0x2016, packet)
+        self.send_command(opcode, cmd_name, packet)
 
     def read_local_public_key(self):
         # Specification v5.4  Vol 4 Part E 7.8.36 LE Read Local P-256 Public Key Command
-        # Opcode 0x2025
-        print(self.cmd_text, "Read Local Public Key")
+        opcode = 0x2025
+        cmd_name = "Read Local Public Key"
+        print(self.cmd_text, cmd_name)
         packet = bu.from_u8(None)
-        self.send_command(0x2025, packet)
+        self.send_command(opcode, cmd_name, packet)
+
     
     def do_att_error_rsp(self, request_opcode, handle, error_code):
         print(self.att_rsp_text, "Error")

@@ -27,7 +27,7 @@ class IntervalBase:
         if interval_time < min_value or interval_time > max_value:
             print(f"Error: Interval Time {interval_time} needs to be between {min_value * 1000} ms and {max_value} s")
             return None
-        print(f"Interval {interval_time} -> 0x{interval:04X}")
+        # print(f"Interval {interval_time} -> 0x{interval:04X}")
         return interval_time
 
 

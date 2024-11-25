@@ -286,6 +286,7 @@ class GATTAttributes(Enum):
 # see Specification v5.4 Vol 4 Part E 7.7
 @unique
 class HCIEvents(IntEnum):
+    INQUIRY_COMPLETE = 0x01
     DISCONNECTION_COMPLETE = 0x05
     COMMAND_COMPLETE = 0x0E
     COMMAND_STATUS = 0x0F
