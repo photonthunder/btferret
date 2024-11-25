@@ -150,6 +150,41 @@ class BluetoothLEConnection:
         self.hc_le_data_buffer = bu.to_u16(data, 9)
         print("le data buffer = {}".format(self.hc_le_data_buffer))
 
+    def handle_le_command(self, cmd, status_text, data=None):
+        # Define a dictionary to map command values to their corresponding messages or functions
+        command_map = {
+            0x0C01: ('General Event Mask Complete', None),
+            0x0C03: ('Reset Complete', None),
+            0x0C13: ('Write Local Name Complete', None),
+            0x0C16: ('Set Page Scan Interval and Window', None),
+            0x0C18: ('Set Inquiry Interval and Window', None),
+            0x0C1A: ('Set Page/Inquiry Scan Timeout Complete', None),
+            0x1002: ('Read Local Supported Commands', 'check_le_compatable'),
+            0x1009: ('Read Local Board Address', 'board_address'),
+            0x2001: ('LE Event Mask Complete', None),
+            0x2002: ('LE Read Buffer Size', 'read_buffer_size'),
+            0x2005: ('LE Set Random Address', None),
+            0x200b: ('LE Scan Parameters Set', None),
+            0x200c: ('LE Scan Enable Set', None),
+            0x2006: ('LE Advertising Parameters Set', None),
+            0x2008: ('LE Advertising Data Set', None),
+            0x2009: ('LE Scan Response Data Set', None),
+            0x200a: ('LE Advertising Set', None),
+            0x2025: ('LE Get Extended Advertising', None),
+
+        }
+
+        # Check if the command exists in the map
+        if cmd in command_map:
+            message, function_name = command_map[cmd]
+            print(self.event_text, "{}: {}".format(message, status_text))
+
+            # If there's a function to call, do so with data
+            if function_name and hasattr(self, function_name):
+                getattr(self, function_name)(data)
+        else:
+            print(f'Unknown Event: {cmd} ({hex(cmd)}), {status_text}')
+
     @register_event(MetaEvent.CONNECTION_COMPLETE, meta_event_handlers)
     def on_le_connection_complete(self, data):
         # Specification v5.4  Vol 4 Part E 7.7.65.1 LE Connection Complete
@@ -220,16 +255,17 @@ class BluetoothLEConnection:
         print("Peripheral Latency 0x{peripheral_latency:04X} connection events}")
         print("Supervision Timeout {SupervisionTimeout.to_time(supervision_timeout)} seconds}")
 
-
     @register_event(MetaEvent.READ_REMOTE, meta_event_handlers)
     def on_le_read_remote_features_complete(self, data):
         # Specification v5.4  Vol 4 Part E 7.7.65.4 LE Read Remote Features Complete
         # Subevent Code = 0x04
+        status =   bu.to_u8(data, 4)
+        if self.ble_error_check(status) == False:
+            print("Read Remote Features did not complete")
+            return
         print("Read Remote Features Complete")
-        
         handle = bu.to_u16(data, 5)
         features = bu.to_data_rest(data, 7)
-        
         print("Handle: {} Features {}".format(handle, bu.as_hex(features)))
 
     @register_event(MetaEvent.DATA_LENGTH_CHANGE, meta_event_handlers)
@@ -242,63 +278,25 @@ class BluetoothLEConnection:
         max_rx_octets = bu.to_u16(data, 10) # 0x001B to 0x00FB
         max_rx_time = bu.to_u16(data, 12) # 0x0148 to 0x4290
         print(self.event_text, "Data length changed for 0x{:04X}".format(handle))
+        print(f"Max TX Octets: 0x{max_tx_octets:04X}, Max TX Time:  0x{max_tx_octets:04X}")
+        print(f"Max RX Octets: 0x{max_tx_octets:04X}, Max RX Time:  0x{max_tx_octets:04X}")
 
     @register_event(MetaEvent.READ_PUBLIC_KEY, meta_event_handlers)
     def on_le_read_local_public_key(self, data):
         # Specification v5.4  Vol 4 Part E 7.7.65.8 LE Read Local P-256 Public Key Complete
         # Subevent Code = 0x08
-        status = bu.to_u8(data, 4)
+        status =   bu.to_u8(data, 4)
+        if self.ble_error_check(status) == False:
+            print("Read Local Public Key did not complete")
+            return
         key_x_coordinate = bu.to_data(data, 5, 37)  # 32 octets
         key_y_coordinate = bu.to_data(data, 37, 69) # 32 octets
         print(self.event_text, "Read Local Public Key Complete")
-
-    def handle_le_command(self, cmd, status_text, data=None):
-        # Define a dictionary to map command values to their corresponding messages or functions
-        command_map = {
-            0x0C01: ('General Event Mask Complete', None),
-            0x0C03: ('Reset Complete', None),
-            0x0C13: ('Write Local Name Complete', None),
-            0x0C16: ('Set Page Scan Interval and Window', None),
-            0x0C18: ('Set Inquiry Interval and Window', None),
-            0x0C1A: ('Set Page/Inquiry Scan Timeout Complete', None),
-            0x1002: ('Read Local Supported Commands', 'check_le_compatable'),
-            0x1009: ('Read Local Board Address', 'board_address'),
-            0x2001: ('LE Event Mask Complete', None),
-            0x2002: ('LE Read Buffer Size', 'read_buffer_size'),
-            0x2005: ('LE Set Random Address', None),
-            0x200b: ('LE Scan Parameters Set', None),
-            0x200c: ('LE Scan Enable Set', None),
-            0x2006: ('LE Advertising Parameters Set', None),
-            0x2008: ('LE Advertising Data Set', None),
-            0x2009: ('LE Scan Response Data Set', None),
-            0x200a: ('LE Advertising Set', None),
-            0x2025: ('LE Get Extended Advertising', None),
-
-        }
-
-        # Check if the command exists in the map
-        if cmd in command_map:
-            message, function_name = command_map[cmd]
-            print(self.event_text, "{}: {}".format(message, status_text))
-
-            # If there's a function to call, do so with data
-            if function_name and hasattr(self, function_name):
-                getattr(self, function_name)(data)
-        else:
-            print(f'Unknown Event: {cmd} ({hex(cmd)}), {status_text}')
 
     @register_event(HCIEvents.COMPLETED_PACKETS, hci_event_handlers)
     def on_hci_event_disconnect_complete(self, data):
         # Specification v5.4  Vol 4 Part E 7.7.5 HCI_Disconnection_Complete (p2163)
         # HCI_Disconnection_Complete = 0x05
-        #     [packet_type                                   1 octet]
-        #     [event_code                                    1 octet]
-        #     [parameter_length                              1 octet]
-        #     status                                         1 octet
-        #     connection_handle                              2 octets
-        #     reason                                         1 octet
-
-        
         status = bu.to_u8  (data, 3)
         handle = bu.to_u16 (data, 4)
         reason = bu.to_u8  (data, 6)
