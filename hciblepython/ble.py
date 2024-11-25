@@ -311,7 +311,7 @@ class BluetoothLEConnection:
     @register_event(HCIEvents.COMPLETED_PACKETS, hci_event_handlers)
     def on_hci_event_number_of_completed_packets(self, data):
         # Specification v5.4  Vol 4 Part E 7.7.19 HCI Number Of Completed Packets
-
+        # Event Code = 0x13
         length = bu.to_u8(data, 2)
         number_handles = bu.to_u8(data, 3)
         # two byte handle and two byte completed packet + number_handles byte
@@ -413,32 +413,6 @@ class BluetoothLEConnection:
             self.on_acl_packet(data)
         else:
             print("Unhandled packet type", packet_type)
-
-    def create_advertising_packet(self, fields):
-        packet = bytes()
-        total_length = 0
-        for field_type, field_data in fields:
-            if not isinstance(field_type, AdvertisingDataType):
-                raise ValueError(f"Field type must be an instance of AdvertisingDataType.")
-            if not isinstance(field_data, bytes):
-                if field_type == AdvertisingDataType.SHORTENED_LOCAL_NAME and isinstance(field_data, str):
-                    field_data = bu.from_string(field_data)
-                elif field_type == AdvertisingDataType.COMPLETE_LOCAL_NAME and isinstance(field_data, str):
-                    field_data = bu.from_string(field_data)
-                else:
-                    raise ValueError(f"Data for type {field_type.name} must be provided as bytes.")
-            length = len(field_data) + 1
-            if length > 31:
-                raise ValueError(f"Field data for type {field_type.name} exceeds the maximum allowed length.")
-            packet += bu.from_u8(length)
-            packet += bu.from_u8(field_type.value)
-            packet += field_data
-        if len(packet) > 31:
-            raise ValueError("Total advertising packet exceeds the 31-byte maximum.")
-        packet = bu.from_u8(len(packet)) + packet
-        pad = bytes(b'\x00' * (32-len(packet)))
-        packet += pad
-        return bytes(packet)
 
     def event_mask_conversion(self, event_types, class_name):
         event_mask = [0] * 8
@@ -613,6 +587,32 @@ class BluetoothLEConnection:
         packet += bu.from_u8   (adv_filter_policy)
         self.send_command(opcode, cmd_name, packet)
 
+    def create_advertising_packet(self, fields):
+        packet = bytes()
+        total_length = 0
+        for field_type, field_data in fields:
+            if not isinstance(field_type, AdvertisingDataType):
+                raise ValueError(f"Field type must be an instance of AdvertisingDataType.")
+            if not isinstance(field_data, bytes):
+                if field_type == AdvertisingDataType.SHORTENED_LOCAL_NAME and isinstance(field_data, str):
+                    field_data = bu.from_string(field_data)
+                elif field_type == AdvertisingDataType.COMPLETE_LOCAL_NAME and isinstance(field_data, str):
+                    field_data = bu.from_string(field_data)
+                else:
+                    raise ValueError(f"Data for type {field_type.name} must be provided as bytes.")
+            length = len(field_data) + 1
+            if length > 31:
+                raise ValueError(f"Field data for type {field_type.name} exceeds the maximum allowed length.")
+            packet += bu.from_u8(length)
+            packet += bu.from_u8(field_type.value)
+            packet += field_data
+        if len(packet) > 31:
+            raise ValueError("Total advertising packet exceeds the 31-byte maximum.")
+        packet = bu.from_u8(len(packet)) + packet
+        pad = bytes(b'\x00' * (32-len(packet)))
+        packet += pad
+        return bytes(packet)
+
     def do_set_advertising_data(self, fields):
         # Specification v5.4  Vol 4 Part E 7.8.7 LE Set Advertising Data
         opcode = 0x2008
@@ -730,8 +730,9 @@ class BluetoothLEConnection:
         self.send_command(opcode, cmd_name, packet)
     
     def do_att_error_rsp(self, request_opcode, handle, error_code):
-        print(self.att_rsp_text, "Error")
-
+        # Specification v5.4  Vol 3 Part F 3.4.1.1 ATT_ERROR_RSP
+        # ATT Opcode 0x02
+        print(self.att_rsp_text, "Error Response")
         packet =  bu.from_u8(0x01) 
         packet += bu.from_u8(request_opcode)     
         packet += bu.from_u16(handle) 
@@ -739,7 +740,7 @@ class BluetoothLEConnection:
         self.send_acl(packet)
 
     def do_att_exchange_mtu_req(self, mtu_size = 244):
-        # Specification v5.4  Vol 3 Part F 3.4.2.1 ATT_EXCHANGE_MTU_REQ (p1416)
+        # Specification v5.4  Vol 3 Part F 3.4.2.1 ATT_EXCHANGE_MTU_REQ
         # ATT Opcode 0x02
         #     [packet_type                                  1 octet]
         #     [handle (BC[2] PB[2] handle[12])              2 octets]
