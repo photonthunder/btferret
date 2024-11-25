@@ -66,6 +66,8 @@ class BLE(BluetoothLEConnection):
         self.wait_listen()
         self.read_le_buffer_size()
         self.wait_listen()
+        self.read_local_public_key()
+        self.wait_listen()
         self.write_local_name(self.gatt_server.device_name.encode("utf-8"))
         self.wait_listen()
         fields = [

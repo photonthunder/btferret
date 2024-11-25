@@ -124,11 +124,23 @@ class BluetoothLEConnection:
     def handle_le_command(self, cmd, data):
         if cmd in self.hci_cc_event_handler:
             message, function_name = self.hci_cc_event_handler[cmd]
-            print(self.event_text, f"{message} Complete {data}")
-            if function_name and hasattr(self, function_name):
-                getattr(self, function_name)(data)
+            if data[0] == BLEErrorCode.SUCCESS:
+                print(self.event_text, f"{message} Complete")
+                if function_name and hasattr(self, function_name):
+                    print(f"Data: {bu.as_hex(data)}")
+                    getattr(self, function_name)(data)
+            else:
+                print(self.event_text, f"{message} Error, {BLEErrorCode(data[0]).name}")
+                return
         else:
-            print(f'Unknown Event: {cmd} ({hex(cmd)}), {status_text}')
+            print(f'Unknown CC Event: {cmd} ({hex(cmd)}), {status_text}')
+
+    def handle_le_status(self, cmd):
+        if cmd in self.hci_cc_event_handler:
+            message, function_name = self.hci_cc_event_handler[cmd]
+            print(self.event_text, f"{message} Received but not complete")
+        else:
+            print(f'Unknown Status Event: {cmd} ({hex(cmd)}), {status_text}')
 
     @register_event(MetaEvent.CONNECTION_COMPLETE, meta_event_handlers)
     def on_le_connection_complete(self, data):
@@ -283,22 +295,18 @@ class BluetoothLEConnection:
 
     @register_event(HCIEvents.COMMAND_STATUS, hci_event_handlers)
     def on_hci_event_command_status(self, data):
-        # Specification v5.4  Vol 4 Part E 7.7.15 HCI_Command_Status (p2179)
-        # HCI_Command_Status = 0x0f
-        #     [packet_type                                   1 octet]
-        #     [event_code                                    1 octet]
-        #     [parameter_length                              1 octet]
-        #     status                                         1 octet
-        #     num_hci_command_packets                        1 octet
-        #     command_opcode                                 2 octets
-
-        # print(self.event_text, "HCI Command Status")
+        # Specification v5.4  Vol 4 Part E 7.7.15 HCI_Command_Status
+        # Event Code = 0x0F
         status = bu.to_u8  (data, 3)
+        if self.ble_error_check(status) == False:
+            print("Command Status Fail Report")
+            return
+        num_hci_command_packets = bu.to_u8(data, 4)
+        if num_hci_command_packets == 0x00:
+            print("Error: Controller not ready for more commands")
+            return
         opcode = bu.to_u16 (data, 5)
-        if opcode == 0x2025:
-            print(self.event_text, "Local Public Key Command Complete")
-        else:
-            print(self.event_text, "Unknown Opcode: {:02x} status: {:02x}".format(opcode, status))
+        self.handle_le_status(opcode)
 
     @register_event(HCIEvents.COMPLETED_PACKETS, hci_event_handlers)
     def on_hci_event_number_of_completed_packets(self, data):
@@ -565,10 +573,14 @@ class BluetoothLEConnection:
         self.send_command(opcode, cmd_name, packet, "read_buffer_size")
 
     def read_buffer_size(self, data):
-        hc_le_data_packet_length = bu.to_u16(data, 7)
-        print("le data length = {}".format(hc_le_data_packet_length))
-        hc_le_data_buffer = bu.to_u16(data, 9)
-        print("le data buffer = {}".format(hc_le_data_buffer))
+        status = bu.to_u8(data, 0)
+        if self.ble_error_check(status) == False:
+            print("Read Buffer Size did not complete")
+            return
+        hc_le_data_packet_length = bu.to_u16(data, 1)
+        print(f"Data Length = 0x{hc_le_data_packet_length:04X}")
+        hc_le_data_buffer = bu.to_u8(data, 3)
+        print(f"Data Buffer = 0x{hc_le_data_buffer:02X}")
 
     def set_random_address(self):
         # Specification v5.4  Vol 4 Part E 7.8.4 LE Set Random Address Command
@@ -716,7 +728,6 @@ class BluetoothLEConnection:
         print(self.cmd_text, cmd_name)
         packet = bu.from_u8(None)
         self.send_command(opcode, cmd_name, packet)
-
     
     def do_att_error_rsp(self, request_opcode, handle, error_code):
         print(self.att_rsp_text, "Error")
