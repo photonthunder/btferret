@@ -23,6 +23,23 @@ import byte_utils as bu
 
 hci_event_handlers = {}
 meta_event_handlers = {}
+acl_event_handler = {}
+
+
+# def register_event(handlers):
+#     def decorator(func):
+#         # Access the `event_code` variable inside the function
+#         func_vars = func.__code__.co_names  # Get variable names in the function
+#         if "event_code" in func_vars:
+#             event_code = func.__globals__.get("event_code", None)  # Retrieve value from globals if declared globally
+#             if event_code is None:
+#                 raise ValueError(f"'event_code' must be defined in the function '{func.__name__}'")
+#         else:
+#             raise ValueError(f"'event_code' not found in function '{func.__name__}'")
+
+#         handlers[event_code] = func
+#         return func
+#     return decorator
 
 def register_event(event_code, registry):
     def decorator(func):
@@ -144,7 +161,7 @@ class BluetoothLEConnection:
 
     @register_event(MetaEvent.CONNECTION_COMPLETE, meta_event_handlers)
     def on_le_connection_complete(self, data):
-        # Specification v5.4  Vol 4 Part E 7.7.65.1 LE Connection Complete
+        # v5.4  Vol 4 Part E 7.7.65.1 LE Connection Complete
         # Subevent Code =  0x01
         status = bu.to_u8(data, 4)
         if self.ble_error_check(status) == False:
@@ -170,7 +187,7 @@ class BluetoothLEConnection:
 
     @register_event(MetaEvent.ADVERTISING_REPORT, meta_event_handlers)
     def on_le_advertising_report(self, data):
-        # Specification v5.4 Vol 4 Part E 7.7.65.2 LE Advertising Report
+        # v5.4 Vol 4 Part E 7.7.65.2 LE Advertising Report
         # Subevent Code = 0x02
         num_reports = bu.to_u8(data, 4)
         if num_reports > 0x19:
@@ -196,7 +213,7 @@ class BluetoothLEConnection:
               
     @register_event(MetaEvent.UPDATE_COMPLETE, meta_event_handlers)
     def on_le_update_complete(self, data):
-        # Specification v5.4  Vol 4 Part E 7.7.65.3 LE Connection Update Complete
+        # v5.4  Vol 4 Part E 7.7.65.3 LE Connection Update Complete
         # Subevent Code = 0x03
         status =   bu.to_u8(data, 4)
         if self.ble_error_check(status) == False:
@@ -214,7 +231,7 @@ class BluetoothLEConnection:
 
     @register_event(MetaEvent.READ_REMOTE, meta_event_handlers)
     def on_le_read_remote_features_complete(self, data):
-        # Specification v5.4  Vol 4 Part E 7.7.65.4 LE Read Remote Features Complete
+        # v5.4  Vol 4 Part E 7.7.65.4 LE Read Remote Features Complete
         # Subevent Code = 0x04
         status =   bu.to_u8(data, 4)
         if self.ble_error_check(status) == False:
@@ -227,7 +244,7 @@ class BluetoothLEConnection:
 
     @register_event(MetaEvent.DATA_LENGTH_CHANGE, meta_event_handlers)
     def on_le_data_length_change(self, data):
-        # Specification v5.4  Vol 4 Part E 7.7.65.7 LE Data Length CHange Event
+        # v5.4  Vol 4 Part E 7.7.65.7 LE Data Length CHange Event
         # Subevent Code = 0x07
         handle = bu.to_u16(data, 4)
         max_tx_octets = bu.to_u16(data, 6) # 0x001B to 0x00FB
@@ -240,7 +257,7 @@ class BluetoothLEConnection:
 
     @register_event(MetaEvent.READ_PUBLIC_KEY, meta_event_handlers)
     def on_le_read_local_public_key(self, data):
-        # Specification v5.4  Vol 4 Part E 7.7.65.8 LE Read Local P-256 Public Key Complete
+        # v5.4  Vol 4 Part E 7.7.65.8 LE Read Local P-256 Public Key Complete
         # Subevent Code = 0x08
         status =   bu.to_u8(data, 4)
         if self.ble_error_check(status) == False:
@@ -252,7 +269,7 @@ class BluetoothLEConnection:
 
     @register_event(HCIEvents.INQUIRY_COMPLETE, hci_event_handlers)
     def on_hci_inquiry_complete(self, data):
-        # Specification v5.4  Vol 4 Part E 7.7.1 HCI Inquiry Complete
+        # v5.4  Vol 4 Part E 7.7.1 HCI Inquiry Complete
         # Event Code = 0x01
         status = bu.to_u8  (data, 3)
         if self.ble_error_check(status) == False:
@@ -263,7 +280,7 @@ class BluetoothLEConnection:
 
     @register_event(HCIEvents.DISCONNECTION_COMPLETE, hci_event_handlers)
     def on_hci_event_disconnect_complete(self, data):
-        # Specification v5.4  Vol 4 Part E 7.7.5 HCI Disconnection Complete
+        # v5.4  Vol 4 Part E 7.7.5 HCI Disconnection Complete
         # Event Code = 0x05
         status = bu.to_u8  (data, 3)
         if self.ble_error_check(status) == False:
@@ -281,7 +298,7 @@ class BluetoothLEConnection:
 
     @register_event(HCIEvents.COMMAND_COMPLETE, hci_event_handlers)
     def on_hci_event_command_complete(self, data):
-        # Specification v5.4  Vol 4 Part E 7.7.14 HCI Command Complete
+        # v5.4  Vol 4 Part E 7.7.14 HCI Command Complete
         # Event Code = 0x0E
         num_hci_command_packets = bu.to_u8(data, 3)
         if num_hci_command_packets == 0x00:
@@ -295,7 +312,7 @@ class BluetoothLEConnection:
 
     @register_event(HCIEvents.COMMAND_STATUS, hci_event_handlers)
     def on_hci_event_command_status(self, data):
-        # Specification v5.4  Vol 4 Part E 7.7.15 HCI_Command_Status
+        # v5.4  Vol 4 Part E 7.7.15 HCI_Command_Status
         # Event Code = 0x0F
         status = bu.to_u8  (data, 3)
         if self.ble_error_check(status) == False:
@@ -310,7 +327,7 @@ class BluetoothLEConnection:
 
     @register_event(HCIEvents.COMPLETED_PACKETS, hci_event_handlers)
     def on_hci_event_number_of_completed_packets(self, data):
-        # Specification v5.4  Vol 4 Part E 7.7.19 HCI Number Of Completed Packets
+        # v5.4  Vol 4 Part E 7.7.19 HCI Number Of Completed Packets
         # Event Code = 0x13
         length = bu.to_u8(data, 2)
         number_handles = bu.to_u8(data, 3)
@@ -334,7 +351,7 @@ class BluetoothLEConnection:
 
     @register_event(HCIEvents.META_EVENT, hci_event_handlers)
     def on_hci_meta_event(self, data):
-        # Specification v5.4  Vol 4 Part E 7.7.65 LE Meta event
+        # v5.4  Vol 4 Part E 7.7.65 LE Meta event
         # Event Code = 0x3E
         event_code = bu.to_u8(data, 3)
         try:
@@ -350,7 +367,7 @@ class BluetoothLEConnection:
         
     @register_event(HCIEvents.VENDOR_SPECIFIC, hci_event_handlers)
     def on_hci_event_vendor_specific (self, data):
-        # Specification v5.4  Vol 4 Part E 5.4.4 Mentions Vendor Specific Debugging Event
+        # v5.4  Vol 4 Part E 5.4.4 Mentions Vendor Specific Debugging Event
         # Event Code = 0xFF
         print(self.event_text, "Vendor Specific")
 
@@ -368,7 +385,7 @@ class BluetoothLEConnection:
             print(self.event_text, f"Unhandled 0x{event:02X}")
 
     def on_acl_packet(self, data):
-        # Specification v5.4  Vol 4 Part E 5.4.2 HCI ACL Packet
+        # v5.4  Vol 4 Part E 5.4.2 HCI ACL Packet
         handle = bu.to_bits_u16(data, 1, 0, 12)
         if self.connection_handle is not None and handle != self.connection_handle:
             print(f"Warning: Handle does not match 0x{handle:04X} != 0x{self.connection_handle:04X}")
@@ -404,8 +421,8 @@ class BluetoothLEConnection:
             self.on_acl_event(self.acl_packet)                 
             
     def on_data(self, data):
-        # Specification v5.4  Vol 4 Part E 5.4.4 HCI Event Packet
-        # Specification v5.4  Vol 4 Part E 5.4.2 HCI ACL Packet
+        # v5.4  Vol 4 Part E 5.4.4 HCI Event Packet
+        # v5.4  Vol 4 Part E 5.4.2 HCI ACL Packet
         packet_type = bu.to_u8(data, 0)
         if   packet_type == HCIPacket.EVENT: 
             self.on_hci_event(data)
@@ -428,7 +445,7 @@ class BluetoothLEConnection:
         return bytes(event_mask)
 
     def set_event_mask(self, event_mask=None):
-        # Specification v5.4  Vol 4 Part E 7.3.1 Set Event Mask Command
+        # v5.4  Vol 4 Part E 7.3.1 Set Event Mask Command
         opcode = 0x0C01
         cmd_name = "Set Event Mask"
         print(self.cmd_text, cmd_name)
@@ -441,7 +458,7 @@ class BluetoothLEConnection:
         self.send_command(opcode, cmd_name, packet)
 
     def reset(self):
-        # Specification v5.4  Vol 4 Part E 7.3.2 Reset Command
+        # v5.4  Vol 4 Part E 7.3.2 Reset Command
         opcode = 0x0C03
         cmd_name = "BLE Reset"
         print(self.cmd_text, cmd_name)
@@ -449,7 +466,7 @@ class BluetoothLEConnection:
         self.send_command(opcode, cmd_name, packet)
 
     def write_local_name(self, name_bytes):
-        # Specification v5.4  Vol 4 Part E 7.3.11 Write Local Name Command
+        # v5.4  Vol 4 Part E 7.3.11 Write Local Name Command
         opcode = 0x0C13
         cmd_name = "Write Local Name"
         print(self.cmd_text, f"{cmd_name} {name_bytes}")
@@ -461,7 +478,7 @@ class BluetoothLEConnection:
         self.send_command(opcode, cmd_name, packet)
 
     def write_connection_accept_timeout(self, connect_timeout = ConnectionAcceptTimeout.DEFAULT_TIME):
-        # Specification v5.4  Vol 4 Part E 7.3.14 Write Connection Accept Timeout Command
+        # v5.4  Vol 4 Part E 7.3.14 Write Connection Accept Timeout Command
         opcode = 0x0C16
         cmd_name = "Write Connection Accept Timeout Command"
         print(self.cmd_text, cmd_name)
@@ -469,7 +486,7 @@ class BluetoothLEConnection:
         self.send_command(opcode, cmd_name, packet)
 
     def write_page_timeout_command(self, page_timeout = PageTimeout.DEFAULT_TIME):
-        # Specification v5.4  Vol 4 Part E 7.3.16 Write Page Timeout Command
+        # v5.4  Vol 4 Part E 7.3.16 Write Page Timeout Command
         opcode = 0x0C18
         cmd_name = "Write Page Timeout Command"
         print(self.cmd_text, cmd_name)
@@ -477,7 +494,7 @@ class BluetoothLEConnection:
         self.send_command(opcode, cmd_name, packet)
 
     def write_scan_enable(self, scan_enable = ScanEnable.ALL_ENABLED):
-        # Specification v5.4  Vol 4 Part E 7.3.18 Write Scan Enable Command
+        # v5.4  Vol 4 Part E 7.3.18 Write Scan Enable Command
         opcode = 0x0C1A
         cmd_name = "Write Scan Enable Command"
         print(self.cmd_text, cmd_name)
@@ -485,7 +502,7 @@ class BluetoothLEConnection:
         self.send_command(opcode, cmd_name, packet)
 
     def read_local_commands(self):
-        # Specification v5.4  Vol 4 Part E 7.4.2 Read Local Supported Commands
+        # v5.4  Vol 4 Part E 7.4.2 Read Local Supported Commands
         opcode = 0x1002
         cmd_name = "Read Local Supported Commands"
         print(self.cmd_text, cmd_name)
@@ -499,7 +516,7 @@ class BluetoothLEConnection:
             raise ValueError("Error: Not LE Compatible")
 
     def read_local_board_address(self):
-        # Specification v5.4  Vol 4 Part E 7.4.2 Read BD_ADDR Commands
+        # v5.4  Vol 4 Part E 7.4.2 Read BD_ADDR Commands
         opcode = 0x1009
         cmd_name = "Read Local Board Address"
         print(self.cmd_text, cmd_name)
@@ -517,7 +534,7 @@ class BluetoothLEConnection:
         return formatted_address
 
     def set_le_event_mask(self, event_mask = None):
-        # Specification v5.4  Vol 4 Part E 7.8.3 LE Set Event Mask Command
+        # v5.4  Vol 4 Part E 7.8.3 LE Set Event Mask Command
         opcode = 0x2001
         cmd_name = "LE Event Mask"
         print(self.cmd_text, cmd_name)
@@ -539,7 +556,7 @@ class BluetoothLEConnection:
         self.send_command(opcode, cmd_name, packet)
 
     def read_le_buffer_size(self):
-        # Specification v5.4  Vol 4 Part E 7.8.3 LE Read Buffer Size Command
+        # v5.4  Vol 4 Part E 7.8.3 LE Read Buffer Size Command
         opcode = 0x2002
         cmd_name = "Read LE Buffer Size"
         print(self.cmd_text, cmd_name)
@@ -557,7 +574,7 @@ class BluetoothLEConnection:
         print(f"Data Buffer = 0x{hc_le_data_buffer:02X}")
 
     def set_random_address(self):
-        # Specification v5.4  Vol 4 Part E 7.8.4 LE Set Random Address Command
+        # v5.4  Vol 4 Part E 7.8.4 LE Set Random Address Command
         opcode = 0x2005
         cmd_name = "Set Random Bluetooth Address"
         random_address = bytes([randint(0x00, 0xFF) for _ in range(6)])
@@ -573,7 +590,7 @@ class BluetoothLEConnection:
                                       peer_addr='00:00:00:00:00:00',
                                       adv_channel_map=AdvertisingChannelMap.ALL_CHANNELS,
                                       adv_filter_policy=AdvertisingFilterPolicy.SCAN_CONNECT_ALL):
-        # Specification v5.4  Vol 4 Part E 7.8.5 LE Set Advertising Parameters
+        # v5.4  Vol 4 Part E 7.8.5 LE Set Advertising Parameters
         opcode = 0x2006
         cmd_name = "LE Set Advertising Parameters"
         print(self.cmd_text, cmd_name)
@@ -614,7 +631,7 @@ class BluetoothLEConnection:
         return bytes(packet)
 
     def do_set_advertising_data(self, fields):
-        # Specification v5.4  Vol 4 Part E 7.8.7 LE Set Advertising Data
+        # v5.4  Vol 4 Part E 7.8.7 LE Set Advertising Data
         opcode = 0x2008
         cmd_name = "LE Set Advertising Data"
         packet = self.create_advertising_packet(fields)
@@ -622,7 +639,7 @@ class BluetoothLEConnection:
         self.send_command(opcode, cmd_name, packet)
 
     def do_set_scan_response_data(self, fields):
-        # Specification v5.4  Vol 4 Part E 7.8.8 LE Set Scan Response Data
+        # v5.4  Vol 4 Part E 7.8.8 LE Set Scan Response Data
         opcode = 0x2009
         cmd_name = "LE Set Scan Response Data"
         packet = self.create_advertising_packet(fields)
@@ -630,7 +647,7 @@ class BluetoothLEConnection:
         self.send_command(opcode, cmd_name, packet)
 
     def do_set_advertise_enable(self, enabled_status:Advertising):
-        # Specification v5.4  Vol 4 Part E 7.8.9 LE Set Advertising Enable
+        # v5.4  Vol 4 Part E 7.8.9 LE Set Advertising Enable
         opcode = 0x200A
         if enabled_status == Advertising.ENABLED:
             cmd_name = "LE Set Advertising: Enabled"
@@ -647,7 +664,7 @@ class BluetoothLEConnection:
                                scan_window=ScanningTime.DEFAULT_TIME,
                                own_addr_type=Address.PUBLIC,
                                scan_filter_policy=ScanningFilter.BASIC_UNFILTERED):
-        # Specification v5.4  Vol 4 Part E 7.8.10 LE Set Scan Parameters
+        # v5.4  Vol 4 Part E 7.8.10 LE Set Scan Parameters
         opcode = 0x200B
         cmd_name = "LE Set Scan Parameters"
         print(self.cmd_text, cmd_name)
@@ -660,7 +677,7 @@ class BluetoothLEConnection:
 
     def do_set_scan(self, enabled_status=ScanningStatus.DISABLED,
                     duplicates=ScanningFilterDuplicate.DISABLED):
-        # Specification v5.4  Vol 4 Part E 7.8.11 LE Set Scan Enable
+        # v5.4  Vol 4 Part E 7.8.11 LE Set Scan Enable
         opcode = 0x200C
         if enabled:
             cmd_name = "LE Set Scan Enable"
@@ -683,7 +700,7 @@ class BluetoothLEConnection:
                              supervision_timeout=SupervisionTimeout.DEFAULT_TIME,
                              min_ce_length=ConnectionEventTime.DEFAULT_TIME,
                              max_ce_length = ConnectionEventTime.DEFAULT_TIME):
-        # Specification v5.4  Vol 4 Part E 7.8.12 LE Create Connection
+        # v5.4  Vol 4 Part E 7.8.12 LE Create Connection
         opcode = 0x200d
         cmd_name = "LE Create Connection"
         print(self.cmd_text, cmd_name)
@@ -702,7 +719,7 @@ class BluetoothLEConnection:
         self.send_command(opcode, cmd_name, packet)
 
     def do_add_device_to_accept_list(self, addr=Address.PUBLIC, addr_type='00:00:00:00:00:00'):
-        # Specification v5.4  Vol 4 Part E 7.8.16 LE Add Device To Filter Accept List
+        # v5.4  Vol 4 Part E 7.8.16 LE Add Device To Filter Accept List
         opcode = 0x2011
         cmd_name = "LE Add Device To Filter Accept List"
         print(self.cmd_text, cmd_name)
@@ -711,7 +728,7 @@ class BluetoothLEConnection:
         self.send_command(opcode, cmd_name, packet)
 
     def do_read_remote_used_features(self):
-        # Specification v5.4  Vol 4 Part E 7.8.21 LE Read Remote Features
+        # v5.4  Vol 4 Part E 7.8.21 LE Read Remote Features
         opcode = 0x2016 
         cmd_name = "LE Read Remote Features"
         print(self.cmd_text, cmd_name)
@@ -722,7 +739,7 @@ class BluetoothLEConnection:
         self.send_command(opcode, cmd_name, packet)
 
     def read_local_public_key(self):
-        # Specification v5.4  Vol 4 Part E 7.8.36 LE Read Local P-256 Public Key Command
+        # v5.4  Vol 4 Part E 7.8.36 LE Read Local P-256 Public Key Command
         opcode = 0x2025
         cmd_name = "Read Local Public Key"
         print(self.cmd_text, cmd_name)
@@ -730,34 +747,29 @@ class BluetoothLEConnection:
         self.send_command(opcode, cmd_name, packet)
     
     def do_att_error_rsp(self, request_opcode, handle, error_code):
-        # Specification v5.4  Vol 3 Part F 3.4.1.1 ATT_ERROR_RSP
-        # ATT Opcode 0x02
-        print(self.att_rsp_text, "Error Response")
-        packet =  bu.from_u8(0x01) 
+        # v5.4  Vol 3 Part F 3.4.1.1 ATT_ERROR_RSP
+        att_opcode = 0x01
+        cmd_name = "Error Response"
+        print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
+        packet =  bu.from_u8(att_opcode) 
         packet += bu.from_u8(request_opcode)     
         packet += bu.from_u16(handle) 
         packet += bu.from_u8(error_code)
         self.send_acl(packet)
 
     def do_att_exchange_mtu_req(self, mtu_size = 244):
-        # Specification v5.4  Vol 3 Part F 3.4.2.1 ATT_EXCHANGE_MTU_REQ
-        # ATT Opcode 0x02
-        #     [packet_type                                  1 octet]
-        #     [handle (BC[2] PB[2] handle[12])              2 octets]
-        #     [packet length                                2 octets]
-        #     [data_length                                  2 octets]
-        #     [channel                                      2 octets]
-        #     opcode                                        1 octet
-        #     client receive mtu size                       2 octets
-
-        print(self.att_req_text, "EXCHANGE MTU (0x02)")
-
+        # v5.4  Vol 3 Part F 3.4.2.1 ATT_EXCHANGE_MTU_REQ
+        att_opcode = 0x02
+        cmd_name = "Exchance MTU"
+        print(self.att_req_text, f"{cmd_name}: 0x{att_opcode:02X}")
         packet =  bu.from_u8  (0x02)           # ATT opcode ATT_EXCHANGE_MTU_REQ
         packet += bu.from_u16 (mtu_size)       # MTU size requested 
         self.send_acl(packet)
 
     def do_att_exchange_mtu_rsp(self, mtu_size = 244):
+        att_opcode = 0x03
         print(self.att_rsp_text, "EXCHANGE MTU (0x03)")
+        print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
 
         packet =  bu.from_u8  (0x03)      
         packet += bu.from_u16 (mtu_size) 
@@ -765,19 +777,11 @@ class BluetoothLEConnection:
 
 
     def do_att_find_information_req(self, start_handle, end_handle):
-        # Specification v5.4  Vol 3 Part F 3.4.3.1 ATT_FIND_INFORMATION_REQ (p1418)
-        # ATT Opcode 0x04
-        #
-        #     [packet_type                                  1 octet]
-        #     [handle (BC[2] PB[2] handle[12])              2 octets]
-        #     [packet length                                2 octets]
-        #     [data_length                                  2 octets]
-        #     [channel                                      2 octets]
-        #     opcode                                        1 octet
-        #     starting handle                               2 octets
-        #     ending handle                                 2 octets
+        # v5.4  Vol 3 Part F 3.4.3.1 ATT_FIND_INFORMATION_REQ (p1418)
+        att_opcode = 0x04
 
         print(self.att_req_text, "FIND INFORMATION (0x04)")
+        print(self.att_req_text, f"{cmd_name}: 0x{att_opcode:02X}")
         
         packet =  bu.from_u8(0x04)          # ATT opcode ATT_FIND_INFORMATION_REQ
         packet += bu.from_u16(start_handle)
@@ -785,7 +789,9 @@ class BluetoothLEConnection:
         self.send_acl(packet)
 
     def do_att_find_information_rsp(self, start_handle, end_handle):
+        att_opcode = 0x05
         print(self.att_rsp_text, "FIND INFORMATION (0x05)")
+        print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         return_code, uuid_format, handle_uuid = self.gatt_server.find_information(start_handle, end_handle)
         if return_code != ATTErrorCode.SUCCESS:
             self.do_att_error_rsp(0x04, start_handle, return_code) 
@@ -801,20 +807,11 @@ class BluetoothLEConnection:
 
 
     def do_att_read_by_type_req(self, start_handle, end_handle, attribute_type):
-        # Specification v5.4  Vol 3 Part F 3.4.4.1 ATT_READ_BY_TYPE_REQ (p1422)
-        # ATT Opcode 0x08
-        #
-        #     [packet_type                                  1 octet]
-        #     [handle (BC[2] PB[2] handle[12])              2 octets]
-        #     [packet length                                2 octets]
-        #     [data_length                                  2 octets]
-        #     [channel                                      2 octets]
-        #     opcode                                        1 octet
-        #     starting handle                               2 octets
-        #     ending handle                                 2 octets
-        #     attribute type (UUID)                         2 or 16 octets
+        # v5.4  Vol 3 Part F 3.4.4.1 ATT_READ_BY_TYPE_REQ
+        att_opcode = 0x08
 
         print(self.att_req_text, "READ BY TYPE (0x08)")
+        print(self.att_req_text, f"{cmd_name}: 0x{att_opcode:02X}")
         
         packet =  bu.from_u8  (0x08)               # ATT opcode ATT_READ_BY_TYPE_REQ
         packet += bu.from_u16 (start_handle)
@@ -823,7 +820,9 @@ class BluetoothLEConnection:
         self.send_acl(packet)
 
     def do_att_read_by_type_rsp(self, start_handle, end_handle, uuid):
+        att_opcode = 0x09
         print(self.att_rsp_text, "READ BY TYPE (0x09)")
+        print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         packet =  bu.from_u8  (0x09)
         if uuid == GATTAttributes.CHARACTERISTIC.value:
             return_code, char_decl = self.gatt_server.read_char_uuid_value(start_handle, end_handle)
@@ -855,24 +854,18 @@ class BluetoothLEConnection:
         self.send_acl(packet)
 
     def do_att_read_req(self, handle):
-        # Specification v5.4  Vol 3 Part F 3.4.4.1 ATT_READ_REQ (p1425)
-        # ATT Opcode 0x0a
-        #
-        #     [packet_type                                  1 octet]
-        #     [handle (BC[2] PB[2] handle[12])              2 octets]
-        #     [packet length                                2 octets]
-        #     [data_length                                  2 octets]
-        #     [channel                                      2 octets]
-        #     opcode                                        1 octet
-        #     handle                                        2 octets
+        # v5.4  Vol 3 Part F 3.4.4.1 ATT_READ_REQ (p1425)
+        att_opcode = 0x0A
 
         print(self.att_req_text, "GROUP TYPE (0x0A)")
+        print(self.att_req_text, f"{cmd_name}: 0x{att_opcode:02X}")
         
         packet =  bu.from_u8  (0x0A)               # ATT opcode ATT_READ_REQ
         packet += bu.from_u16 (handle)
         self.send_acl(packet)
 
     def do_att_read_rsp(self, handle):
+        att_opcode = 0x0B
         print(self.att_rsp_text, "READ (0x0B)")
         return_code, byte_value = self.gatt_server.read_char_value(handle)
         if return_code != ATTErrorCode.SUCCESS: 
@@ -884,7 +877,9 @@ class BluetoothLEConnection:
             self.send_acl(packet)
 
     def do_att_group_type_rsp(self, gatt_uuid, start_handle, end_handle):
+        att_opcode = 0x11
         print(self.att_rsp_text, "GROUP TYPE (0x11)")
+        print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         packet =  bu.from_u8  (0x11)    
         if gatt_uuid == GATTAttributes.PRIMARY_SERVICE.value:
             print("Get primary services for handles 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
@@ -908,7 +903,9 @@ class BluetoothLEConnection:
         self.send_acl(packet)
 
     def do_att_write_rsp(self, handle, value):
+        att_opcode = 0x13
         print(self.att_rsp_text, "WRITE (0x13)")
+        print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         return_code = self.gatt_server.write_char_value(handle, value)
         if return_code == ATTErrorCode.SUCCESS:
             packet =  bu.from_u8(0x13)   
@@ -925,6 +922,7 @@ class BluetoothLEConnection:
         if handle == None or data == None:
             # print("Notification has no handle or data")
             return
+        att_opcode = 0x1B
         print(self.att_rsp_text, "Notification (0x1B)")
         packet =  bu.from_u8(0x1B) 
         packet += bu.from_u16(handle)
@@ -940,6 +938,7 @@ class BluetoothLEConnection:
         if handle == None or data == None:
             # print("Indication has no handle or data")
             return
+        att_opcode = 0x1D
         print(self.att_rsp_text, "Indication (0x1D)")
         packet =  bu.from_u8(0x1B) 
         packet += bu.from_u16(handle)
@@ -947,11 +946,15 @@ class BluetoothLEConnection:
         self.send_acl(packet)
 
     def ack_indication(self):
+        att_opcode = 0x1E
         print("\nIndication ACK (0x1E)")
+        print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         self.gatt_server.clear_ack()
 
     def do_att_write_no_response(self, handle, value):
+        att_opcode = 0x52
         print(self.att_rsp_text, "WRITE NO RESPONSE (0x52)")
+        print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         return_code = self.gatt_server.write_char_value(handle, value)
         if return_code != ATTErrorCode.SUCCESS:
             print("No response was requested but write was not successful, Error = 0x{:02X}".format(return_code))
@@ -959,6 +962,16 @@ class BluetoothLEConnection:
     def on_acl_event(self, data):
         print("ACL data:      ", bu.as_hex(data))
         att_opcode = bu.to_u8(data, 0)
+        # try:
+        #     if event in ACLResponse(att_opcode):
+        #         print(f"Warning: Should not get {ACLResponse(event).name} from client")
+        #         return
+        #     event = ACLRequest(att_opcode):
+
+
+
+
+
         if att_opcode == 0x02:
             print(self.att_req_text, "Exchange MTU (0x{:02X})".format(att_opcode))
             client_rx_mtu = bu.to_u16(data, 1)
