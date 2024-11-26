@@ -5,15 +5,68 @@ from gatt_enum import CCCD, PERM_FLAGS, PROP_FLAGS
 import byte_utils as bu
 import logging
 import time
+import bisect
+
+class Handles:
+    def __init__(self):
+        self.min_handle = 0x0003
+        self.max_handle = 0xFFFF
+        self.primary_service_handles = []  # Stores a list of handles
+
+    def set_min_handle(self, handle):
+        if handle < 0 or handle > self.max_handle:
+            print(f"min_handle 0x{handle:04X} must be between 0x0000 and 0x{self.max_handle:04X}.")
+            return False
+        self.min_handle = handle
+        return True
+
+    def set_max_handle(self, handle):
+        if handle < self.min_handle or handle > 0xFFFF:
+            print(f"max_handle 0x{handle:04X} must be between 0x{self.min_handle:04X} and 0xFFFF.")
+            return False
+        self.max_handle = handle
+
+    def add_primary_service_handle(self, handle):
+        if handle < self.min_handle or handle > self.max_handle:
+            print("PS Handle must be within 0x{self.min_handle:04X} and 0x{self.max_handle:04X}.")
+            return False
+        if handle not in self.primary_service_handles:
+            bisect.insort(self.primary_service_handles, handle)
+        return True
+
+    def remove_primary_service_handle(self, handle):
+        if handle in self.primary_service_handles:
+            self.primary_service_handles.remove(handle)
+            return True
+        return False
+
+    def clear_primary_service_handles(self):
+        self.primary_service_handles.clear()
+
+    def __repr__(self):
+        """String representation of the Handles class."""
+        return (
+            f"Handles(min_handle={hex(self.min_handle)}, "
+            f"max_handle={hex(self.max_handle)}, "
+            f"primary_service_handles={self.primary_service_handles})"
+        )
 
 class Characteristic:
-    def __init__(self, uuid: str, properties: list[PROP_FLAGS], value: bytes = b"", value_type="variable", fixed_length=False, length=None):
-        self.uuid = uuid  # Binary strings can be converted to UUIDs as needed
-        self.properties = properties  # List of enums
-        self.value = value  # Binary string
-        self.value_type = value_type
-        self.fixed_length = fixed_length
-        self.length = length
+    def __init__(
+        self,
+        uuid: str,
+        properties: list[PROP_FLAGS],
+        value: bytes = b"",
+        permissions: list[PERM_FLAGS] = None,
+        constant=False,
+        value_handle=None,
+    ):
+        self.uuid = uuid
+        self.properties = properties
+        self.permissions = permissions or []
+        self.value = value
+        self.constant = constant
+        self.value_handle = value_handle
         self.descriptors = {}
 
     def add_descriptor(self, uuid: str, value: bytes):
@@ -32,17 +85,31 @@ class Characteristic:
         return self.value
 
     def __str__(self):
-        properties = ", ".join(str(prop) for prop in self.properties)
-        descriptors = ", ".join(f"{uuid}: {value}" for uuid, value in self.descriptors.items())
+        properties_str = ", ".join(prop.name for prop in self.properties)
+        permissions_str = ", ".join(perm.name for perm in self.permissions)
+        const_str = "CONSTANT" if self.constant else "VARIABLE"
+        vh_str = f"VH = 0x{self.value_handle:04X}" if self.value_handle else ""
+        descriptors_str = (
+            "\n        Descriptors:\n" +
+            "\n".join(
+                f"          Descriptor(UUID: {uuid}, Value: {value})"
+                for uuid, value in self.descriptors.items()
+            )
+            if self.descriptors
+            else ""
+        )
         return (
-            f"Characteristic(UUID: {self.uuid}, Properties: [{properties}], "
-            f"Value: {self.value}, Descriptors: {{{descriptors}}})"
+            f"Characteristic Declaration, b'{self.uuid}', {properties_str}, {const_str}, {vh_str}\n"
+            f"Characteristic Value, b'{self.uuid}', {self.value!r}, Permissions: [{permissions_str}]"
+            f"{descriptors_str}"
         )
 
+
 class Service:
-    def __init__(self, uuid: str, primary=True):
-        self.uuid = uuid  # Binary string representation of UUID
+    def __init__(self, uuid: str, primary=True, name=""):
+        self.uuid = uuid
         self.primary = primary
+        self.name = name
         self.characteristics = {}
 
     def add_characteristic(self, handle: int, characteristic: Characteristic):
@@ -56,10 +123,13 @@ class Service:
         return self.characteristics.get(handle)
 
     def __str__(self):
-        characteristics_str = "\n    ".join(
-            f"Handle 0x{handle:04X}: {characteristic}" for handle, characteristic in self.characteristics.items()
+        service_type = "Primary Service" if self.primary else "Secondary Service"
+        characteristics_str = "\n".join(
+            f"  0x{handle:04X}: {characteristic}"
+            for handle, characteristic in self.characteristics.items()
         )
-        return f"Service(UUID: {self.uuid}, Primary: {self.primary})\n    {characteristics_str}"
+        return f"{self.name or 'Unnamed Service'}\n" \
+               f"0x{self.uuid}: {service_type}, b'{self.uuid}'\n{characteristics_str}"
 
 class GattServer:
     def __init__(self):
@@ -77,21 +147,40 @@ class GattServer:
 
     def __str__(self):
         services_str = "\n".join(
-            f"Handle 0x{handle:04X}: {service}" for handle, service in self.services.items()
+            f"Handle 0x{handle:04X}:\n{service}" for handle, service in self.services.items()
         )
-        return f"GattServer:\n{services_str}"
+        return f"Gatt Server\n{services_str}"
+
 
 if __name__ == "__main__":
+    # Create GATT Server
     gatt_server = GattServer()
 
     # Generic Access Service
-    generic_access = Service(uuid="1800")
+    generic_access = Service(uuid="1800", name="Generic Access")
     generic_access.add_characteristic(
-        0x0005, Characteristic(uuid="2A00", properties="read", value="MyDevice")
+        0x0005,
+        Characteristic(
+            uuid="2A00",
+            properties=[PROP_FLAGS.READ],
+            permissions=[PERM_FLAGS.READ],
+            value=b"MyDevice",
+            constant=True,
+            value_handle=0x0005,
+        )
     )
     generic_access.add_characteristic(
-        0x0007, Characteristic(uuid="2A01", properties="read", value="Appearance")
+        0x0007,
+        Characteristic(
+            uuid="2A01",
+            properties=[PROP_FLAGS.READ],
+            permissions=[PERM_FLAGS.READ],
+            value=b"\x00\x80",
+            constant=True,
+            value_handle=0x0007,
+        )
     )
     gatt_server.add_service(0x0003, generic_access)
 
+    # Print GATT Server
     print(gatt_server)
