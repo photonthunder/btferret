@@ -91,7 +91,7 @@ class BLE(BluetoothLEConnection):
             own_addr_type=Address.RANDOM
         )
         self.wait_listen()
-        self.do_set_advertise_enable(True)
+        self.do_set_advertise_enable(Advertising.ENABLED)
         self.wait_listen()
 
         try:
@@ -104,15 +104,15 @@ class BLE(BluetoothLEConnection):
             self.restore_terminal()
 
         # Closing steps
-        self.do_set_advertise_enable(True)
-        self.wait_listen(self.long_wait)
-        self.do_set_advertising_parameters(
-            min_interval=0.320,
-            max_interval=0.320,
-            own_addr_type=Address.PUBLIC # turn off random address
-        )
-        self.wait_listen()
-        self.do_set_advertise_enable(False)
+        # self.do_set_advertise_enable(Advertising.ENABLED)
+        # self.wait_listen(self.long_wait)
+        # self.do_set_advertising_parameters(
+        #     min_interval=0.320,
+        #     max_interval=0.320,
+        #     own_addr_type=Address.PUBLIC # turn off random address
+        # )
+        # self.wait_listen()
+        self.do_set_advertise_enable(Advertising.DISABLED)
         self.wait_listen()
 
 

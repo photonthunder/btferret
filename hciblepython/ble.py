@@ -32,6 +32,7 @@ def register_event(event_code, registry):
         return func
     return decorator
 
+
 class BluetoothLEConnection:
 
     def __init__(self, dev_id=0, gatt_server=None):
@@ -279,6 +280,8 @@ class BluetoothLEConnection:
         else:
             print("Disconnect Reason: {BLEErrorCode(reason).name}")
         self.gatt_server.clear_connection_settings()
+        self.do_set_advertise_enable(Advertising.ENABLED)
+
 
     @register_event(0x0E, hci_event_handlers)
     def on_hci_event_command_complete(self, data):
@@ -349,61 +352,6 @@ class BluetoothLEConnection:
         # v5.4  Vol 4 Part E 5.4.4 Mentions Vendor Specific Debugging Event
         # Event Code = 0xFF
         print(self.event_text, "Vendor Specific")
-
-    def on_hci_event(self, data):
-        event_code = bu.to_u8(data, 1)
-        handler = hci_event_handlers.get(event_code)
-        if handler:
-            handler(self, data)
-        else:
-            print(self.event_text, f"Unhandled 0x{event_code:02X}")
-
-    def on_acl_packet(self, data):
-        # v5.4  Vol 4 Part E 5.4.2 HCI ACL Packet
-        handle = bu.to_bits_u16(data, 1, 0, 12)
-        if self.connection_handle is not None and handle != self.connection_handle:
-            print(f"Warning: Handle does not match 0x{handle:04X} != 0x{self.connection_handle:04X}")
-        pb =     bu.to_bits_u16(data, 1, 12, 2)
-        if pb != PacketBoundaryFlags.COMPLETE_MESSAGE:
-            print(f"Warning: PB is not a complete message.  Fragemented packets not tested ")
-        bc =     bu.to_bits_u16(data, 1, 14, 2)
-        if bc != BroadcastFlags.POINT_POINT:
-            print("Warning: BC only supports Point to Point.")
-        length = bu.to_u16(data, 3) 
- 
-        full_packet = False
-        # print('ACL header: handle: {}  bc: {}  pb: {}'.format(handle, bc, pb))
-        if pb & PacketBoundaryFlags.CONTINUING_FRAGMENT == PacketBoundaryFlags.CONTINUING_FRAGMENT:
-            size =     bu.to_u16(data, 5)
-            channel =  bu.to_u16(data, 7)
-            acl_data = bu.to_data_rest(data, 9)
-            full_packet = length - size == 4
-            print("Channel: {} Length: {} Data size: {} Full packet? {}".format(channel, length, size, full_packet))
-            # print("ACL packet:    ", bu.as_hex(acl_data))
-            self.acl_total_length = size
-            self.acl_packet =       acl_data
-        if pb & PacketBoundaryFlags.FIRST_FRAGMENT == PacketBoundaryFlags.FIRST_FRAGMENT:
-            print("ACL Packet Continuation")
-            acl_data = bu.to_data_rest(data, 5)
-            self.acl_packet += acl_data
-            print("ACL data:  ", bu.as_hex(acl_data))
-            if len(self.acl_packet) == self.acl_total_length:    # This was the last continuation packet
-                full_packet = True
-                # print("ACL Packet Final")
-                print("Full ACL data: ", bu.as_hex(self.acl_packet))
-        if full_packet:
-            self.on_acl_event(self.acl_packet)                 
-            
-    def on_data(self, data):
-        # v5.4  Vol 4 Part E 5.4.4 HCI Event Packet
-        # v5.4  Vol 4 Part E 5.4.2 HCI ACL Packet
-        packet_type = bu.to_u8(data, 0)
-        if   packet_type == HCIPacket.EVENT: 
-            self.on_hci_event(data)
-        elif packet_type == HCIPacket.ACL_DATA:
-            self.on_acl_packet(data)
-        else:
-            print("Unhandled packet type", packet_type)
 
     def event_mask_conversion(self, event_types, class_name):
         event_mask = [0] * 8
@@ -740,10 +688,17 @@ class BluetoothLEConnection:
         packet += bu.from_u16 (mtu_size)       # MTU size requested 
         self.send_acl(packet)
 
-    def do_att_exchange_mtu_rsp(self, mtu_size = 244):
+    @register_event(0x02, acl_event_handler)
+    def do_att_exchange_mtu_rsp(self, data, mtu_size = 244):
+        # v5.4  Vol 3 Part F 3.4.2.1 ATT_EXCHANGE_MTU_REQ
+        att_opcode_req = 0x02
+        cmd_name = "Exchance MTU"
+        print(self.att_req_text, f"{cmd_name} (0x{att_opcode_req:02X})")
+        client_rx_mtu = bu.to_u16(data, 1)
+        print(f"Client RX MTU = {client_rx_mtu}")
+
         # v5.4  Vol 3 Part F 3.4.2.2 ATT_EXCHANGE_MTU_RSP
         att_opcode = 0x03
-        cmd_name = "Exchance MTU"
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         packet =  bu.from_u8  (att_opcode)      
         packet += bu.from_u16 (mtu_size) 
@@ -754,20 +709,27 @@ class BluetoothLEConnection:
         att_opcode = 0x04
         cmd_name = "FIND INFORMATION"
         print(self.att_req_text, f"{cmd_name}: 0x{att_opcode:02X}")
-        
-        packet =  bu.from_u8(att_opcode)          # ATT opcode ATT_FIND_INFORMATION_REQ
+        packet =  bu.from_u8(att_opcode)
         packet += bu.from_u16(start_handle)
         packet += bu.from_u16(end_handle)
         self.send_acl(packet)
 
-    def do_att_find_information_rsp(self, start_handle, end_handle):
+    @register_event(0x04, acl_event_handler)
+    def do_att_find_information_rsp(self, data):
+        # v5.4  Vol 3 Part F 3.4.3.1 ATT_FIND_INFORMATION_REQ
+        att_opcode_req = 0x04
+        cmd_name = "FIND INFORMATION"
+        print(self.att_req_text, f"{cmd_name}: 0x{att_opcode_req:02X}")
+        start_handle = bu.to_u16(data, 1)
+        end_handle = bu.to_u16(data, 3)
+        print(f"Start Handle 0x{start_handle:04X}, End Handle 0x{end_handle:04X}")
+
         # v5.4  Vol 3 Part F 3.4.3.2 ATT_FIND_INFORMATION_RSP
         att_opcode = 0x05
-        cmd_name = "FIND INFORMATION"
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         return_code, uuid_format, handle_uuid = self.gatt_server.find_information(start_handle, end_handle)
         if return_code != ATTErrorCode.SUCCESS:
-            self.do_att_error_rsp(0x04, start_handle, return_code) 
+            self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
             return
         packet =  bu.from_u8(att_opcode)
         packet += bu.from_u8(uuid_format)
@@ -777,31 +739,71 @@ class BluetoothLEConnection:
             packet += uuid
         self.send_acl(packet)
 
+    @register_event(0x06, acl_event_handler)
+    def do_att_find_by_type_rsp(self, data):
+        # v5.4  Vol 3 Part F 3.4.3.3 ATT_FIND_BY_TYPE_VALUE_REQ
+        att_opcode_req = 0x06
+        cmd_name = "FIND BY TYPE"
+        print(self.att_req_text, f"{cmd_name}: 0x{att_opcode_req:02X}")
+        start_handle = bu.to_u16(data, 1)
+        end_handle = bu.to_u16(data, 3)
+        print(f"Start Handle 0x{start_handle:04X}, End Handle 0x{end_handle:04X}")
+        att_uuid = bu.to_u16(data, 5)
+        att_value = data[7:]
+        print(f"UUID to find 0x{att_uuid:04X}, {att_value}")
+
+        # v5.4  Vol 3 Part F 3.4.3.4 ATT_FIND_BY_TYPE_VALUE_RSP
+        att_opcode = 0x07
+        print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
+        return_code, value_handles = self.gatt_server.find_by_value(start_handle,
+                                                end_handle, att_uuid, att_value)
+        if return_code != ATTErrorCode.SUCCESS:
+            self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
+            return
+        packet =  bu.from_u8(att_opcode)
+        for i in range(0, len(value_handles), 2):
+            packet += bu.from_u16(value_handles[i])
+            if i + 1 < len(value_handles):
+                packet += bu.from_u16(value_handles[i + 1])
+            else:
+                packet += bu.from_u16(value_handles[i])
+        self.send_acl(packet)
+
     def do_att_read_by_type_req(self, start_handle, end_handle, attribute_type):
         # v5.4  Vol 3 Part F 3.4.4.1 ATT_READ_BY_TYPE_REQ
         att_opcode = 0x08
         cmd_name = "READ BY TYPE"
         print(self.att_req_text, f"{cmd_name}: 0x{att_opcode:02X}")
-        packet =  bu.from_u8  (att_opcode)               # ATT opcode ATT_READ_BY_TYPE_REQ
+        packet =  bu.from_u8  (att_opcode) 
         packet += bu.from_u16 (start_handle)
         packet += bu.from_u16 (end_handle)
         packet += bu.from_u16 (attribute_type)        
         self.send_acl(packet)
 
-    def do_att_read_by_type_rsp(self, start_handle, end_handle, uuid):
+    @register_event(0x08, acl_event_handler)
+    def do_att_read_by_type_rsp(self, data):
+        # v5.4  Vol 3 Part F 3.4.4.1 ATT_READ_BY_TYPE_REQ
+        att_opcode_req = 0x08
+        cmd_name = "READ BY TYPE"
+        print(self.att_req_text, f"{cmd_name}: 0x{att_opcode_req:02X}")
+        start_handle = bu.to_u16(data, 1)
+        end_handle = bu.to_u16(data, 3)
+        uuid = bu.to_uuid(data[5:])
+        print(f"Start Handle 0x{start_handle:04X}, End Handle 0x{end_handle:04X}")
+        print(f"UUID = {uuid}")
+
         # v5.4  Vol 3 Part F 3.4.4.2 ATT_READ_BY_TYPE_RSP
         att_opcode = 0x09
-        cmd_name = "READ BY TYPE"
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         packet =  bu.from_u8  (att_opcode)
         if uuid == GATTAttributes.CHARACTERISTIC.value:
             return_code, char_decl = self.gatt_server.read_char_uuid_value(start_handle, end_handle)
             if return_code != ATTErrorCode.SUCCESS:
-                self.do_att_error_rsp(0x08, start_handle, return_code) 
+                self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
                 return
             elif not char_decl:
                 print("No CD Handle in range of 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
-                self.do_att_error_rsp(0x08, start_handle, return_code) 
+                self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
                 return
             else:
                 # len_char_item = len(char_decl)
@@ -812,11 +814,10 @@ class BluetoothLEConnection:
                 packet += bu.from_u8(prop_byte)
                 packet += bu.from_u16(value_handle)
                 packet += char_uuid
-        
         else:
             return_code, handle, data = self.gatt_server.read_uuid_value(start_handle, end_handle, uuid)
             if return_code != ATTErrorCode.SUCCESS:
-                self.do_att_error_rsp(0x08, start_handle, return_code) 
+                self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
                 return  
             packet += bu.from_u8(2 + len(data))
             packet += bu.from_u16 (handle)
@@ -833,31 +834,49 @@ class BluetoothLEConnection:
         packet += bu.from_u16 (handle)
         self.send_acl(packet)
 
-    def do_att_read_rsp(self, handle):
+    @register_event(0x0A, acl_event_handler)
+    def do_att_read_rsp(self, data):
+        # v5.4  Vol 3 Part F 3.4.4.3 ATT_READ_REQ
+        att_opcode_req = 0x0A
+        cmd_name = "READ"
+        print(self.att_req_text, f"{cmd_name}: 0x{att_opcode_req:02X}")
+        handle = bu.to_u16(data, 1)
+        print(f"Handle 0x{handle:04X}")
+
         # v5.4  Vol 3 Part F 3.4.4.4 ATT_READ_RSP
         att_opcode = 0x0B
         cmd_name = "READ"
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         return_code, byte_value = self.gatt_server.read_char_value(handle)
         if return_code != ATTErrorCode.SUCCESS: 
-            self.do_att_error_rsp(0x0A, handle, return_code)
+            self.do_att_error_rsp(att_opcode_req, handle, return_code)
             return
         else: 
             packet = bu.from_u8(att_opcode)
             packet += byte_value
             self.send_acl(packet)
 
-    def do_att_group_type_rsp(self, gatt_uuid, start_handle, end_handle):
+    @register_event(0x10, acl_event_handler)
+    def do_att_group_type_rsp(self, data):
+        # v5.4  Vol 3 Part F 3.4.4.9 ATT_READ_BY_GROUP_TYPE_REQ
+        att_opcode_req = 0x10
+        cmd_name = "GROUP TYPE"
+        print(self.att_req_text, f"{cmd_name}: 0x{att_opcode_req:02X}")
+        start_handle = bu.to_u16(data, 1)
+        end_handle = bu.to_u16(data, 3)
+        gatt_uuid = bu.to_uuid(data[5:])
+        print(f"Start Handle 0x{start_handle:04X}, End Handle 0x{end_handle:04X}")
+        print(f"UUID = {gatt_uuid}")
+
         # v5.4  Vol 3 Part F 3.4.4.10 ATT_READ_BY_GROUP_TYPE_RSP
         att_opcode = 0x11
-        cmd_name = "GROUP TYPE"
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         packet =  bu.from_u8  (att_opcode)    
         if gatt_uuid == GATTAttributes.PRIMARY_SERVICE.value:
             print("Get primary services for handles 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
             return_code, return_start_handle, return_end_handle, primary_uuid = self.gatt_server.get_service_handle_range(start_handle)
             if return_code != ATTErrorCode.SUCCESS: 
-                self.do_att_error_rsp(0x10, handle, return_code)
+                self.do_att_error_rsp(att_opcode_req, handle, return_code)
                 return
             print("Handles 0x{:04X} to 0x{:04X}".format(return_start_handle, return_end_handle))
             if end_handle < return_end_handle:
@@ -870,21 +889,29 @@ class BluetoothLEConnection:
             packet += primary_uuid
         else:
             print("GATT Attribute 0x{:04X} Not Implemented".format(gatt_uuid))
-            self.do_att_error_rsp(0x10, start_handle, ATTErrorCode.UNLIKELY_ERROR)
+            self.do_att_error_rsp(att_opcode_req, start_handle, ATTErrorCode.UNLIKELY_ERROR)
             return
         self.send_acl(packet)
 
-    def do_att_write_rsp(self, handle, value):
+    @register_event(0x12, acl_event_handler)
+    def do_att_write_rsp(self, data):
+        # v5.4  Vol 3 Part F 3.4.5.1 ATT_WRITE_REQ
+        att_opcode_req = 0x12
+        cmd_name = "WRITE"
+        print(self.att_req_text, f"{cmd_name}: 0x{att_opcode_req:02X}")
+        handle = bu.to_u16(data, 1)
+        value = data[3:]
+        print(f"Handle 0x{handle:04X}, Value {value}")
+
         # v5.4  Vol 3 Part F 3.4.5.2 ATT_WRITE_RSP
         att_opcode = 0x13
-        cmd_name = "WRITE"
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         return_code = self.gatt_server.write_char_value(handle, value)
         if return_code == ATTErrorCode.SUCCESS:
             packet =  bu.from_u8(att_opcode)   
             self.send_acl(packet)
         else:
-            self.do_att_error_rsp(0x12, handle, return_code)
+            self.do_att_error_rsp(att_opcode_req, handle, return_code)
 
     def check_notification(self):
         # v5.4  Vol 3 Part F 3.4.7.1 ATT_HANDLE_VALUE_NTF
@@ -922,18 +949,22 @@ class BluetoothLEConnection:
         packet += data
         self.send_acl(packet)
 
-    def ack_indication(self):
+    @register_event(0x1E, acl_event_handler)
+    def ack_indication(self, data):
         # v5.4  Vol 3 Part F 3.4.7.3 ATT_HANDLE_VALUE_CFM
-        att_opcode = 0x1E
+        att_opcode_req = 0x1E
         cmd_name = "Indication ACK"
-        print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
+        print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode_req:02X}")
         self.gatt_server.clear_ack()
 
-    def do_att_write_no_response(self, handle, value):
+    @register_event(0x52, acl_event_handler)
+    def do_att_write_no_response(self, data):
          # v5.4  Vol 3 Part F 3.4.5.3 ATT_WRITE_CMD
-        att_opcode = 0x52
+        att_opcode_req = 0x52
         cmd_name = "WRITE NO RESPONSE"
-        print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
+        print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode_req:02X}")
+        handle = bu.to_u16(data, 1)
+        value = data[3:]
         return_code = self.gatt_server.write_char_value(handle, value)
         if return_code != ATTErrorCode.SUCCESS:
             print("No response was requested but write was not successful, Error = 0x{:02X}".format(return_code))
@@ -941,76 +972,67 @@ class BluetoothLEConnection:
     def on_acl_event(self, data):
         print("ACL data:      ", bu.as_hex(data))
         att_opcode = bu.to_u8(data, 0)
-        # try:
-        #     if event in ACLResponse(att_opcode):
-        #         print(f"Warning: Should not get {ACLResponse(event).name} from client")
-        #         return
-        #     event = ACLRequest(att_opcode):
-
-
-
-
-
-        if att_opcode == 0x02:
-            print(self.att_req_text, "Exchange MTU (0x{:02X})".format(att_opcode))
-            client_rx_mtu = bu.to_u16(data, 1)
-            self.do_att_exchange_mtu_rsp()
-        elif att_opcode == 0x03:
-            print("Warning: Exchange MTU RSP (0x03) - should not get from client")
-            # server_rx_mtu = bu.to_u16(data, 1)
-        elif att_opcode == 0x04:
-            print(self.att_req_text, "Find Information (0x{:02X})".format(att_opcode))
-            start_handle = bu.to_u16(data, 1)
-            end_handle = bu.to_u16(data, 3)
-            self.do_att_find_information_rsp(start_handle, end_handle)
-        elif att_opcode == 0x05:
-            print("Warning: Find Information RSP (0x05) - should not get from client")      
-        elif att_opcode == 0x06:
-            print(self.att_req_text, "Find by Type Value (0x{:02X})".format(att_opcode))
-            start_handle = bu.to_u16(data, 1)
-            end_handle = bu.to_u16(data, 3)
-            att_uuid = bu.to_u16(data, 5)
-            att_value = data[7:]
-        elif att_opcode == 0x07:
-            print("Warning: Find by Type Value RSP (0x07) - should not get from client")         
-        elif att_opcode == 0x08:
-            start_handle = bu.to_u16(data, 1)
-            end_handle = bu.to_u16(data, 3)
-            uuid = bu.to_uuid(data[5:])
-            print(self.att_req_text, "Read by Type (0x{:02X}), UUID = {}".format(att_opcode, uuid))
-            self.do_att_read_by_type_rsp(start_handle, end_handle, uuid)
-        elif att_opcode == 0x09:
-            print("Read by Type RSP (0x09) - should not get from client")
-        elif att_opcode == 0x0A:
-            handle = bu.to_u16(data, 1)
-            print(self.att_req_text, "READ (0x{:02X})".format(att_opcode))
-            self.do_att_read_rsp(handle)
-        elif att_opcode == 0x0B:
-            print("Warning Read RSP (0x0B) - should not get from client")
-        elif att_opcode == 0x10:
-            start_handle = bu.to_u16(data, 1)
-            end_handle = bu.to_u16(data, 3)
-            uuid = bu.to_uuid(data[5:])
-            print(self.att_req_text, "Read by Group Request (0x{:02X}), UUID = {}".format(att_opcode, uuid))
-            self.do_att_group_type_rsp(uuid, start_handle, end_handle)
-        elif att_opcode == 0x11:
-            print("Warning: Read by Group RSP (0x11) - should not get from client") 
-        elif att_opcode == 0x12:
-            handle = bu.to_u16(data, 1)
-            value = data[3:]
-            print(self.att_req_text, "Write Request handle = 0x{:04X}, value = {}".format(handle, value))
-            self.do_att_write_rsp(handle, value)
-        elif att_opcode == 0x13:
-            print("Warning: Write RSP (0x13) - should not get from client") 
-        elif att_opcode == 0x1E:
-            self.ack_indication()
-        elif att_opcode == 0x52:
-            handle = bu.to_u16(data, 1)
-            value = data[3:]
-            print(self.att_req_text, "Write without response handle = 0x{:04X}, value = {}".format(handle, value))
-            self.do_att_write_no_response(handle, value)
+        handler = acl_event_handler.get(att_opcode)
+        if handler:
+            handler(self, data)
         else:
-            print("Warning: ATT Opcode 0x{:02X} Unknown".format(att_opcode))
+            print(self.event_text, f"Unhandled ATT Req 0x{att_opcode:02X}")
+
+    def on_hci_event(self, data):
+        event_code = bu.to_u8(data, 1)
+        handler = hci_event_handlers.get(event_code)
+        if handler:
+            handler(self, data)
+        else:
+            print(self.event_text, f"Unhandled HCI Req 0x{event_code:02X}")
+
+    def on_acl_packet(self, data):
+        # v5.4  Vol 4 Part E 5.4.2 HCI ACL Packet
+        handle = bu.to_bits_u16(data, 1, 0, 12)
+        if self.connection_handle is not None and handle != self.connection_handle:
+            print(f"Warning: Handle does not match 0x{handle:04X} != 0x{self.connection_handle:04X}")
+        pb =     bu.to_bits_u16(data, 1, 12, 2)
+        if pb != PacketBoundaryFlags.COMPLETE_MESSAGE:
+            print(f"Warning: PB is not a complete message.  Fragemented packets not tested ")
+        bc =     bu.to_bits_u16(data, 1, 14, 2)
+        if bc != BroadcastFlags.POINT_POINT:
+            print("Warning: BC only supports Point to Point.")
+        length = bu.to_u16(data, 3) 
+ 
+        full_packet = False
+        # print('ACL header: handle: {}  bc: {}  pb: {}'.format(handle, bc, pb))
+        if pb & PacketBoundaryFlags.CONTINUING_FRAGMENT == PacketBoundaryFlags.CONTINUING_FRAGMENT:
+            size =     bu.to_u16(data, 5)
+            channel =  bu.to_u16(data, 7)
+            acl_data = bu.to_data_rest(data, 9)
+            full_packet = length - size == 4
+            print("Channel: {} Length: {} Data size: {} Full packet? {}".format(channel, length, size, full_packet))
+            # print("ACL packet:    ", bu.as_hex(acl_data))
+            self.acl_total_length = size
+            self.acl_packet =       acl_data
+        if pb & PacketBoundaryFlags.FIRST_FRAGMENT == PacketBoundaryFlags.FIRST_FRAGMENT:
+            print("ACL Packet Continuation")
+            acl_data = bu.to_data_rest(data, 5)
+            self.acl_packet += acl_data
+            print("ACL data:  ", bu.as_hex(acl_data))
+            if len(self.acl_packet) == self.acl_total_length:    # This was the last continuation packet
+                full_packet = True
+                # print("ACL Packet Final")
+                print("Full ACL data: ", bu.as_hex(self.acl_packet))
+        if full_packet:
+            self.on_acl_event(self.acl_packet)                 
+            
+    def on_data(self, data):
+        # v5.4  Vol 4 Part E 5.4.4 HCI Event Packet
+        # v5.4  Vol 4 Part E 5.4.2 HCI ACL Packet
+        packet_type = bu.to_u8(data, 0)
+        if   packet_type == HCIPacket.EVENT: 
+            self.on_hci_event(data)
+        elif packet_type == HCIPacket.ACL_DATA:
+            self.on_acl_packet(data)
+        else:
+            print("Unhandled packet type", packet_type)
+
 
 if __name__ == "__main__":
     bc = BluetoothLEConnection()

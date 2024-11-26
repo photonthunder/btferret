@@ -18,6 +18,8 @@ class GattServer:
         self.indication_waiting_ack = None
         self.indication_sent_time = None 
         self.indication_timeout = 30 
+        self.min_handle = None
+        self.max_handle = None
 
     def create_pnp_id(self, vendor_id_source = 0x01, vendor_id = 0x1234, product_id = 0x0203, product_version = 0x0001):
         # vendor_id_source = 0x01   # Bluetooth SIG
@@ -206,9 +208,9 @@ class GattServer:
         }
         # Once gatt table is stable don't have to update service characteristics
         handles = self.gatt_table.keys()
-        min_handle = min(handles)
-        max_handle = max(handles)
-        self.updateServiceCharacteristic(min_handle, max_handle)
+        self.min_handle = min(handles)
+        self.max_handle = max(handles)
+        self.updateServiceCharacteristic(self.min_handle, self.max_handle)
         self.check_gatt_table()
 
     def clear_connection_settings(self):
@@ -549,6 +551,34 @@ class GattServer:
                         return ATTErrorCode.SUCCESS, uuid_format, handle_uuid
         return ATTErrorCode.SUCCESS, uuid_format, handle_uuid
 
+    def find_group_end_handle(self, handle):
+        group_handle = handle
+        for handle in range(handle, self.max_handle + 1):
+            if handle in self.gatt_table:
+                handle_type = self.gatt_table[handle].get("type")
+                if handle_type != "primary_service":
+                    group_handle = handle
+                else:
+                    break
+        return group_handle
+
+    def find_by_value(self, start_handle, end_handle, target_uuid, target_value):
+        handle_match = []
+        for handle in range(start_handle, end_handle + 1):
+            if handle in self.gatt_table:
+                uuid = self.gatt_table[handle].get("uuid")
+                # print(uuid, target_uuid)
+                if uuid == target_uuid:
+                    value = self.gatt_table[handle].get("value")
+                    if value == target_value:
+                        handle_match.append(target_value)
+                        handle.match.append(self.find_group_end_handle(start_handle))
+            else:
+                return ATTErrorCode.INVALID_HANDLE, None
+        if len(handle_match) > 0:
+            return ATTErrorCode.SUCCESS, handle_match
+        print(f"No value match {uuid} found bewtween 0x{start_handle:04X} and 0x{end_handle:04X}")
+        return ATTErrorCode.ATTRIBUTE_NOT_FOUND, None
 
     def read_uuid_value(self, start_handle, end_handle, target_uuid):     
         for handle in range(start_handle, end_handle + 1):
