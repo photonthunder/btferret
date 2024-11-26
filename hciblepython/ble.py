@@ -9,8 +9,8 @@ from ble_enum import BLEErrorCode, BroadcastFlags
 from ble_enum import CentralClockAccuracy
 from ble_enum import EventMask, EventType
 from ble_enum import GATTAttributes
-from ble_enum import HCIEvents, HCIPacket
-from ble_enum import InitiatorFilter, MetaEvent
+from ble_enum import HCIPacket
+from ble_enum import InitiatorFilter
 from ble_enum import PacketBoundaryFlags, PeerAddressType, Role
 from ble_enum import ScanningFilter, ScanningFilterDuplicate
 from ble_enum import ScanEnable, ScanningStatus, ScanningType
@@ -24,22 +24,6 @@ import byte_utils as bu
 hci_event_handlers = {}
 meta_event_handlers = {}
 acl_event_handler = {}
-
-
-# def register_event(handlers):
-#     def decorator(func):
-#         # Access the `event_code` variable inside the function
-#         func_vars = func.__code__.co_names  # Get variable names in the function
-#         if "event_code" in func_vars:
-#             event_code = func.__globals__.get("event_code", None)  # Retrieve value from globals if declared globally
-#             if event_code is None:
-#                 raise ValueError(f"'event_code' must be defined in the function '{func.__name__}'")
-#         else:
-#             raise ValueError(f"'event_code' not found in function '{func.__name__}'")
-
-#         handlers[event_code] = func
-#         return func
-#     return decorator
 
 def register_event(event_code, registry):
     def decorator(func):
@@ -159,7 +143,7 @@ class BluetoothLEConnection:
         else:
             print(f'Unknown Status Event: {cmd} ({hex(cmd)}), {status_text}')
 
-    @register_event(MetaEvent.CONNECTION_COMPLETE, meta_event_handlers)
+    @register_event(0x01, meta_event_handlers)
     def on_le_connection_complete(self, data):
         # v5.4  Vol 4 Part E 7.7.65.1 LE Connection Complete
         # Subevent Code =  0x01
@@ -185,7 +169,7 @@ class BluetoothLEConnection:
         print(f"Supervision Timeout {SupervisionTimeout.to_time(supervision_timeout)} seconds")
         print(f"Central Clock Accuracy = {CentralClockAccuracy(central_clock_accuracy).name} ppm")
 
-    @register_event(MetaEvent.ADVERTISING_REPORT, meta_event_handlers)
+    @register_event(0x02, meta_event_handlers)
     def on_le_advertising_report(self, data):
         # v5.4 Vol 4 Part E 7.7.65.2 LE Advertising Report
         # Subevent Code = 0x02
@@ -211,7 +195,7 @@ class BluetoothLEConnection:
             print(f"Report Data: {report_data}")
             print(f"RSSI: {rssi} dBm")
               
-    @register_event(MetaEvent.UPDATE_COMPLETE, meta_event_handlers)
+    @register_event(0x03, meta_event_handlers)
     def on_le_update_complete(self, data):
         # v5.4  Vol 4 Part E 7.7.65.3 LE Connection Update Complete
         # Subevent Code = 0x03
@@ -229,7 +213,7 @@ class BluetoothLEConnection:
         print("Peripheral Latency 0x{peripheral_latency:04X} connection events}")
         print("Supervision Timeout {SupervisionTimeout.to_time(supervision_timeout)} seconds}")
 
-    @register_event(MetaEvent.READ_REMOTE, meta_event_handlers)
+    @register_event(0x04, meta_event_handlers)
     def on_le_read_remote_features_complete(self, data):
         # v5.4  Vol 4 Part E 7.7.65.4 LE Read Remote Features Complete
         # Subevent Code = 0x04
@@ -242,7 +226,7 @@ class BluetoothLEConnection:
         features = bu.to_data_rest(data, 7)
         print("Handle: {} Features {}".format(handle, bu.as_hex(features)))
 
-    @register_event(MetaEvent.DATA_LENGTH_CHANGE, meta_event_handlers)
+    @register_event(0x07, meta_event_handlers)
     def on_le_data_length_change(self, data):
         # v5.4  Vol 4 Part E 7.7.65.7 LE Data Length CHange Event
         # Subevent Code = 0x07
@@ -255,7 +239,7 @@ class BluetoothLEConnection:
         print(f"Max TX Octets: 0x{max_tx_octets:04X}, Max TX Time:  0x{max_tx_octets:04X}")
         print(f"Max RX Octets: 0x{max_tx_octets:04X}, Max RX Time:  0x{max_tx_octets:04X}")
 
-    @register_event(MetaEvent.READ_PUBLIC_KEY, meta_event_handlers)
+    @register_event(0x08, meta_event_handlers)
     def on_le_read_local_public_key(self, data):
         # v5.4  Vol 4 Part E 7.7.65.8 LE Read Local P-256 Public Key Complete
         # Subevent Code = 0x08
@@ -267,7 +251,7 @@ class BluetoothLEConnection:
         key_y_coordinate = bu.to_data(data, 37, 69) # 32 octets
         print(self.event_text, "Read Local Public Key Complete")
 
-    @register_event(HCIEvents.INQUIRY_COMPLETE, hci_event_handlers)
+    @register_event(0x01, hci_event_handlers)
     def on_hci_inquiry_complete(self, data):
         # v5.4  Vol 4 Part E 7.7.1 HCI Inquiry Complete
         # Event Code = 0x01
@@ -278,7 +262,7 @@ class BluetoothLEConnection:
         else:
             print("HCI Inquiry Complete")
 
-    @register_event(HCIEvents.DISCONNECTION_COMPLETE, hci_event_handlers)
+    @register_event(0x05, hci_event_handlers)
     def on_hci_event_disconnect_complete(self, data):
         # v5.4  Vol 4 Part E 7.7.5 HCI Disconnection Complete
         # Event Code = 0x05
@@ -296,7 +280,7 @@ class BluetoothLEConnection:
             print("Disconnect Reason: {BLEErrorCode(reason).name}")
         self.gatt_server.clear_connection_settings()
 
-    @register_event(HCIEvents.COMMAND_COMPLETE, hci_event_handlers)
+    @register_event(0x0E, hci_event_handlers)
     def on_hci_event_command_complete(self, data):
         # v5.4  Vol 4 Part E 7.7.14 HCI Command Complete
         # Event Code = 0x0E
@@ -310,7 +294,7 @@ class BluetoothLEConnection:
             return
         self.handle_le_command(cmd, data[6:])
 
-    @register_event(HCIEvents.COMMAND_STATUS, hci_event_handlers)
+    @register_event(0x0F, hci_event_handlers)
     def on_hci_event_command_status(self, data):
         # v5.4  Vol 4 Part E 7.7.15 HCI_Command_Status
         # Event Code = 0x0F
@@ -325,7 +309,7 @@ class BluetoothLEConnection:
         opcode = bu.to_u16 (data, 5)
         self.handle_le_status(opcode)
 
-    @register_event(HCIEvents.COMPLETED_PACKETS, hci_event_handlers)
+    @register_event(0x13, hci_event_handlers)
     def on_hci_event_number_of_completed_packets(self, data):
         # v5.4  Vol 4 Part E 7.7.19 HCI Number Of Completed Packets
         # Event Code = 0x13
@@ -347,25 +331,20 @@ class BluetoothLEConnection:
             print(f"Handle 0x{handle:04X}, Connections = {connections}, Total Connections = {new_count}")
 
         # Appears that some use this as an ack to indication
-        self.gatt_server.clear_ack()  
+        # self.gatt_server.clear_ack()  
 
-    @register_event(HCIEvents.META_EVENT, hci_event_handlers)
+    @register_event(0x3E, hci_event_handlers)
     def on_hci_meta_event(self, data):
         # v5.4  Vol 4 Part E 7.7.65 LE Meta event
         # Event Code = 0x3E
         event_code = bu.to_u8(data, 3)
-        try:
-            event = MetaEvent(event_code)
-        except ValueError:
-            print(self.event_text, f"Event 0x{event_code:02X} not in MetaEvents List")
-            return
-        handler = meta_event_handlers.get(event)
+        handler = meta_event_handlers.get(event_code)
         if handler:
             handler(self, data)
         else:
-            print(self.event_text, f"Unhandled MetaEvent 0x{event:02X}")
+            print(self.event_text, f"Unhandled MetaEvent 0x{event_code:02X}")
         
-    @register_event(HCIEvents.VENDOR_SPECIFIC, hci_event_handlers)
+    @register_event(0xFF, hci_event_handlers)
     def on_hci_event_vendor_specific (self, data):
         # v5.4  Vol 4 Part E 5.4.4 Mentions Vendor Specific Debugging Event
         # Event Code = 0xFF
@@ -373,16 +352,11 @@ class BluetoothLEConnection:
 
     def on_hci_event(self, data):
         event_code = bu.to_u8(data, 1)
-        try:
-            event = HCIEvents(event_code)
-        except ValueError:
-            print(self.event_text, f"Event 0x{event_code:02X} not in HCIEvents List")
-            return
-        handler = hci_event_handlers.get(event)
+        handler = hci_event_handlers.get(event_code)
         if handler:
             handler(self, data)
         else:
-            print(self.event_text, f"Unhandled 0x{event:02X}")
+            print(self.event_text, f"Unhandled 0x{event_code:02X}")
 
     def on_acl_packet(self, data):
         # v5.4  Vol 4 Part E 5.4.2 HCI ACL Packet
@@ -762,68 +736,64 @@ class BluetoothLEConnection:
         att_opcode = 0x02
         cmd_name = "Exchance MTU"
         print(self.att_req_text, f"{cmd_name}: 0x{att_opcode:02X}")
-        packet =  bu.from_u8  (0x02)           # ATT opcode ATT_EXCHANGE_MTU_REQ
+        packet =  bu.from_u8  (att_opcode)           # ATT opcode ATT_EXCHANGE_MTU_REQ
         packet += bu.from_u16 (mtu_size)       # MTU size requested 
         self.send_acl(packet)
 
     def do_att_exchange_mtu_rsp(self, mtu_size = 244):
+        # v5.4  Vol 3 Part F 3.4.2.2 ATT_EXCHANGE_MTU_RSP
         att_opcode = 0x03
-        print(self.att_rsp_text, "EXCHANGE MTU (0x03)")
+        cmd_name = "Exchance MTU"
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
-
-        packet =  bu.from_u8  (0x03)      
+        packet =  bu.from_u8  (att_opcode)      
         packet += bu.from_u16 (mtu_size) 
         self.send_acl(packet)
 
-
     def do_att_find_information_req(self, start_handle, end_handle):
-        # v5.4  Vol 3 Part F 3.4.3.1 ATT_FIND_INFORMATION_REQ (p1418)
+        # v5.4  Vol 3 Part F 3.4.3.1 ATT_FIND_INFORMATION_REQ
         att_opcode = 0x04
-
-        print(self.att_req_text, "FIND INFORMATION (0x04)")
+        cmd_name = "FIND INFORMATION"
         print(self.att_req_text, f"{cmd_name}: 0x{att_opcode:02X}")
         
-        packet =  bu.from_u8(0x04)          # ATT opcode ATT_FIND_INFORMATION_REQ
+        packet =  bu.from_u8(att_opcode)          # ATT opcode ATT_FIND_INFORMATION_REQ
         packet += bu.from_u16(start_handle)
         packet += bu.from_u16(end_handle)
         self.send_acl(packet)
 
     def do_att_find_information_rsp(self, start_handle, end_handle):
+        # v5.4  Vol 3 Part F 3.4.3.2 ATT_FIND_INFORMATION_RSP
         att_opcode = 0x05
-        print(self.att_rsp_text, "FIND INFORMATION (0x05)")
+        cmd_name = "FIND INFORMATION"
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         return_code, uuid_format, handle_uuid = self.gatt_server.find_information(start_handle, end_handle)
         if return_code != ATTErrorCode.SUCCESS:
             self.do_att_error_rsp(0x04, start_handle, return_code) 
             return
-        packet =  bu.from_u8(0x05)
+        packet =  bu.from_u8(att_opcode)
         packet += bu.from_u8(uuid_format)
         for each_handle_uuid in handle_uuid:
             handle, uuid = each_handle_uuid
             packet += bu.from_u16(start_handle)
             packet += uuid
         self.send_acl(packet)
-        
-
 
     def do_att_read_by_type_req(self, start_handle, end_handle, attribute_type):
         # v5.4  Vol 3 Part F 3.4.4.1 ATT_READ_BY_TYPE_REQ
         att_opcode = 0x08
-
-        print(self.att_req_text, "READ BY TYPE (0x08)")
+        cmd_name = "READ BY TYPE"
         print(self.att_req_text, f"{cmd_name}: 0x{att_opcode:02X}")
-        
-        packet =  bu.from_u8  (0x08)               # ATT opcode ATT_READ_BY_TYPE_REQ
+        packet =  bu.from_u8  (att_opcode)               # ATT opcode ATT_READ_BY_TYPE_REQ
         packet += bu.from_u16 (start_handle)
         packet += bu.from_u16 (end_handle)
         packet += bu.from_u16 (attribute_type)        
         self.send_acl(packet)
 
     def do_att_read_by_type_rsp(self, start_handle, end_handle, uuid):
+        # v5.4  Vol 3 Part F 3.4.4.2 ATT_READ_BY_TYPE_RSP
         att_opcode = 0x09
-        print(self.att_rsp_text, "READ BY TYPE (0x09)")
+        cmd_name = "READ BY TYPE"
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
-        packet =  bu.from_u8  (0x09)
+        packet =  bu.from_u8  (att_opcode)
         if uuid == GATTAttributes.CHARACTERISTIC.value:
             return_code, char_decl = self.gatt_server.read_char_uuid_value(start_handle, end_handle)
             if return_code != ATTErrorCode.SUCCESS:
@@ -854,33 +824,35 @@ class BluetoothLEConnection:
         self.send_acl(packet)
 
     def do_att_read_req(self, handle):
-        # v5.4  Vol 3 Part F 3.4.4.1 ATT_READ_REQ (p1425)
+        # v5.4  Vol 3 Part F 3.4.4.3 ATT_READ_REQ
         att_opcode = 0x0A
-
-        print(self.att_req_text, "GROUP TYPE (0x0A)")
+        cmd_name = "READ"
         print(self.att_req_text, f"{cmd_name}: 0x{att_opcode:02X}")
         
-        packet =  bu.from_u8  (0x0A)               # ATT opcode ATT_READ_REQ
+        packet =  bu.from_u8  (att_opcode)
         packet += bu.from_u16 (handle)
         self.send_acl(packet)
 
     def do_att_read_rsp(self, handle):
+        # v5.4  Vol 3 Part F 3.4.4.4 ATT_READ_RSP
         att_opcode = 0x0B
-        print(self.att_rsp_text, "READ (0x0B)")
+        cmd_name = "READ"
+        print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         return_code, byte_value = self.gatt_server.read_char_value(handle)
         if return_code != ATTErrorCode.SUCCESS: 
             self.do_att_error_rsp(0x0A, handle, return_code)
             return
         else: 
-            packet = bu.from_u8(0x0B)
+            packet = bu.from_u8(att_opcode)
             packet += byte_value
             self.send_acl(packet)
 
     def do_att_group_type_rsp(self, gatt_uuid, start_handle, end_handle):
+        # v5.4  Vol 3 Part F 3.4.4.10 ATT_READ_BY_GROUP_TYPE_RSP
         att_opcode = 0x11
-        print(self.att_rsp_text, "GROUP TYPE (0x11)")
+        cmd_name = "GROUP TYPE"
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
-        packet =  bu.from_u8  (0x11)    
+        packet =  bu.from_u8  (att_opcode)    
         if gatt_uuid == GATTAttributes.PRIMARY_SERVICE.value:
             print("Get primary services for handles 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
             return_code, return_start_handle, return_end_handle, primary_uuid = self.gatt_server.get_service_handle_range(start_handle)
@@ -903,17 +875,21 @@ class BluetoothLEConnection:
         self.send_acl(packet)
 
     def do_att_write_rsp(self, handle, value):
+        # v5.4  Vol 3 Part F 3.4.5.2 ATT_WRITE_RSP
         att_opcode = 0x13
-        print(self.att_rsp_text, "WRITE (0x13)")
+        cmd_name = "WRITE"
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         return_code = self.gatt_server.write_char_value(handle, value)
         if return_code == ATTErrorCode.SUCCESS:
-            packet =  bu.from_u8(0x13)   
+            packet =  bu.from_u8(att_opcode)   
             self.send_acl(packet)
         else:
             self.do_att_error_rsp(0x12, handle, return_code)
 
     def check_notification(self):
+        # v5.4  Vol 3 Part F 3.4.7.1 ATT_HANDLE_VALUE_NTF
+        att_opcode = 0x1B
+        cmd_name = "NOTIFICATION"
         if self.client_connected == False:
             return
         notification_exists, handle, data = self.gatt_server.get_notification()
@@ -922,14 +898,16 @@ class BluetoothLEConnection:
         if handle == None or data == None:
             # print("Notification has no handle or data")
             return
-        att_opcode = 0x1B
-        print(self.att_rsp_text, "Notification (0x1B)")
-        packet =  bu.from_u8(0x1B) 
+        print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
+        packet =  bu.from_u8(att_opcode) 
         packet += bu.from_u16(handle)
         packet += data
         self.send_acl(packet)
 
     def check_indication(self):
+        # v5.4  Vol 3 Part F 3.4.7.2 ATT_HANDLE_VALUE_IND
+        att_opcode = 0x1D
+        cmd_name = "INDICATION"
         if self.client_connected == False:
             return
         indication_exists, handle, data = self.gatt_server.get_indication()
@@ -938,22 +916,23 @@ class BluetoothLEConnection:
         if handle == None or data == None:
             # print("Indication has no handle or data")
             return
-        att_opcode = 0x1D
-        print(self.att_rsp_text, "Indication (0x1D)")
-        packet =  bu.from_u8(0x1B) 
+        print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
+        packet =  bu.from_u8(att_opcode) 
         packet += bu.from_u16(handle)
         packet += data
         self.send_acl(packet)
 
     def ack_indication(self):
+        # v5.4  Vol 3 Part F 3.4.7.3 ATT_HANDLE_VALUE_CFM
         att_opcode = 0x1E
-        print("\nIndication ACK (0x1E)")
+        cmd_name = "Indication ACK"
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         self.gatt_server.clear_ack()
 
     def do_att_write_no_response(self, handle, value):
+         # v5.4  Vol 3 Part F 3.4.5.3 ATT_WRITE_CMD
         att_opcode = 0x52
-        print(self.att_rsp_text, "WRITE NO RESPONSE (0x52)")
+        cmd_name = "WRITE NO RESPONSE"
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         return_code = self.gatt_server.write_char_value(handle, value)
         if return_code != ATTErrorCode.SUCCESS:

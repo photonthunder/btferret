@@ -282,18 +282,6 @@ class GATTAttributes(Enum):
     CHARACTERISTIC_PRESENTATION_FORMAT = "2904"
     CHARACTERISTIC_AGGREGATE_FORMAT = "2905"
 
-# Not Complete list of HCI Events,
-# see Specification v5.4 Vol 4 Part E 7.7
-@unique
-class HCIEvents(IntEnum):
-    INQUIRY_COMPLETE = 0x01
-    DISCONNECTION_COMPLETE = 0x05
-    COMMAND_COMPLETE = 0x0E
-    COMMAND_STATUS = 0x0F
-    COMPLETED_PACKETS = 0x13
-    META_EVENT = 0x3E
-    VENDOR_SPECIFIC = 0xFF
-
 class HCIPacket(IntEnum):
     ACK = 0x00
     COMMAND = 0x01
@@ -307,17 +295,6 @@ class HCIPacket(IntEnum):
 class InitiatorFilter(IntEnum):
     FILTER_ACCEPT_NOT_USED = 0x00
     FILTER_ACCEPT_USED = 0x01
-
-# Not Complete list of LE Meta Events,
-# see Specification v5.4 Vol 4 Part E 7.7.65
-@unique
-class MetaEvent(IntEnum):
-    CONNECTION_COMPLETE = 0x01
-    ADVERTISING_REPORT = 0x02
-    UPDATE_COMPLETE = 0x03
-    READ_REMOTE = 0x04
-    DATA_LENGTH_CHANGE = 0x07
-    READ_PUBLIC_KEY = 0x08
 
 class PacketBoundaryFlags(IntEnum):
     CONTINUING_FRAGMENT = 0b00
