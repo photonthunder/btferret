@@ -19,16 +19,14 @@ def to_u8 (byts, ind):
 
 def to_uuid (uuid_bytes):
     if len(uuid_bytes) == 2:
-        # Convert 2-byte UUID to a 4-character hex string
-        return "{:02X}{:02X}".format(uuid_bytes[1], uuid_bytes[0])
+        return b"{:02X}{:02X}".format(uuid_bytes[1], uuid_bytes[0])
     elif len(uuid_bytes) == 16:
-        # Reverse the bytes and convert 16-byte UUID to string format with dashes
         reversed_uuid_bytes = uuid_bytes[::-1]
         uuid_str = ''.join(f"{b:02X}" for b in reversed_uuid_bytes)
         return f"{uuid_str[0:8]}-{uuid_str[8:12]}-{uuid_str[12:16]}-{uuid_str[16:20]}-{uuid_str[20:32]}"
     else:
         return None
-    
+
 def to_string(byts):
     return byts.decode('utf-8')
 
@@ -69,11 +67,13 @@ def from_uuid(uuid):
         little_endian_bytes = byte_pairs[::-1]
         little_endian_bytes = bytes(int(byte, 16) for byte in little_endian_bytes)
         return little_endian_bytes
+    if isinstance(uuid, int):
+        byte_string = str(num).encode('utf-8')
     return None
 
 def from_string(val):
     if isinstance(val, str):
-        return val.encode("utf-8")
+        return val.encode('utf-8')
     return None
 
 def from_addr(val):

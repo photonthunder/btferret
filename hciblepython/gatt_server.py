@@ -1,34 +1,55 @@
 #!/usr/bin/env python3
 # from ble_enum import ATTErrorCode
-# from ble_enum import GATTAttributes
-from gatt_enum import CCCD, PERM_FLAGS, PROP_FLAGS
+from gatt_enum import ATTR, CCCD, PERM_FLAGS, PROP_FLAGS
 import byte_utils as bu
 import logging
 import time
 import bisect
 
-class Handles:
-    def __init__(self):
-        self.min_handle = 0x0003
-        self.max_handle = 0xFFFF
-        self.primary_service_handles = []  # Stores a list of handles
+class GattHandles:
+    _instance = None
 
-    def set_min_handle(self, handle):
-        if handle < 0 or handle > self.max_handle:
-            print(f"min_handle 0x{handle:04X} must be between 0x0000 and 0x{self.max_handle:04X}.")
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls, *args, **kwargs)
+        cls._instance.min_handle = 0x0000
+        cls._instance.max_handle = 0xFFFF
+        cls.instance.start_handle = 0x0003
+        cls.instance.next_handle = cls.instance.start_handle
+        cls.instance.end_handle = cls.instance.start_handle
+        cls._instance.primary_service_handles = []  # Stores a list of handles
+        return cls._instance
+
+    def set_start_handle(self, start_handle):
+        if start_handle < self.min_handle or start_handle > self.end_handle:
+            print(f"start_handle 0x{start_handle:04X} must be between 0x{self.min_handle:04X} and 0x{self.end_handle:04X}.")
             return False
-        self.min_handle = handle
+        self.start_handle = start_handle
         return True
 
-    def set_max_handle(self, handle):
-        if handle < self.min_handle or handle > 0xFFFF:
-            print(f"max_handle 0x{handle:04X} must be between 0x{self.min_handle:04X} and 0xFFFF.")
+    def set_end_handle(self, end_handle):
+        if end_handle < self.start_handle or end_handle > self.max_handle:
+            print(f"end_handle 0x{end_handle:04X} must be between 0x{self.start_handle:04X} and 0x{self.max_handle:04X}.")
             return False
-        self.max_handle = handle
+        self.end_handle = end_handle
+        return True
+
+    def get_new_handle(self):
+        new_handle = self.next_handle
+        if new_handle < self.start_handle or new_handle > self.end_handle:
+            print(f"new_handle 0x{new_handle:04X} must be between 0x{self.start_handle:04X} and 0x{self.end_handle:04X}.")
+            return None
+        next_handle = new_handle + 1
+        if next_handle > self.max_handle:
+            print(f"No handles available: next_handle 0x{next_handle:04X} > 0x{self.max_handle:04X}.")
+            return None
+        self.next_handle = next_handle
+        self.set_end_handle(next_handle)
+        return new_handle
 
     def add_primary_service_handle(self, handle):
         if handle < self.min_handle or handle > self.max_handle:
-            print("PS Handle must be within 0x{self.min_handle:04X} and 0x{self.max_handle:04X}.")
+            print(f"PS Handle must be within 0x{self.min_handle:04X} and 0x{self.max_handle:04X}.")
             return False
         if handle not in self.primary_service_handles:
             bisect.insort(self.primary_service_handles, handle)
@@ -44,35 +65,51 @@ class Handles:
         self.primary_service_handles.clear()
 
     def __repr__(self):
-        """String representation of the Handles class."""
+        handles_hex = [f"0x{handle:04X}\n" for handle in self.primary_service_handles]
         return (
-            f"Handles(min_handle={hex(self.min_handle)}, "
-            f"max_handle={hex(self.max_handle)}, "
-            f"primary_service_handles={self.primary_service_handles})"
+            f"Handles(min_handle={0x(self.min_handle:04X)}\n"
+            f"max_handle={0x(self.max_handle:04X)}\n"
+            f"primary_service_handles\n{handles_hex})"
         )
 
 class Characteristic:
     def __init__(
         self,
-        uuid: str,
+        uuid: bytes,
         properties: list[PROP_FLAGS],
-        value: bytes = b"",
+        value: bytes,
         permissions: list[PERM_FLAGS] = None,
         constant=False,
-        value_handle=None,
+        fixed_length = False,
+        length = None
     ):
         self.uuid = uuid
         self.properties = properties
-        self.permissions = permissions or []
+        self.permissions = permissions
         self.value = value
         self.constant = constant
-        self.value_handle = value_handle
-        self.descriptors = {}
+        self.fixed_length = fixed_length
+        self.length = length
+        self.descr_uuid = None
+        self.descr_value = None
+        self.gatt_handles = GattHandles
+        self.cd_handle = None
+        self.value_handle = None
+        self.descr_handle = None
 
-    def add_descriptor(self, uuid: str, value: bytes):
-        self.descriptors[uuid] = value
+    def set_handles(self):
+        self.cd_handle = self.gatt_handles.get_new_handle()
+        self.value_handle = self.gatt_handles.get_new_handle()
 
-    def remove_descriptor(self, uuid: str):
+    def need_descriptor(self):
+        if self.properties & (PROP_FLAGS.NOTIFY | PROP_FLAGS.INDICATE):
+            self.add_descriptor()
+
+    def add_descriptor(self, ):
+        self.descr_handle = self.gatt_handles.get_new_handle()
+        self.descr_value = CCCD.DISABLED
+
+    def remove_descriptor(self):
         if uuid in self.descriptors:
             del self.descriptors[uuid]
 

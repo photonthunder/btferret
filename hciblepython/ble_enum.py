@@ -1,7 +1,6 @@
 # Specification v5.4  Vol 4 Part E
 
 from enum import IntEnum
-from enum import Enum
 from enum import unique
 
 class Address(IntEnum):
@@ -269,18 +268,6 @@ class EventType(IntEnum):
     PERIODIC_ADV_SUBEVENT_DATA_REQUEST = 38
     PERIODIC_ADV_RESPONSE_REPORT = 39
     ENHANCED_CONNECTION_COMPLETE_V2 = 40
-
-class GATTAttributes(Enum):
-    PRIMARY_SERVICE = "2800"
-    SECONDARY_SERVICE = "2801"
-    INCLUDE = "2802"
-    CHARACTERISTIC = "2803"
-    CHARACTERISTIC_EXT_PROPERTIES = "2900"
-    CHARACTERISTIC_USER_DESC = "2901"
-    CLIENT_CHAR_CONFIG = "2902"
-    SERVER_CHAR_CONFIG = "2903"
-    CHARACTERISTIC_PRESENTATION_FORMAT = "2904"
-    CHARACTERISTIC_AGGREGATE_FORMAT = "2905"
 
 class HCIPacket(IntEnum):
     ACK = 0x00

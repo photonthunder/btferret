@@ -8,7 +8,6 @@ from ble_enum import ATTChannelID, ATTErrorCode
 from ble_enum import BLEErrorCode, BroadcastFlags
 from ble_enum import CentralClockAccuracy
 from ble_enum import EventMask, EventType
-from ble_enum import GATTAttributes
 from ble_enum import HCIPacket
 from ble_enum import InitiatorFilter
 from ble_enum import PacketBoundaryFlags, PeerAddressType, Role
@@ -19,6 +18,7 @@ from ble_time import ConnectionAcceptTimeout, ConnectionEventTime, ConnectionInt
 from ble_time import MaxLatency
 from ble_time import PageTimeout
 from ble_time import ScanningTime, SupervisionTimeout
+from gatt_enum import ATTR
 import byte_utils as bu
 
 hci_event_handlers = {}
@@ -796,7 +796,7 @@ class BluetoothLEConnection:
         att_opcode = 0x09
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         packet =  bu.from_u8  (att_opcode)
-        if uuid == GATTAttributes.CHARACTERISTIC.value:
+        if uuid == bu.from_uuid(ATTR.CHARACTERISTIC.value):
             return_code, char_decl = self.gatt_server.read_char_uuid_value(start_handle, end_handle)
             if return_code != ATTErrorCode.SUCCESS:
                 self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
@@ -872,7 +872,7 @@ class BluetoothLEConnection:
         att_opcode = 0x11
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         packet =  bu.from_u8  (att_opcode)    
-        if gatt_uuid == GATTAttributes.PRIMARY_SERVICE.value:
+        if gatt_uuid == bu.from_uuid(ATTR.PRIMARY_SERVICE.value):
             print("Get primary services for handles 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
             return_code, return_start_handle, return_end_handle, primary_uuid = self.gatt_server.get_service_handle_range(start_handle)
             if return_code != ATTErrorCode.SUCCESS: 

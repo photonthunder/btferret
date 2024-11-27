@@ -431,7 +431,7 @@ class GattServer:
 
     def read_table_variable(self, uuid):
         if uuid == "2A00":
-            return ATTErrorCode.SUCCESS, self.device_name.encode("utf-8")
+            return ATTErrorCode.SUCCESS, self.device_name.encode('utf-8')
         elif uuid == "2A01":
             return ATTErrorCode.SUCCESS, bu.from_u16(self.appearance)
         elif uuid == "2A05":

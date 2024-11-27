@@ -1,6 +1,16 @@
 from enum import IntEnum
-from enum import Enum
-from enum import unique
+
+class ATTR(IntEnum):
+    PRIMARY_SERVICE = 0x2800
+    SECONDARY_SERVICE = 0x2801
+    INCLUDE = 0x2802
+    CHARACTERISTIC = 0x2803
+    CHARACTERISTIC_EXT_PROPERTIES = 0x2900
+    CHARACTERISTIC_USER_DESC = 0x2901
+    CLIENT_CHAR_CONFIG = 0x2902
+    SERVER_CHAR_CONFIG = 0x2903
+    CHARACTERISTIC_PRESENTATION_FORMAT = 0x2904
+    CHARACTERISTIC_AGGREGATE_FORMAT = 0x2905
 
 class CCCD(IntEnum):  # Client Characteristic Configuration Descriptor
     DISABLED = 0x0000
@@ -25,5 +35,3 @@ class PROP_FLAGS(IntEnum):
     INDICATE = 0x20
     AUTH_SIGN_WRITE = 0x40
     EXTENDED_PROP = 0x80
-
-
