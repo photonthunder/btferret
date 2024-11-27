@@ -796,7 +796,7 @@ class BluetoothLEConnection:
         att_opcode = 0x09
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         packet =  bu.from_u8  (att_opcode)
-        if uuid == bu.from_uuid(ATTR.CHARACTERISTIC.value):
+        if uuid == bu.from_uuid_int(ATTR.CHARACTERISTIC):
             return_code, char_decl = self.gatt_server.read_char_uuid_value(start_handle, end_handle)
             if return_code != ATTErrorCode.SUCCESS:
                 self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
@@ -871,8 +871,8 @@ class BluetoothLEConnection:
         # v5.4  Vol 3 Part F 3.4.4.10 ATT_READ_BY_GROUP_TYPE_RSP
         att_opcode = 0x11
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
-        packet =  bu.from_u8  (att_opcode)    
-        if gatt_uuid == bu.from_uuid(ATTR.PRIMARY_SERVICE.value):
+        packet =  bu.from_u8  (att_opcode)   
+        if gatt_uuid == bu.from_uuid_int(ATTR.PRIMARY_SERVICE):
             print("Get primary services for handles 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
             return_code, return_start_handle, return_end_handle, primary_uuid = self.gatt_server.get_service_handle_range(start_handle)
             if return_code != ATTErrorCode.SUCCESS: 
@@ -888,7 +888,7 @@ class BluetoothLEConnection:
             packet += bu.from_u16(return_end_handle)
             packet += primary_uuid
         else:
-            print("GATT Attribute 0x{:04X} Not Implemented".format(gatt_uuid))
+            print(f"GATT Attribute {gatt_uuid} Not Implemented")
             self.do_att_error_rsp(att_opcode_req, start_handle, ATTErrorCode.UNLIKELY_ERROR)
             return
         self.send_acl(packet)

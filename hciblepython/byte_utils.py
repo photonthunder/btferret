@@ -19,11 +19,13 @@ def to_u8 (byts, ind):
 
 def to_uuid (uuid_bytes):
     if len(uuid_bytes) == 2:
-        return b"{:02X}{:02X}".format(uuid_bytes[1], uuid_bytes[0])
+        temp_string = "{:02X}{:02X}".format(uuid_bytes[1], uuid_bytes[0])
+        return temp_string.encode('utf-8')
     elif len(uuid_bytes) == 16:
         reversed_uuid_bytes = uuid_bytes[::-1]
         uuid_str = ''.join(f"{b:02X}" for b in reversed_uuid_bytes)
-        return f"{uuid_str[0:8]}-{uuid_str[8:12]}-{uuid_str[12:16]}-{uuid_str[16:20]}-{uuid_str[20:32]}"
+        # temp_string = f"{uuid_str[0:8]}-{uuid_str[8:12]}-{uuid_str[12:16]}-{uuid_str[16:20]}-{uuid_str[20:32]}"
+        return uuid_str.encode('utf-8')
     else:
         return None
 
@@ -60,17 +62,17 @@ def from_u16(val):
 def from_u32(val):
     return val.to_bytes(4, byteorder='little')
 
-def from_uuid(uuid):
-    if isinstance(uuid, str):
-        cleaned_uuid = clean_uuid(uuid)
-        byte_pairs = [cleaned_uuid[i:i+2] for i in range(0, len(cleaned_uuid), 2)]
-        little_endian_bytes = byte_pairs[::-1]
-        little_endian_bytes = bytes(int(byte, 16) for byte in little_endian_bytes)
-        return little_endian_bytes
-    if isinstance(uuid, int):
-        byte_string = str(num).encode('utf-8')
-    return None
+def from_uuid_int(uuid):
+    return format(uuid, 'X').encode('utf-8')
 
+def from_uuid(uuid):
+    if len(uuid) == 4:
+        num = int(uuid, 16)
+        little_endian_bytes = num.to_bytes(2, byteorder='little')
+        return little_endian_bytes
+    else:
+        return byte_uuid[::-1]
+    
 def from_string(val):
     if isinstance(val, str):
         return val.encode('utf-8')
