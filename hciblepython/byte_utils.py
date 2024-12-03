@@ -1,3 +1,5 @@
+from uuid import UUID
+
 
 def as_addr (byts):
     return ':'.join('{:02x}'.format (a) for a in byts)
@@ -22,10 +24,8 @@ def to_uuid (uuid_bytes):
         temp_string = "{:02X}{:02X}".format(uuid_bytes[1], uuid_bytes[0])
         return temp_string.encode('utf-8')
     elif len(uuid_bytes) == 16:
-        reversed_uuid_bytes = uuid_bytes[::-1]
-        uuid_str = ''.join(f"{b:02X}" for b in reversed_uuid_bytes)
-        # temp_string = f"{uuid_str[0:8]}-{uuid_str[8:12]}-{uuid_str[12:16]}-{uuid_str[16:20]}-{uuid_str[20:32]}"
-        return uuid_str.encode('utf-8')
+        uuid_bytes_reversed = uuid_bytes[::-1]
+        uuid_obj = uuid.UUID(bytes=uuid_bytes_reversed)
     else:
         return None
 
@@ -67,8 +67,10 @@ def from_uuid(uuid):
         num = int(uuid, 16)
         little_endian_bytes = num.to_bytes(2, byteorder='little')
         return little_endian_bytes
-    else:
-        return byte_uuid[::-1]
+    if len(uuid) == 36:
+        binary_uuid = uuid.UUID(uuid_string.decode()).bytes
+        return binary_uuid[::-1]
+    return None
     
 def from_string(val):
     if isinstance(val, str):
@@ -84,9 +86,21 @@ def from_data(val):
 def clean_uuid(uuid):
     return uuid.replace('-', '')
 
+def is_hex(s):
+    return all(c in '0123456789abcdefABCDEF' for c in s)
+
+def check_uuid(uuid):
+    if len(uuid) == 4 and is_hex(uuid):
+        return True
+    if len(uuid) == 36:
+        cleaned = clean_uuid(uuid)
+        if len(cleaned) == 32 and is_hex(cleaned):
+            return True
+    return False
+
 def get_uuid_byte_length(uuid):
     if isinstance(uuid, str):      
         cleaned_uuid = uuid.replace('-', '')
-        return int(len(cleaned_uuid)/2)
+        return int(len(cleaned_uuid))
     else:
         return 0

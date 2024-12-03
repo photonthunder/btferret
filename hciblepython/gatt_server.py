@@ -151,10 +151,6 @@ class Characteristic:
             self.gatt_handles.get_new_handle(self.value_handle)
         # print(f"value handle = {self.value_handle}")
 
-    def check_uuid(self, uuid):
-        print(f"UUID Length = {len(uuid)}")
-        return True
-
     def check_descriptor(self, descr_value):
         if descr_value not in CCCD:
             raise ValueError(f"Description Value 0x{descr_value:04X} not in PROP_FLAGS")
@@ -175,7 +171,7 @@ class Characteristic:
         else:
             self.check_descriptor(value)
         self.descriptor["value"] = bu.from_u16(value)
-        self.check_uuid(uuid)
+        bu.check_uuid(uuid)
         self.descriptor["uuid"] = uuid
         self.descriptors.append(self.descriptor)
 
@@ -217,13 +213,15 @@ class Service:
         uuid: bytes,
         name:str = None,
         handle: int = None,
-        primary:bool = True
+        primary:bool = True,
+        notify_callback = None
         ):
         self.gatt_handles = GattHandles()
         self.uuid = uuid
         self.primary = primary
         self.name = name or 'Unnamed Service'
         self.handle = handle
+        self.notify_callback = notify_callback
         self.characteristics = {}
         self.set_handle()
 
@@ -234,8 +232,12 @@ class Service:
             self.gatt_handles.get_new_handle(self.handle)
 
     def add_characteristic(self, uuid, properties, value, **kwargs):
+        if bu.check_uuid(uuid) == False:
+            raise ValueError(f"Invalid char uuid {uuid}")
         characteristic = Characteristic(uuid, properties, value, **kwargs)
         self.characteristics[characteristic.cd_handle] = characteristic
+        if self.notify_callback:
+            self.notify_callback()
 
     def remove_characteristic(self, handle: int):
         if handle in self.characteristics:
@@ -296,8 +298,11 @@ class GattServer:
         )
         return pnp_id
 
+    def on_add_char(self):
+        self.get_service_change_range()
+
     def set_base_services(self):
-        generic_access = self.add_service(uuid=KEY_SERVICE.GENERIC_ACCESS.value, name=b"Generic Access")
+        generic_access = self.add_service(uuid=KEY_SERVICE.GENERIC_ACCESS.value, name="Generic Access")
         generic_access.add_characteristic(
             uuid=KEY_CHAR.DEVICE_NAME.value,
             properties=[PROP_FLAGS.READ],
@@ -310,7 +315,7 @@ class GattServer:
             value=bu.from_u16(APPEARANCE.MINI_PC),
             constant=True
         )
-        generic_attribute = self.add_service(uuid=KEY_SERVICE.GENERIC_ATTRIBUTE.value, name=b"Generic Attribute")
+        generic_attribute = self.add_service(uuid=KEY_SERVICE.GENERIC_ATTRIBUTE.value, name="Generic Attribute")
         generic_attribute.add_characteristic(
             uuid=KEY_CHAR.SERVICE_CHANGED.value,
             properties=[PROP_FLAGS.INDICATE],
@@ -318,7 +323,7 @@ class GattServer:
             fixed_length = True,
             length = 4
         )
-        device_information = self.add_service(uuid=KEY_SERVICE.DEVICE_INFORMATION.value, name=b"Device Information")
+        device_information = self.add_service(uuid=KEY_SERVICE.DEVICE_INFORMATION.value, name="Device Information")
         device_information.add_characteristic(
             uuid=KEY_CHAR.PNP_ID.value,
             properties=[PROP_FLAGS.READ],
@@ -338,12 +343,15 @@ class GattServer:
                         char.value = new_value
 
     def add_service(self, uuid: bytes, name: str = None, handle: int = None, primary: bool = True):
-        service = Service(uuid, name, handle, primary)
+        if bu.check_uuid(uuid) == False:
+            raise ValueError(f"Invalid service uuid {uuid}")
+        service = Service(uuid, name, handle, primary, self.on_add_char)
         self.services[service.handle] = service
         if primary == True:
             self.primary_service_handles.append(service.handle)
         else:
             self.secondary_service_handles.append(service.handle)
+        self.get_service_change_range()
         return service
 
     def remove_service(self, handle: int):
@@ -370,26 +378,26 @@ class GattServer:
 
 
 if __name__ == "__main__":
-    device_name = b"MyDevice"
+    device_name = "MyDevice"
     gatt_server = GattServer(device_name)
-    custom_service = gatt_server.add_service(b'\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa\xbb\xcc\xdd\xee\xff\x00', name=b"My Custom Service")
+    custom_service = gatt_server.add_service('11223344-5566-7788-99AA-BBCCDDEEFF00', name="My Custom Service")
     custom_service.add_characteristic(
-        uuid=b"ABCD",
+        uuid="ABCD",
         properties=[PROP_FLAGS.READ, PROP_FLAGS.WRITE_WITHOUT_RESPONSE],
         value=b'ENTER'[::-1]
     )
     custom_service.add_characteristic(
-        uuid=b"CDEF",
+        uuid="CDEF",
         properties=[PROP_FLAGS.READ, PROP_FLAGS.NOTIFY, PROP_FLAGS.WRITE_WITHOUT_RESPONSE],
         value=b'0'[::-1]
     )
     custom_service.add_characteristic(
-        uuid=b"DEAF",
+        uuid="DEAF",
         properties=[PROP_FLAGS.READ, PROP_FLAGS.INDICATE],
         value=b'210'[::-1]
     )
     custom_service.add_characteristic(
-        uuid=b"DCBA",
+        uuid="DCBA",
         properties=[PROP_FLAGS.READ, PROP_FLAGS.NOTIFY],
         value=b'SET CNT'[::-1]
     )
