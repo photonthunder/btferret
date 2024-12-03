@@ -106,15 +106,15 @@ class GattHandles:
 class Characteristic:
     def __init__(
         self,
-        uuid: bytes,
-        properties: list,
-        value: bytes,
-        cd_handle: int = None,
-        value_handle: int = None,
-        permissions: list = None,
-        constant: bool = False,
-        fixed_length: bool = False,
-        length: int = None
+        uuid,
+        properties,
+        value,
+        cd_handle = None,
+        value_handle = None,
+        permissions = None,
+        constant = False,
+        fixed_length = False,
+        length = None
     ):
         self.gatt_handles = GattHandles()
         self.uuid = uuid
@@ -183,12 +183,12 @@ class Characteristic:
         print(f"uuid {uuid} not in descriptors")
         return False
 
-    def set_value(self, value: bytes):
+    def set_value(self, value):
         if not isinstance(value, bytes):
             raise ValueError("Value must be a binary string (bytes).")
         self.value = value
 
-    def get_value(self) -> bytes:
+    def get_value(self):
         return self.value
 
     def print_string(self):
@@ -210,10 +210,10 @@ class Characteristic:
 
 class Service:
     def __init__(self,
-        uuid: bytes,
-        name:str = None,
-        handle: int = None,
-        primary:bool = True,
+        uuid,
+        name = None,
+        handle = None,
+        primary = True,
         notify_callback = None
         ):
         self.gatt_handles = GattHandles()
@@ -239,13 +239,13 @@ class Service:
         if self.notify_callback:
             self.notify_callback()
 
-    def remove_characteristic(self, handle: int):
+    def remove_characteristic_handle(self, handle):
         if handle in self.characteristics:
             del self.characteristics[handle]
             return True
         return False
 
-    def get_characteristic(self, handle: int):
+    def get_characteristic_handle(self, handle):
         return self.characteristics.get(handle)
 
     def print_string(self):
@@ -260,7 +260,7 @@ class Service:
         return service_str + characteristics_str
 
 class GattServer:
-    def __init__(self, device_name: bytes):
+    def __init__(self, device_name):
         self.gatt_handles = GattHandles()
         self.device_name = device_name
         self.services = {}
@@ -342,7 +342,7 @@ class GattServer:
                         # print(f"Char Match {char_uuid}")
                         char.value = new_value
 
-    def add_service(self, uuid: bytes, name: str = None, handle: int = None, primary: bool = True):
+    def add_service(self, uuid, name = None, handle = None, primary = True):
         if bu.check_uuid(uuid) == False:
             raise ValueError(f"Invalid service uuid {uuid}")
         service = Service(uuid, name, handle, primary, self.on_add_char)
@@ -354,7 +354,9 @@ class GattServer:
         self.get_service_change_range()
         return service
 
-    def remove_service(self, handle: int):
+    def remove_service_uuid(self, uuid)
+
+    def remove_service_handle(self, handle):
         if handle in self.services:
             service = self.services[handle]
             if primary == True:
@@ -365,7 +367,7 @@ class GattServer:
             return True
         return False
 
-    def get_service(self, handle: int):
+    def get_service_handle(self, handle):
         return self.services.get(handle)
 
     def print_string(self):
@@ -405,6 +407,8 @@ if __name__ == "__main__":
 
     print(gatt_server.print_string())
     print(gatt_server.gatt_handles.print_string())
+
+    custom_service.remove_service("DCBA")
 
     # uuid = '11223344-5566-7788-99AA-BBCCDDEEFF00'
     # uuid = '1801'
