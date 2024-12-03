@@ -7,6 +7,7 @@ import logging
 import time
 import bisect
 import threading
+import struct
 
 class GattHandles:
     _instance = None
@@ -152,7 +153,7 @@ class Characteristic:
         # print(f"value handle = {self.value_handle}")
 
     def check_uuid(self, uuid):
-        print(f"Length = {len(uuid)}")
+        print(f"UUID Length = {len(uuid)}")
         return True
 
     def check_descriptor(self, descr_value):
@@ -267,15 +268,37 @@ class GattServer:
         self.services = {}
         self.primary_service_handles = []
         self.secondary_service_handles = []
-        self.gacc_service = None
-        self.gatt_service = None
         self.set_base_services()
-        self.service_change_range = 0x00000000
-        self.get_service_change_range()
 
     def get_service_change_range(self):
-        self.service_change_range =  (self.gatt_handles.start_handle << 16) & self.gatt_handles.end_handle
-        print(f"Service Change Range = 0x{self.service_change_range:08X}")
+        service_change_bytes = struct.pack("<HH",self.gatt_handles.start_handle, self.gatt_handles.end_handle)
+        self.change_char_value(KEY_SERVICE.GENERIC_ATTRIBUTE.value, KEY_CHAR.SERVICE_CHANGED.value, service_change_bytes)
+        # print(service_change_bytes)
+        return service_change_bytes
+
+    def create_pnp_id(self, vendor_id_source = 0x01, vendor_id = 0x1234, product_id = 0x0203, product_version = 0x0001):
+        # vendor_id_source = 0x01   # Bluetooth SIG
+        # vendor_id = 0x1234        # Any value you want since we are not official
+        # product_id = 0x0203       # Product ID
+        # product_version = 0x0001  # Product Version
+
+        if not (0 <= vendor_id_source <= 0xFF):
+            raise ValueError("Vendor ID Source must be a 1-byte value (0-255).")
+        if not (0 <= vendor_id <= 0xFFFF):
+            raise ValueError("Vendor ID must be a 2-byte value (0-65535).")
+        if not (0 <= product_id <= 0xFFFF):
+            raise ValueError("Product ID must be a 2-byte value (0-65535).")
+        if not (0 <= product_version <= 0xFFFF):
+            raise ValueError("Product Version must be a 2-byte value (0-65535).")
+
+        pnp_id = struct.pack(
+            "<BHHH",
+            vendor_id_source,    # 1 byte for Vendor ID Source
+            vendor_id,           # 2 bytes for Vendor ID (little-endian)
+            product_id,          # 2 bytes for Product ID (little-endian)
+            product_version      # 2 bytes for Product Version (little-endian)
+        )
+        return pnp_id
 
     def set_base_services(self):
         generic_access = self.add_service(uuid=KEY_SERVICE.GENERIC_ACCESS.value, name=b"Generic Access")
@@ -297,12 +320,29 @@ class GattServer:
         generic_attribute.add_characteristic(
             uuid=KEY_CHAR.SERVICE_CHANGED.value,
             properties=[PROP_FLAGS.INDICATE],
-            value=0x00000000,
+            value=b'\x00\x00\x00\x00',
             cd_handle = 0x0009,
             fixed_length = True,
             length = 4
-
         )
+        device_information = self.add_service(uuid=KEY_SERVICE.DEVICE_INFORMATION.value, name=b"Device Information")
+        device_information.add_characteristic(
+            uuid=KEY_CHAR.PNP_ID.value,
+            properties=[PROP_FLAGS.READ],
+            value=self.create_pnp_id(),
+            cd_handle = 0x000D,
+            constant = True
+        )
+        self.get_service_change_range()
+
+    def change_char_value(self, service_uuid, char_uuid, new_value):
+        for handle, service in self.services.items():
+            if service.uuid == service_uuid:
+                # print(f"Service Match {service_uuid}")
+                for handle, char in service.characteristics.items():
+                    if char.uuid == char_uuid:
+                        # print(f"Char Match {char_uuid}")
+                        char.value = new_value
 
     def add_service(self, uuid: bytes, name: str = None, handle: int = None, primary: bool = True):
         service = Service(uuid, name, handle, primary)
