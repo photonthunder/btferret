@@ -406,3 +406,12 @@ if __name__ == "__main__":
     print(gatt_server.print_string())
     print(gatt_server.gatt_handles.print_string())
 
+    # uuid = '11223344-5566-7788-99AA-BBCCDDEEFF00'
+    # uuid = '1801'
+    # print(uuid)
+    # result = bu.from_uuid(uuid)
+    # print(result)
+    # result = bu.to_uuid(result)
+    # print(result)
+
+

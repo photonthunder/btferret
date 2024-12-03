@@ -22,10 +22,12 @@ def to_u8 (byts, ind):
 def to_uuid (uuid_bytes):
     if len(uuid_bytes) == 2:
         temp_string = "{:02X}{:02X}".format(uuid_bytes[1], uuid_bytes[0])
-        return temp_string.encode('utf-8')
+        return temp_string
     elif len(uuid_bytes) == 16:
         uuid_bytes_reversed = uuid_bytes[::-1]
-        uuid_obj = uuid.UUID(bytes=uuid_bytes_reversed)
+        print(uuid_bytes_reversed)
+        uuid_obj = UUID(bytes=uuid_bytes_reversed)
+        return str(uuid_obj).upper()
     else:
         return None
 
@@ -68,7 +70,7 @@ def from_uuid(uuid):
         little_endian_bytes = num.to_bytes(2, byteorder='little')
         return little_endian_bytes
     if len(uuid) == 36:
-        binary_uuid = uuid.UUID(uuid_string.decode()).bytes
+        binary_uuid = UUID(uuid).bytes
         return binary_uuid[::-1]
     return None
     
