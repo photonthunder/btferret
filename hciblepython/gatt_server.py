@@ -212,9 +212,6 @@ class Characteristic:
             f"{descriptors_str}"
         )
 
-
-
-
 class Service:
     def __init__(self,
         uuid: bytes,
@@ -305,14 +302,12 @@ class GattServer:
             uuid=KEY_CHAR.DEVICE_NAME.value,
             properties=[PROP_FLAGS.READ],
             value=self.device_name,
-            cd_handle = 0x0004,
             constant=True
         )
         generic_access.add_characteristic(
             uuid=KEY_CHAR.APPEARANCE.value,
             properties=[PROP_FLAGS.READ],
             value=bu.from_u16(APPEARANCE.MINI_PC),
-            cd_handle = 0x0006,
             constant=True
         )
         generic_attribute = self.add_service(uuid=KEY_SERVICE.GENERIC_ATTRIBUTE.value, name=b"Generic Attribute")
@@ -320,7 +315,6 @@ class GattServer:
             uuid=KEY_CHAR.SERVICE_CHANGED.value,
             properties=[PROP_FLAGS.INDICATE],
             value=b'\x00\x00\x00\x00',
-            cd_handle = 0x0009,
             fixed_length = True,
             length = 4
         )
@@ -378,6 +372,27 @@ class GattServer:
 if __name__ == "__main__":
     device_name = b"MyDevice"
     gatt_server = GattServer(device_name)
+    custom_service = gatt_server.add_service(b'\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa\xbb\xcc\xdd\xee\xff\x00', name=b"My Custom Service")
+    custom_service.add_characteristic(
+        uuid=b"ABCD",
+        properties=[PROP_FLAGS.READ, PROP_FLAGS.WRITE_WITHOUT_RESPONSE],
+        value=b'ENTER'[::-1]
+    )
+    custom_service.add_characteristic(
+        uuid=b"CDEF",
+        properties=[PROP_FLAGS.READ, PROP_FLAGS.NOTIFY, PROP_FLAGS.WRITE_WITHOUT_RESPONSE],
+        value=b'0'[::-1]
+    )
+    custom_service.add_characteristic(
+        uuid=b"DEAF",
+        properties=[PROP_FLAGS.READ, PROP_FLAGS.INDICATE],
+        value=b'210'[::-1]
+    )
+    custom_service.add_characteristic(
+        uuid=b"DCBA",
+        properties=[PROP_FLAGS.READ, PROP_FLAGS.NOTIFY],
+        value=b'SET CNT'[::-1]
+    )
 
 
     print(gatt_server.print_string())
