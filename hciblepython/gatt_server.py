@@ -392,14 +392,18 @@ class GattServer:
     def get_service_handle(self, handle):
         return self.services.get(handle)
 
+    def clear_connection_settings(self):
+        for handle, service in self.services.items():
+            for char_handle, char_inst in service.characteristics.items():
+                if char_inst.uuid == ATTR.CLIENT_CHAR_CONFIG:
+                    char_inst.value = bu.from_u16(CCCD.DISABLED)
+        
     def print_string(self):
         gatt_print = "\nGatt Server:"
         services_str = ""
         for service in self.services.values():
             services_str += service.print_string()
         return gatt_print + services_str
-
-
 
 if __name__ == "__main__":
     device_name = "MyDevice"
