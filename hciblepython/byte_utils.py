@@ -55,9 +55,6 @@ def from_u8(val):
 
 def from_u16(val):
     return val.to_bytes(2, byteorder='little')
-    # v1 = val & 0xFF
-    # v2 = val >> 8
-    # return bytes([v1]) + bytes([v2])
 
 def from_u32(val):
     return val.to_bytes(4, byteorder='little')

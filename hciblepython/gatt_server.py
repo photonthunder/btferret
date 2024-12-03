@@ -129,7 +129,6 @@ class Characteristic:
         self.descr_uuid = self.descriptor.get("uuid")
         self.descr_value = self.descriptor.get("value")
         
-
         self.permissions = permissions or []
         self.constant = constant
         self.fixed_length = fixed_length
@@ -175,7 +174,7 @@ class Characteristic:
             value = CCCD.DISABLED
         else:
             self.check_descriptor(value)
-        self.descriptor["value"] = value
+        self.descriptor["value"] = bu.from_u16(value)
         self.check_uuid(uuid)
         self.descriptor["uuid"] = uuid
         self.descriptors.append(self.descriptor)
@@ -312,7 +311,7 @@ class GattServer:
         generic_access.add_characteristic(
             uuid=KEY_CHAR.APPEARANCE.value,
             properties=[PROP_FLAGS.READ],
-            value=APPEARANCE.MINI_PC,
+            value=bu.from_u16(APPEARANCE.MINI_PC),
             cd_handle = 0x0006,
             constant=True
         )
