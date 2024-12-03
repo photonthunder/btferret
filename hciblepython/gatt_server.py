@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # from ble_enum import ATTErrorCode
-from gatt_enum import ATTR, CCCD, PERM_FLAGS, PROP_FLAGS
+from gatt_enum import APPEARANCE, ATTR, CCCD, KEY_CHAR
+from gatt_enum import KEY_SERVICE, PERM_FLAGS, PROP_FLAGS
 import byte_utils as bu
 import logging
 import time
@@ -25,7 +26,7 @@ class GattHandles:
         self.next_handle = self.start_handle
         self.end_handle = self.start_handle
         self.assigned_handles = []
-        self.primary_service_handles = []
+        self.one_loop = False
 
     def set_start_handle(self, start_handle):
         if start_handle < self.min_handle or start_handle > self.end_handle:
@@ -79,6 +80,12 @@ class GattHandles:
                 return new_handle
             else:
                 next_handle += 1
+                if next_handle > self.max_handle:
+                    if self.one_loop == False:
+                        next_handle = self.min_handle
+                        self.one_loop = True
+                    else:
+                        raise ValueError("Looped through all handles, non available")
         raise ValueError(f"No handles available: next_handle 0x{next_handle:04X} > 0x{self.max_handle:04X}.")
 
     def remove_handle(self, handle):
@@ -89,29 +96,10 @@ class GattHandles:
             print(f"Warning: Handle 0x{handle:04X} not assigned.")
             return False
 
-    def add_primary_service_handle(self, handle):
-        if handle < self.min_handle or handle > self.max_handle:
-            print(f"PS Handle must be within 0x{self.min_handle:04X} and 0x{self.max_handle:04X}.")
-            return False
-        if handle not in self.primary_service_handles:
-            bisect.insort(self.primary_service_handles, handle)
-        return True
-
-    def remove_primary_service_handle(self, handle):
-        if handle in self.primary_service_handles:
-            self.primary_service_handles.remove(handle)
-            return True
-        return False
-
-    def clear_primary_service_handles(self):
-        self.primary_service_handles.clear()
-
-    def __repr__(self):
-        handles_hex = [f"0x{handle:04X}\n" for handle in self.primary_service_handles]
+    def print_string(self):
         return (
-            f"Handles(min_handle=0x{self.min_handle:04X}\n"
-            f"max_handle=0x{self.max_handle:04X}\n"
-            f"primary_service_handles\n{handles_hex})"
+            f"\nHandles:\nMin = 0x{self.min_handle:04X}, Max = 0x{self.max_handle:04X}\n"
+            f"Start = 0x{self.start_handle:04X}, End = 0x{self.end_handle:04X}\n"
         )
 
 class Characteristic:
@@ -164,16 +152,16 @@ class Characteristic:
         # print(f"value handle = {self.value_handle}")
 
     def check_uuid(self, uuid):
-        print("Length = {len(uuid)}")
+        print(f"Length = {len(uuid)}")
         return True
 
     def check_descriptor(self, descr_value):
-        if descr_value not in PROP_FLAGS:
+        if descr_value not in CCCD:
             raise ValueError(f"Description Value 0x{descr_value:04X} not in PROP_FLAGS")
 
     def need_descriptor(self):
         if any(flag in self.properties for flag in [PROP_FLAGS["NOTIFY"], PROP_FLAGS["INDICATE"]]):
-            self.add_descriptor(ATTR.CLIENT_CHAR_CONFIG, CCD.DISABLED)
+            self.add_descriptor(ATTR.CLIENT_CHAR_CONFIG.value, CCCD.DISABLED)
 
     def add_descriptor(self, uuid, value, handle = None):
         if handle == None:
@@ -208,29 +196,19 @@ class Characteristic:
         return self.value
 
     def print_string(self):
-        # Format properties and permissions safely
         properties_str = ", ".join(prop.name for prop in self.properties) if self.properties else "None"
-
-        # Handle constant or variable declaration
         const_str = "CONSTANT" if self.constant else "VARIABLE"
-
-        # Value handle formatting
         vh_str = f"VH = 0x{self.value_handle:04X}" if self.value_handle else "VH = Not Assigned"
-
-        # Descriptor details
         descriptors_str = ""
         for descriptor in self.descriptors:
             uuid = descriptor.get("uuid")
             value = descriptor.get("value")
             handle = descriptor.get("handle")
-            descriptors_str += "\n".join(
-                f"0x{handle:04X}: Descriptor, UUID: {uuid}, Value: {value!r}"
-            )
+            descriptors_str += f"\n0x{handle:04X}: Descriptor, UUID: {uuid}, Value: {value!r}"
 
-        # Final string
         return (
-            f"0x{self.cd_handle:04X}: Characteristic Declaration, UUID: {self.uuid}, Properties: [{properties_str}], {const_str}, {vh_str}\n"
-            f"0x{self.value_handle:04X}: Characteristic Value, UUID: {self.uuid}, Value: {self.value!r}\n"
+            f"\n0x{self.cd_handle:04X}: Characteristic Declaration, UUID: {self.uuid}, Properties: [{properties_str}], {const_str}, {vh_str}"
+            f"\n0x{self.value_handle:04X}: Characteristic Value, UUID: {self.uuid}, Value: {self.value!r}"
             f"{descriptors_str}"
         )
 
@@ -272,25 +250,76 @@ class Service:
         return self.characteristics.get(handle)
 
     def print_string(self):
-        service_type = "Primary Service" if self.primary else "Unknown Service"
-        service_str = f"0x{self.handle:04X}: {service_type}: UUID={self.uuid}, Name={self.name}"
-        characteristics_str = "\n".join(
-            f"{ch.print_string()}"
-            for ch in self.characteristics.values()
-        )
-        return f"{service_str}\n{characteristics_str}"
+        if self.primary:
+            service_type = "Primary Service"
+        else:
+            service_type = "Secondary Service"
+        service_str = f"\n\n0x{self.handle:04X}: {service_type}: UUID={self.uuid}, Name={self.name}"
+        characteristics_str = ""
+        for ch in self.characteristics.values():
+            characteristics_str += ch.print_string()
+        return service_str + characteristics_str
 
 class GattServer:
-    def __init__(self):
+    def __init__(self, device_name: bytes):
+        self.gatt_handles = GattHandles()
+        self.device_name = device_name
         self.services = {}
+        self.primary_service_handles = []
+        self.secondary_service_handles = []
+        self.gacc_service = None
+        self.gatt_service = None
+        self.set_base_services()
+        self.service_change_range = 0x00000000
+        self.get_service_change_range()
+
+    def get_service_change_range(self):
+        self.service_change_range =  (self.gatt_handles.start_handle << 16) & self.gatt_handles.end_handle
+        print(f"Service Change Range = 0x{self.service_change_range:08X}")
+
+    def set_base_services(self):
+        generic_access = self.add_service(uuid=KEY_SERVICE.GENERIC_ACCESS.value, name=b"Generic Access")
+        generic_access.add_characteristic(
+            uuid=KEY_CHAR.DEVICE_NAME.value,
+            properties=[PROP_FLAGS.READ],
+            value=self.device_name,
+            cd_handle = 0x0004,
+            constant=True
+        )
+        generic_access.add_characteristic(
+            uuid=KEY_CHAR.APPEARANCE.value,
+            properties=[PROP_FLAGS.READ],
+            value=APPEARANCE.MINI_PC,
+            cd_handle = 0x0006,
+            constant=True
+        )
+        generic_attribute = self.add_service(uuid=KEY_SERVICE.GENERIC_ATTRIBUTE.value, name=b"Generic Attribute")
+        generic_attribute.add_characteristic(
+            uuid=KEY_CHAR.SERVICE_CHANGED.value,
+            properties=[PROP_FLAGS.INDICATE],
+            value=0x00000000,
+            cd_handle = 0x0009,
+            fixed_length = True,
+            length = 4
+
+        )
 
     def add_service(self, uuid: bytes, name: str = None, handle: int = None, primary: bool = True):
         service = Service(uuid, name, handle, primary)
         self.services[service.handle] = service
+        if primary == True:
+            self.primary_service_handles.append(service.handle)
+        else:
+            self.secondary_service_handles.append(service.handle)
         return service
 
     def remove_service(self, handle: int):
         if handle in self.services:
+            service = self.services[handle]
+            if primary == True:
+                self.primary_service_handles.remove(service.handle)
+            else:
+                self.secondary_service_handles.remove(service.handle)
             del self.services[handle]
             return True
         return False
@@ -299,30 +328,19 @@ class GattServer:
         return self.services.get(handle)
 
     def print_string(self):
-        services_str = "\n".join(service.print_string() for service in self.services.values())
-        return f"Gatt Server:\n{services_str}"
+        gatt_print = "\nGatt Server:"
+        services_str = ""
+        for service in self.services.values():
+            services_str += service.print_string()
+        return gatt_print + services_str
+
 
 
 if __name__ == "__main__":
-    # Create GATT Server
-    gatt_server = GattServer()
+    device_name = b"MyDevice"
+    gatt_server = GattServer(device_name)
 
-    # Generic Access Service
-    ga_service = gatt_server.add_service(uuid=b"1800", name=b"Generic Access")
-    ga_service.add_characteristic(
-        uuid=b"2A00",
-        properties=[PROP_FLAGS.READ],
-        value=b"MyDevice",
-        cd_handle = 0x0004,
-        constant=True
-    )
-    ga_service.add_characteristic(
-        uuid=b"2A01",
-        properties=[PROP_FLAGS.READ],
-        value=b"\x00\x80",
-        cd_handle = 0x0006,
-        constant=True
-    )
 
-    # Print GATT Server
     print(gatt_server.print_string())
+    print(gatt_server.gatt_handles.print_string())
+
