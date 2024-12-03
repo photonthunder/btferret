@@ -239,13 +239,25 @@ class Service:
         if self.notify_callback:
             self.notify_callback()
 
-    def remove_characteristic_handle(self, handle):
+    def remove_char_uuid(self, uuid):
+        for handle, char_inst in self.characteristics.items():
+            if char_inst.uuid == uuid:
+                return self.remove_char_handle(handle)
+        return False
+
+    def remove_char_handle(self, handle):
         if handle in self.characteristics:
             del self.characteristics[handle]
             return True
         return False
 
-    def get_characteristic_handle(self, handle):
+    def get_char_uuid(self, uuid):
+        for handle, char_inst in self.characteristics.items():
+            if char_inst.uuid == uuid:
+                return self.get_char_handle(handle)
+        return None
+
+    def get_char_handle(self, handle):
         return self.characteristics.get(handle)
 
     def print_string(self):
@@ -354,18 +366,28 @@ class GattServer:
         self.get_service_change_range()
         return service
 
-    def remove_service_uuid(self, uuid)
+    def remove_service_uuid(self, uuid):
+        for handle, service in self.services.items():
+            if service.uuid == uuid:
+                return self.remove_service_handle(handle)
+        return False
 
     def remove_service_handle(self, handle):
         if handle in self.services:
             service = self.services[handle]
-            if primary == True:
+            if service.primary == True:
                 self.primary_service_handles.remove(service.handle)
             else:
                 self.secondary_service_handles.remove(service.handle)
             del self.services[handle]
             return True
         return False
+
+    def get_service_uuid(self, uuid):
+        for handle, service in self.services.items():
+            if service.uuid == uuid:
+                return self.get_service_handle(handle)
+        return None
 
     def get_service_handle(self, handle):
         return self.services.get(handle)
@@ -406,16 +428,33 @@ if __name__ == "__main__":
 
 
     print(gatt_server.print_string())
-    print(gatt_server.gatt_handles.print_string())
-
-    custom_service.remove_service("DCBA")
 
     # uuid = '11223344-5566-7788-99AA-BBCCDDEEFF00'
     # uuid = '1801'
+
+    # if gatt_server.remove_service_uuid(uuid) == True:
+    #     print(gatt_server.print_string())
+    # else:
+    #     print("No service found to remove")
+
+    # uuid_char = 'CDEF'
+
+    # if custom_service.remove_char_uuid(uuid) == True:
+    #     print(gatt_server.print_string())
+    # else:
+    #     print("No char found to remove")
+
+    # temp_service = gatt_server.get_service_uuid(uuid)
+    # if temp_service:
+    #     print(temp_service.uuid, temp_service.handle)
+    #     temp_char = temp_service.get_char_uuid(uuid_char)
+    #     if temp_char:
+    #         print(temp_char.uuid, temp_char.cd_handle)
+
     # print(uuid)
     # result = bu.from_uuid(uuid)
     # print(result)
     # result = bu.to_uuid(result)
     # print(result)
 
-
+    print(gatt_server.gatt_handles.print_string())
