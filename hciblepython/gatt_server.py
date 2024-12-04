@@ -28,6 +28,7 @@ class GattHandles:
         self.end_handle = self.start_handle
         self.assigned_handles = []
         self.one_loop = False
+        # self.all_char = {}
 
     def set_start_handle(self, start_handle):
         if start_handle < self.min_handle or start_handle > self.end_handle:
@@ -52,6 +53,18 @@ class GattHandles:
             return False
         else:
             return True
+
+    # def add_char_handle(self, handle, char_inst):
+    #     self.all_char[handle] = char_inst
+
+    # def del_char_handle(self, handle):
+    #     if handle in self.all_char:
+    #         del self.all_char[handle]
+    
+    # def get_char_handle(self, handle):
+    #     if handle in self.all_char:
+    #         return self.all_char[handle]
+    #     return None
 
     def get_new_handle(self, set_handle = None):
         if set_handle == None:
@@ -130,11 +143,14 @@ class Characteristic:
         self.cd_handle = cd_handle
         self.value_handle = value_handle
 
-        self.descriptors = []
+        # self.descriptors = []
         # self.descriptor = {"handle": None, "uuid": None, "value": None}
-        # self.descr_handle = self.descriptor.get("handle")
-        # self.descr_uuid = self.descriptor.get("uuid")
-        # self.descr_value = self.descriptor.get("value")
+        self.descr_handle = None
+        self.descr_uuid = None
+        self.descr_value = None
+        self.notification = False
+        self.indication = False
+        self.value_updated = False
         
         self.permissions = permissions or []
         self.constant = constant
@@ -174,25 +190,29 @@ class Characteristic:
             handle = self.gatt_handles.get_new_handle()
         else:
             self.gatt_handles.get_new_handle(handle)
-        descriptor = {}
-        descriptor["handle"] = handle
 
         if value == None or self.check_descriptor(value) == False:
             value = CCCD.DISABLED
-        descriptor["value"] = bu.from_u16(value)
-        bu.check_uuid(uuid)
-        descriptor["uuid"] = uuid
-        self.descriptors.append(descriptor)
+        if bu.check_uuid(uuid) == False:
+            print(f"Error: Descriptor has bad uuid {uuid}")
+        self.descr_handle = handle
+        self.descr_uuid = uuid
+        self.descr_value = bu.from_u16(value)
 
     def remove_descriptor(self, uuid):
-        for descriptor in self.descriptors:
-            if uuid == descriptor["uuid"]:
-                del self.descriptors[uuid]
-                return True
-        print(f"Warning: uuid {uuid} not in descriptors")
-        return False
+        self.descr_handle = None
+        self.descr_uuid = None
+        self.descr_value = None
 
-    def set_value(self, handle, value):
+    def clear_notif_indic(self):
+        self.notification = False
+        self.indication = False
+        
+    def set_value_server(self, value):
+        self.value = value
+        self.value_updated = True
+
+    def set_value_client(self, handle, value):
         if not isinstance(value, bytes):
             print("Error: Value must be a binary string (bytes).")
             return ATTCode.VALUE_NOT_ALLOWED
@@ -202,13 +222,19 @@ class Characteristic:
         if handle == self.cd_handle:
             self.value = value
             return ATTCode.SUCCESS
-        for descriptor in self.descriptors:
-            if descriptor["handle"] == handle:
-                if self.check_descriptor(bu.to_u16(descriptor["value"], 0)):
-                    descriptor["value"] = value
-                    return ATTCode.SUCCESS
-                else:
-                    return ATTCode.VALUE_NOT_ALLOWED
+        if self.descr_handle == handle:
+            int_value = bu.to_u16(value, 0)
+            if int_value == CCCD.NOTIFICATION.value:
+                self.notification = True
+            elif int_value == CCCD.INDICATION.value:
+                self.indication = True
+            elif int_value == CCCD.DISABLED.value:
+                self.clear_notif_indic()
+            else:
+                print(f"Error, invalid value {value} for descriptor")
+                return ATTCode.VALUE_NOT_ALLOWED
+            self.descr_value = value
+            return ATTCode.SUCCESS
         print(f"Error: Handle 0x{handle:04X} not matched")
         return ATTCode.INVALID_HANDLE
 
@@ -218,10 +244,8 @@ class Characteristic:
             return ATTCode.SUCCESS, self.value
         if handle == self.cd_handle:
             return ATTCode.SUCCESS, self.value
-        for descriptor in self.descriptors:
-            # print(descriptor["handle"])
-            if descriptor["handle"] == handle:
-                return ATTCode.SUCCESS, descriptor["value"]
+        if self.descr_handle == handle:
+                return ATTCode.SUCCESS, self.descr_value
         return ATTCode.INVALID_HANDLE, None
 
     def __repr__(self):
@@ -231,12 +255,13 @@ class Characteristic:
         properties_str = ", ".join(prop.name for prop in self.properties) if self.properties else "None"
         const_str = "CONSTANT" if self.constant else "VARIABLE"
         vh_str = f"VH = 0x{self.value_handle:04X}" if self.value_handle else "VH = Not Assigned"
-        descriptors_str = ""
-        for descriptor in self.descriptors:
-            uuid = descriptor.get("uuid")
-            value = descriptor.get("value")
-            handle = descriptor.get("handle")
-            descriptors_str += f"\n0x{handle:04X}: Descriptor, UUID: {uuid}, Value: {value!r}"
+        uuid = self.descr_uuid
+        value = self.descr_value
+        handle = self.descr_handle
+        if uuid == None or value == None or handle == None:
+            descriptors_str = ""
+        else:
+            descriptors_str = f"\n0x{handle:04X}: Descriptor, UUID: {uuid}, Value: {value!r}"
 
         return (
             f"\n0x{self.cd_handle:04X}: Characteristic Declaration, UUID: {self.uuid}, Properties: [{properties_str}], {const_str}, {vh_str}"
@@ -274,10 +299,7 @@ class Service:
         char_inst = Characteristic(uuid, properties, value, **kwargs)
         self.characteristics[char_inst.cd_handle] = char_inst
         if self.notify_callback:
-            self.notify_callback(char_inst.cd_handle, char_inst)
-            self.notify_callback(char_inst.value_handle, char_inst)
-            for descriptor in char_inst.descriptors:
-                self.notify_callback(descriptor["handle"], char_inst)
+                self.notify_callback()
         return True
 
     def remove_char_uuid(self, uuid):
@@ -295,7 +317,7 @@ class Service:
     def get_char_uuid(self, uuid):
         for handle, char_inst in self.characteristics.items():
             if char_inst.uuid == uuid:
-                return self.get_char_handle(handle)
+                return char_inst
         return None
 
     def get_char_handle(self, handle):
@@ -320,13 +342,12 @@ class GattServer:
         self.gatt_handles = GattHandles()
         self.device_name = device_name
         self.services = {}
-        self.all_char = {}
         self.primary_service_handles = []
         self.secondary_service_handles = []
+        self.all_char = {}
+        
         self.set_base_services()
-
-    def add_global_char(self, handle, char_inst):
-        self.all_char[handle] = char_inst
+        
 
     def get_service_change_range(self):
         service_change_bytes = struct.pack("<HH",self.gatt_handles.start_handle, self.gatt_handles.end_handle)
@@ -362,9 +383,18 @@ class GattServer:
         )
         return pnp_id
 
-    def on_add_char(self, handle, char_inst):
-        self.add_global_char(handle, char_inst)
+    def get_all_char(self):
+        self.all_char.clear()
+        for service_handle, service in self.services.items():
+            for cd_handle, char_inst in service.characteristics.items():
+                self.all_char[char_inst.cd_handle] = char_inst
+                self.all_char[char_inst.value_handle] = char_inst
+                if char_inst.descr_handle:
+                    self.all_char[char_inst.descr_handle] = char_inst
+
+    def on_add_char(self):
         self.get_service_change_range()
+        self.get_all_char()
 
     def set_base_services(self):
         generic_access = self.add_service(uuid=KEY_SERVICE.GENERIC_ACCESS.value, name="Generic Access")
@@ -399,39 +429,39 @@ class GattServer:
         self.get_service_change_range()
 
     def get_char_value_handle(self, handle):
-        if handle in self.all_char:
-            char_inst = self.all_char[handle]
-            return char_inst.get_value(handle) 
-        else:
+        char_inst = self.all_char.get(handle)
+        if char_inst == None:
             print("Error: Handle 0x{handle:04X} not attached to char")
             return ATTCode.INVALID_HANDLE, None
+        else:
+            return char_inst.get_value(handle)
 
     def get_char_value_uuid(self, service_uuid, char_uuid):
-        for handle, service in self.services.items():
+        for service_handle, service in self.services.items():
             if service.uuid == service_uuid:
                 # print(f"Service Match {service_uuid}")
-                for handle, char_inst in service.characteristics.items():
+                for char_handle, char_inst in service.characteristics.items():
                     if char_inst.uuid == char_uuid:
                         # print(f"Char Match {char_uuid}")
-                        return char_inst.get_value(handle)
+                        return char_inst.get_value(char_handle)
         return ATTCODE.ATTRIBUTE_NOT_FOUND, None
         
     def set_char_value_handle(self, handle, new_value):
-        if handle in self.all_char:
-            char_inst = self.all_char[handle]
-            return char_inst.set_value(handle, new_value) 
-        else:
+        char_inst = self.all_char.get(handle)
+        if char_inst == None:
             print("Error: Handle 0x{handle:04X} not attached to char")
             return ATTCode.INVALID_HANDLE
+        else:
+            return char_inst.set_value_client(handle, new_value) 
 
     def set_char_value_uuid(self, service_uuid, char_uuid, new_value):
-        for handle, service in self.services.items():
+        for service_handle, service in self.services.items():
             if service.uuid == service_uuid:
                 # print(f"Service Match {service_uuid}")
-                for handle, char_inst in service.characteristics.items():
+                for char_handle, char_inst in service.characteristics.items():
                     if char_inst.uuid == char_uuid:
                         # print(f"Char Match {char_uuid}")
-                        return char_inst.set_value(handle, new_value)
+                        return char_inst.set_value_client(char_handle, new_value)
         return ATTCode.ATTRIBUTE_NOT_FOUND
 
     def add_service(self, uuid, name = None, handle = None, primary = True):
@@ -474,17 +504,17 @@ class GattServer:
         return self.services.get(handle)
 
     def clear_connection_settings(self):
-        for handle, service in self.services.items():
+        for service_handle, service in self.services.items():
             for char_handle, char_inst in service.characteristics.items():
                 if char_inst.uuid == ATTR.CLIENT_CHAR_CONFIG:
-                    char_inst.value = bu.from_u16(CCCD.DISABLED)
+                    char_inst.set_value_client(char_handle, bu.from_u16(CCCD.DISABLED))
 
     def print_all_char_string(self):
         char_str = ""
         for handle, char_inst in self.all_char.items():
             char_str += f"\n0x{handle:04X} {char_inst}"
         return char_str
-        
+
     def print_string(self):
         gatt_print = "\nGatt Server:"
         services_str = ""
@@ -520,37 +550,37 @@ if __name__ == "__main__":
 
     print(gatt_server.print_string())
 
-    # uuid = '11223344-5566-7788-99AA-BBCCDDEEFF00'
-    # uuid = '1801'
+    uuid = '11223344-5566-7788-99AA-BBCCDDEEFF00'
+    uuid = '1801'
 
-    # if gatt_server.remove_service_uuid(uuid) == True:
-    #     print(gatt_server.print_string())
-    # else:
-    #     print("No service found to remove")
+    if gatt_server.remove_service_uuid(uuid) == True:
+        print(gatt_server.print_string())
+    else:
+        print("No service found to remove")
 
-    # uuid_char = 'CDEF'
+    uuid_char = 'CDEF'
 
-    # if custom_service.remove_char_uuid(uuid) == True:
-    #     print(gatt_server.print_string())
-    # else:
-    #     print("No char found to remove")
+    if custom_service.remove_char_uuid(uuid) == True:
+        print(gatt_server.print_string())
+    else:
+        print("No char found to remove")
 
-    # temp_service = gatt_server.get_service_uuid(uuid)
-    # if temp_service:
-    #     print(temp_service.uuid, temp_service.handle)
-    #     temp_char = temp_service.get_char_uuid(uuid_char)
-    #     if temp_char:
-    #         print(temp_char.uuid, temp_char.cd_handle)
+    temp_service = gatt_server.get_service_uuid(uuid)
+    if temp_service:
+        print(temp_service.uuid, temp_service.handle)
+        temp_char = temp_service.get_char_uuid(uuid_char)
+        if temp_char:
+            print(temp_char.uuid, temp_char.cd_handle)
 
-    # print(uuid)
-    # result = bu.from_uuid(uuid)
-    # print(result)
-    # result = bu.to_uuid(result)
-    # print(result)
+    print(uuid)
+    result = bu.from_uuid(uuid)
+    print(result)
+    result = bu.to_uuid(result)
+    print(result)
 
-    # print(gatt_server.gatt_handles.print_string())
+    print(gatt_server.gatt_handles.print_string())
     print()
-    # print(gatt_server.print_all_char_string())
+    print(gatt_server.print_all_char_string())
 
 
     new_value = b'awesome'[::-1]
