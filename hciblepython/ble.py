@@ -4,7 +4,7 @@ from random import randint
 from ble_enum import Address, Advertising, AdvertisingChannelMap
 from ble_enum import AdvertisingDataType, AdvertisingFilterPolicy
 from ble_enum import AdvertisingEventType, AdvertisingType
-from ble_enum import ATTChannelID, ATTErrorCode
+from ble_enum import ATTChannelID, ATTCode
 from ble_enum import BLEErrorCode, BroadcastFlags
 from ble_enum import CentralClockAccuracy
 from ble_enum import EventMask, EventType
@@ -728,7 +728,7 @@ class BluetoothLEConnection:
         att_opcode = 0x05
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         return_code, uuid_format, handle_uuid = self.gatt_server.find_information(start_handle, end_handle)
-        if return_code != ATTErrorCode.SUCCESS:
+        if return_code != ATTCode.SUCCESS:
             self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
             return
         packet =  bu.from_u8(att_opcode)
@@ -757,7 +757,7 @@ class BluetoothLEConnection:
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         return_code, value_handles = self.gatt_server.find_by_value(start_handle,
                                                 end_handle, att_uuid, att_value)
-        if return_code != ATTErrorCode.SUCCESS:
+        if return_code != ATTCode.SUCCESS:
             self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
             return
         packet =  bu.from_u8(att_opcode)
@@ -798,7 +798,7 @@ class BluetoothLEConnection:
         packet =  bu.from_u8  (att_opcode)
         if uuid == bu.from_uuid_int(ATTR.CHARACTERISTIC):
             return_code, char_decl = self.gatt_server.read_char_uuid_value(start_handle, end_handle)
-            if return_code != ATTErrorCode.SUCCESS:
+            if return_code != ATTCode.SUCCESS:
                 self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
                 return
             elif not char_decl:
@@ -816,7 +816,7 @@ class BluetoothLEConnection:
                 packet += char_uuid
         else:
             return_code, handle, data = self.gatt_server.read_uuid_value(start_handle, end_handle, uuid)
-            if return_code != ATTErrorCode.SUCCESS:
+            if return_code != ATTCode.SUCCESS:
                 self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
                 return  
             packet += bu.from_u8(2 + len(data))
@@ -848,7 +848,7 @@ class BluetoothLEConnection:
         cmd_name = "READ"
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         return_code, byte_value = self.gatt_server.read_char_value(handle)
-        if return_code != ATTErrorCode.SUCCESS: 
+        if return_code != ATTCode.SUCCESS: 
             self.do_att_error_rsp(att_opcode_req, handle, return_code)
             return
         else: 
@@ -875,7 +875,7 @@ class BluetoothLEConnection:
         if gatt_uuid == bu.from_uuid_int(ATTR.PRIMARY_SERVICE):
             print("Get primary services for handles 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
             return_code, return_start_handle, return_end_handle, primary_uuid = self.gatt_server.get_service_handle_range(start_handle)
-            if return_code != ATTErrorCode.SUCCESS: 
+            if return_code != ATTCode.SUCCESS: 
                 self.do_att_error_rsp(att_opcode_req, handle, return_code)
                 return
             print("Handles 0x{:04X} to 0x{:04X}".format(return_start_handle, return_end_handle))
@@ -889,7 +889,7 @@ class BluetoothLEConnection:
             packet += primary_uuid
         else:
             print(f"GATT Attribute {gatt_uuid} Not Implemented")
-            self.do_att_error_rsp(att_opcode_req, start_handle, ATTErrorCode.UNLIKELY_ERROR)
+            self.do_att_error_rsp(att_opcode_req, start_handle, ATTCode.UNLIKELY_ERROR)
             return
         self.send_acl(packet)
 
@@ -907,7 +907,7 @@ class BluetoothLEConnection:
         att_opcode = 0x13
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         return_code = self.gatt_server.write_char_value(handle, value)
-        if return_code == ATTErrorCode.SUCCESS:
+        if return_code == ATTCode.SUCCESS:
             packet =  bu.from_u8(att_opcode)   
             self.send_acl(packet)
         else:
@@ -966,7 +966,7 @@ class BluetoothLEConnection:
         handle = bu.to_u16(data, 1)
         value = data[3:]
         return_code = self.gatt_server.write_char_value(handle, value)
-        if return_code != ATTErrorCode.SUCCESS:
+        if return_code != ATTCode.SUCCESS:
             print("No response was requested but write was not successful, Error = 0x{:02X}".format(return_code))
 
     def on_acl_event(self, data):

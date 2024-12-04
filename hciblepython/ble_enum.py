@@ -57,7 +57,7 @@ class ATTChannelID(IntEnum):
     BLE = 0x0004
 
 @unique
-class ATTErrorCode(IntEnum):
+class ATTCode(IntEnum):
     SUCCESS = 0x00
     INVALID_HANDLE = 0x01  # The attribute handle given was not valid on this server.
     READ_NOT_PERMITTED = 0x02  # The attribute cannot be read.
