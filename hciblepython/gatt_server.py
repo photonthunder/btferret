@@ -464,6 +464,15 @@ class GattServer:
                         return char_inst.set_value_client(char_handle, new_value)
         return ATTCode.ATTRIBUTE_NOT_FOUND
 
+    def set_value_from_server(self, handle, value):
+        for service_handle, service in self.services.items():
+            for char_handle, char_inst in service.characteristics.items():
+                if char_inst.cd_handle == handle or char_inst.value_handle == handle:
+                    char_inst.set_value_server(value)
+                    return True
+        return False
+
+
     def add_service(self, uuid, name = None, handle = None, primary = True):
         uuid_type = check_uuid(uuid)
         if uuid_type is None:
