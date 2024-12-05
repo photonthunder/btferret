@@ -28,7 +28,6 @@ class GattHandles:
         self.end_handle = self.start_handle
         self.assigned_handles = []
         self.one_loop = False
-        # self.all_char = {}
 
     def set_start_handle(self, start_handle):
         if start_handle < self.min_handle or start_handle > self.end_handle:
@@ -42,7 +41,6 @@ class GattHandles:
             print(f"Error: end_handle 0x{end_handle:04X} must be between 0x{self.start_handle:04X} and 0x{self.max_handle:04X}.")
             return False
         self.end_handle = end_handle
-        # print(f"End Handle 0x{self.end_handle:04X}")
         return True
 
     def handle_available(self, handle):
@@ -53,18 +51,6 @@ class GattHandles:
             return False
         else:
             return True
-
-    # def add_char_handle(self, handle, char_inst):
-    #     self.all_char[handle] = char_inst
-
-    # def del_char_handle(self, handle):
-    #     if handle in self.all_char:
-    #         del self.all_char[handle]
-    
-    # def get_char_handle(self, handle):
-    #     if handle in self.all_char:
-    #         return self.all_char[handle]
-    #     return None
 
     def get_new_handle(self, set_handle = None):
         if set_handle == None:
@@ -143,8 +129,6 @@ class Characteristic:
         self.cd_handle = cd_handle
         self.value_handle = value_handle
 
-        # self.descriptors = []
-        # self.descriptor = {"handle": None, "uuid": None, "value": None}
         self.descr_handle = None
         self.descr_uuid = None
         self.descr_value = None
