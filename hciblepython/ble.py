@@ -4,7 +4,6 @@ from random import randint
 from ble_enum import Address, Advertising, AdvertisingChannelMap
 from ble_enum import AdvertisingDataType, AdvertisingFilterPolicy
 from ble_enum import AdvertisingEventType, AdvertisingType
-from ble_enum import ATTChannelID, ATTCode
 from ble_enum import BLEErrorCode, BroadcastFlags
 from ble_enum import CentralClockAccuracy
 from ble_enum import EventMask, EventType
@@ -18,7 +17,7 @@ from ble_time import ConnectionAcceptTimeout, ConnectionEventTime, ConnectionInt
 from ble_time import MaxLatency
 from ble_time import PageTimeout
 from ble_time import ScanningTime, SupervisionTimeout
-from gatt_enum import ATTR
+from gatt_enum import ATTChannelID, ATTCode, ATTR
 import byte_utils as bu
 
 hci_event_handlers = {}
@@ -796,32 +795,38 @@ class BluetoothLEConnection:
         att_opcode = 0x09
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         packet =  bu.from_u8  (att_opcode)
-        if uuid == bu.from_uuid_int(ATTR.CHARACTERISTIC):
-            return_code, char_decl = self.gatt_server.read_char_uuid_value(start_handle, end_handle)
-            if return_code != ATTCode.SUCCESS:
-                self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
-                return
-            elif not char_decl:
-                print("No CD Handle in range of 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
-                self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
-                return
-            else:
-                # len_char_item = len(char_decl)
-                packet += bu.from_u8(7) 
-                # for idx, char_item in enumerate(char_decl):
-                handle, prop_byte, value_handle, char_uuid = char_decl
-                packet += bu.from_u16(handle)
-                packet += bu.from_u8(prop_byte)
-                packet += bu.from_u16(value_handle)
-                packet += char_uuid
-        else:
-            return_code, handle, data = self.gatt_server.read_uuid_value(start_handle, end_handle, uuid)
-            if return_code != ATTCode.SUCCESS:
-                self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
-                return  
-            packet += bu.from_u8(2 + len(data))
-            packet += bu.from_u16 (handle)
-            packet += data        
+        return_code, data = self.gatt_server.read_by_value(start_handle, end_handle, uuid)
+        if return_code != ATTCode.SUCCESS:
+            self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
+            return
+        packet += data
+
+        # if uuid == bu.from_uuid_int(ATTR.CHARACTERISTIC):
+        #     return_code, char_decl = self.gatt_server.read_char_uuid_value(start_handle, end_handle)
+        #     if return_code != ATTCode.SUCCESS:
+        #         self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
+        #         return
+        #     elif not char_decl:
+        #         print("No CD Handle in range of 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
+        #         self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
+        #         return
+        #     else:
+        #         # len_char_item = len(char_decl)
+        #         packet += bu.from_u8(7) 
+        #         # for idx, char_item in enumerate(char_decl):
+        #         handle, prop_byte, value_handle, char_uuid = char_decl
+        #         packet += bu.from_u16(handle)
+        #         packet += bu.from_u8(prop_byte)
+        #         packet += bu.from_u16(value_handle)
+        #         packet += char_uuid
+        # else:
+        #     return_code, handle, data = self.gatt_server.read_uuid_value(start_handle, end_handle, uuid)
+        #     if return_code != ATTCode.SUCCESS:
+        #         self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
+        #         return  
+        #     packet += bu.from_u8(2 + len(data))
+        #     packet += bu.from_u16 (handle)
+        #     packet += data        
         self.send_acl(packet)
 
     def do_att_read_req(self, handle):

@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
-from ble_enum import ATTCode
-from gatt_enum import APPEARANCE, ATTR, CCCD, KEY_CHAR
-from gatt_enum import KEY_SERVICE, PERM_FLAGS, PROP_FLAGS
+from gatt_enum import APPEARANCE, ATTCode, ATTR, CCCD, KEY_CHAR
+from gatt_enum import KEY_SERVICE, PERM_FLAGS, PROP_FLAGS, UUID_TYPE
 import byte_utils as bu
 import logging
 import time
 import bisect
 import threading
 import struct
+
+def check_uuid(uuid):
+    if len(uuid) == 4 and bu.is_hex(uuid):
+        return UUID_TYPE.UUID_16BIT
+    if len(uuid) == 36:
+        cleaned = bu.clean_uuid(uuid)
+        if len(cleaned) == 32 and bu.is_hex(cleaned):
+            return UUID_TYPE.UUID_128BIT
+    return False
 
 class GattHandles:
     _instance = None
@@ -113,6 +121,7 @@ class Characteristic:
     def __init__(
         self,
         uuid,
+        uuid_type,
         properties,
         value,
         cd_handle = None,
@@ -124,6 +133,7 @@ class Characteristic:
     ):
         self.gatt_handles = GattHandles()
         self.uuid = uuid
+        self.uuid_type = uuid_type
         self.properties = properties or []
         self.value = value
         self.cd_handle = cd_handle
@@ -159,6 +169,9 @@ class Characteristic:
             self.gatt_handles.get_new_handle(self.value_handle)
         # print(f"value handle = {self.value_handle}")
 
+    def properties_byte(self):
+        return sum(prop.value for prop in self.properties)
+
     def check_descriptor(self, descr_value):
         if descr_value not in CCCD:
             print(f"Error: Description Value 0x{descr_value:04X} not in PROP_FLAGS")
@@ -178,7 +191,7 @@ class Characteristic:
 
         if value == None or self.check_descriptor(value) == False:
             value = CCCD.DISABLED
-        if bu.check_uuid(uuid) == False:
+        if check_uuid(uuid) != UUID_TYPE.UUID_16BIT:
             print(f"Error: Descriptor has bad uuid {uuid}")
         self.descr_handle = handle
         self.descr_uuid = uuid
@@ -257,6 +270,7 @@ class Characteristic:
 class Service:
     def __init__(self,
         uuid,
+        uuid_type,
         name = None,
         handle = None,
         primary = True,
@@ -264,6 +278,7 @@ class Service:
         ):
         self.gatt_handles = GattHandles()
         self.uuid = uuid
+        self.uuid_type = uuid_type
         self.primary = primary
         self.name = name or 'Unnamed Service'
         self.handle = handle
@@ -278,10 +293,11 @@ class Service:
             self.gatt_handles.get_new_handle(self.handle)
 
     def add_characteristic(self, uuid, properties, value, **kwargs):
-        if bu.check_uuid(uuid) == False:
+        uuid_type = check_uuid(uuid)
+        if uuid_type is None:
             print(f"Error: Invalid char uuid {uuid}")
             return False
-        char_inst = Characteristic(uuid, properties, value, **kwargs)
+        char_inst = Characteristic(uuid, uuid_type, properties, value, **kwargs)
         self.characteristics[char_inst.cd_handle] = char_inst
         if self.notify_callback:
                 self.notify_callback()
@@ -449,10 +465,11 @@ class GattServer:
         return ATTCode.ATTRIBUTE_NOT_FOUND
 
     def add_service(self, uuid, name = None, handle = None, primary = True):
-        if bu.check_uuid(uuid) == False:
+        uuid_type = check_uuid(uuid)
+        if uuid_type is None:
             print(f"Error: Invalid service uuid {uuid}")
             return None
-        service = Service(uuid, name, handle, primary, self.on_add_char)
+        service = Service(uuid, uuid_type, name, handle, primary, self.on_add_char)
         self.services[service.handle] = service
         if primary == True:
             self.primary_service_handles.append(service.handle)
@@ -529,6 +546,71 @@ class GattServer:
         self.indication_ack_inst.wait_indication_ack = False
         self.indication_ack_inst = None
 
+    def find_information(self, start_handle, end_handle):
+        handle_uuid = bytes()
+        uuid_type = None
+        for handle in range(start_handle, end_handle + 1):
+            for service_handle, service in self.services.items():
+                for char_handle, char_inst in service.characteristics.items():
+                    if char_inst.cd_handle == handle or char_inst.descr_handle == handle:
+                        if uuid_type is None:
+                            uuid_type = char_inst.uuid_type
+                        if uuid_type == char_inst.uuid_type:
+                            handle_uuid += bu.from_u16(handle)
+                            handle_uuid += bu.from_uuid(char_inst.uuid)
+                        else:
+                            return ATTCode.SUCCESS, uuid_type, handle_uuid
+        if uuid_type is not None:
+            return ATTCode.SUCCESS, uuid_type, handle_uuid
+        else:
+            return ATTCode.ATTRIBUTE_NOT_FOUND, None, None
+
+    def find_by_value(self, start_handle, end_handle, att_uuid, att_value):
+        handle_bytes = bytes()
+        if att_uuid == ATTR.PRIMARY_SERVICE:
+            test_uuid = bu.to_uuid(att_value, 0)
+            for service_handle, service in self.services.items():
+                if service_handle < start_handle or service_handle > end_handle:
+                    continue
+                if service.uuid == test_uuid:
+                    handle_bytes += bu.from_u16(service_handle)
+                    group_end_handle = service_handle
+                    for char_handle, char_inst in service.charactaristics.items():
+                        group_end_handle = char_inst.value_handle
+                    handle_bytes += bu.from_u16(group_end_handle)
+                    return ATTCode.SUCCESS, handle_bytes
+            print(f"Warning, No Primary Service attribute {att_value} found")
+            return ATTCode.ATTRIBUTE_NOT_FOUND, None
+        else:
+            print(f"Error, ATTR 0x{att_uuid:02X} not implemented in find by value")
+            return ATTCode.REQUEST_NOT_SUPPORTED, None
+
+        def read_by_value(self, start_handle, end_handle, att_uuid):
+            handle_bytes = bytes()
+            if att_uuid == ATTR.CHARACTERISTIC:
+                for service_handle, service in self.services.items():
+                    if service_handle < start_handle or service_handle > end_handle:
+                        continue
+                        for char_handle, char_inst in service.charactaristics.items():
+                            handle_bytes += 0x00
+                            handle_bytes += bu.from_u16(char_inst.cd_handle)
+                            handle_bytes += char_inst.properties_byte()
+                            handle_bytes += bu.from_u16(char_inst.value_handle)
+                            handle_bytes += bu.from_uuid(char_inst.uuid)
+                            handle_bytes[0] = len(handle_bytes) - 1
+                            print(handle_bytes)
+                            return ATTCode.SUCCESS, handle_bytes
+                print(f"Warning, No Char attribute {att_uuid} found")
+                return ATTCode.ATTRIBUTE_NOT_FOUND, None
+            else:
+                print(f"Error, ATTR 0x{att_uuid:02X} not implemented in read by value")
+                return ATTCode.REQUEST_NOT_SUPPORTED, None
+
+                    
+
+
+
+
     def print_string(self):
         gatt_print = "\nGatt Server:"
         services_str = ""
@@ -592,33 +674,33 @@ if __name__ == "__main__":
     # result = bu.to_uuid(result)
     # print(result)
 
-    print(gatt_server.gatt_handles.print_string())
+    # print(gatt_server.gatt_handles.print_string())
 
-    new_value = b'awesome'[::-1]
-    service_uuid = '11223344-5566-7788-99AA-BBCCDDEEFF00'
-    char_uuid = 'ABCD'
-    value = gatt_server.get_char_value_uuid(service_uuid, char_uuid)
-    print(f"uuid -> value {value}")
-    gatt_server.set_char_value_uuid(service_uuid, char_uuid, new_value)
-    value = gatt_server.get_char_value_uuid(service_uuid, char_uuid)
-    print(f"uuid -> value {value}")
-    for handle in range(0x000F, 0x001A):
-        value = gatt_server.get_char_value_handle(handle)
-        print(f"0x{handle:04X} -> value {value}")
+    # new_value = b'awesome'[::-1]
+    # service_uuid = '11223344-5566-7788-99AA-BBCCDDEEFF00'
+    # char_uuid = 'ABCD'
+    # value = gatt_server.get_char_value_uuid(service_uuid, char_uuid)
+    # print(f"uuid -> value {value}")
+    # gatt_server.set_char_value_uuid(service_uuid, char_uuid, new_value)
+    # value = gatt_server.get_char_value_uuid(service_uuid, char_uuid)
+    # print(f"uuid -> value {value}")
+    # for handle in range(0x000F, 0x001A):
+    #     value = gatt_server.get_char_value_handle(handle)
+    #     print(f"0x{handle:04X} -> value {value}")
 
-    new_value = b'great'[::-1]
-    handle = 0x0011
-    value = gatt_server.get_char_value_handle(handle)
-    print(f"0x{handle:04X} -> value {value}")
-    return_code = gatt_server.set_char_value_handle(handle, new_value)
-    if return_code != ATTCode.SUCCESS:
-        print(return_code)
-    value = gatt_server.get_char_value_handle(handle)
-    print(f"0x{handle:04X} -> value {value}")
-    new_value = b'power'[::-1]
-    return_code = gatt_server.set_char_value_uuid(service_uuid, char_uuid, new_value)
-    if return_code != ATTCode.SUCCESS:
-        print(return_code)
-    value = gatt_server.get_char_value_uuid(service_uuid, char_uuid)
-    print(f"uuid -> value {value}")
+    # new_value = b'great'[::-1]
+    # handle = 0x0011
+    # value = gatt_server.get_char_value_handle(handle)
+    # print(f"0x{handle:04X} -> value {value}")
+    # return_code = gatt_server.set_char_value_handle(handle, new_value)
+    # if return_code != ATTCode.SUCCESS:
+    #     print(return_code)
+    # value = gatt_server.get_char_value_handle(handle)
+    # print(f"0x{handle:04X} -> value {value}")
+    # new_value = b'power'[::-1]
+    # return_code = gatt_server.set_char_value_uuid(service_uuid, char_uuid, new_value)
+    # if return_code != ATTCode.SUCCESS:
+    #     print(return_code)
+    # value = gatt_server.get_char_value_uuid(service_uuid, char_uuid)
+    # print(f"uuid -> value {value}")
     

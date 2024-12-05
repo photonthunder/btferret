@@ -91,15 +91,6 @@ def clean_uuid(uuid):
 def is_hex(s):
     return all(c in '0123456789abcdefABCDEF' for c in s)
 
-def check_uuid(uuid):
-    if len(uuid) == 4 and is_hex(uuid):
-        return True
-    if len(uuid) == 36:
-        cleaned = clean_uuid(uuid)
-        if len(cleaned) == 32 and is_hex(cleaned):
-            return True
-    return False
-
 def get_uuid_byte_length(uuid):
     if isinstance(uuid, str):      
         cleaned_uuid = uuid.replace('-', '')
