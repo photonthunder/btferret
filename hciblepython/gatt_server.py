@@ -134,6 +134,7 @@ class Characteristic:
         self.descr_value = None
         self.notification = False
         self.indication = False
+        self.wait_indication_ack = False
         self.value_updated = False
         
         self.permissions = permissions or []
@@ -329,6 +330,9 @@ class GattServer:
         self.primary_service_handles = []
         self.secondary_service_handles = []
         self.all_char = {}
+        self.indication_ack_inst = None
+        self.indication_sent_time = time.time()
+        self.indication_timeout = 30  #seconds
         
         self.set_base_services()
         
@@ -492,6 +496,40 @@ class GattServer:
             for char_handle, char_inst in service.characteristics.items():
                 if char_inst.uuid == ATTR.CLIENT_CHAR_CONFIG:
                     char_inst.set_value_client(char_handle, bu.from_u16(CCCD.DISABLED))
+                
+    def get_notification(self):
+        for handle, char_inst in self.all_char.items():
+            if char_inst.notification == True and char_inst.value_updated == True:
+                char_inst.value_updated = False
+                return True, handle, char.inst.value
+        return False, None, None
+
+    def check_indication_timeout(self):
+        if (time.time() - self.indication_sent_time) > self.indication_timeout:
+            return True
+        else:
+            return False
+
+    def get_indication(self):
+        if self.indication_ack_inst is not None:
+            if self.check_indication_timeout() == False:
+                return False, None, None
+            else:
+                print(f"Warning: No indication ack received in {self.indication_timeout} seconds")
+                self.indication_ack_inst.wait_indication_ack = False
+                self.indication_ack_inst = None
+        for handle, char_inst in self.all_char.items():
+            if char_inst.indication == True and char_inst.value_updated == True and char_inst.wait_indication_ack == False:
+                self.indication_ack_inst = char_inst
+                char_inst.wait_indication_ack = True
+                char_inst.value_updated = False
+                self.indication_sent_time = time.time()
+                return True, handle, char.inst.value
+        return False, None, None
+
+    def indication_ack_received(self):
+        self.indication_ack_inst.wait_indication_ack = False
+        self.indication_ack_inst = None
 
     def print_all_char_string(self):
         char_str = ""
