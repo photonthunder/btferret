@@ -299,6 +299,7 @@ class Service:
             return False
         char_inst = Characteristic(uuid, uuid_type, properties, value, **kwargs)
         self.characteristics[char_inst.cd_handle] = char_inst
+        self.characteristics = dict(sorted(self.characteristics.items()))
         if self.notify_callback:
                 self.notify_callback()
         return True
@@ -343,8 +344,6 @@ class GattServer:
         self.gatt_handles = GattHandles()
         self.device_name = device_name
         self.services = {}
-        self.primary_service_handles = []
-        self.secondary_service_handles = []
         self.indication_ack_inst = None
         self.indication_sent_time = time.time()
         self.indication_timeout = 30  #seconds
@@ -472,7 +471,6 @@ class GattServer:
                     return True
         return False
 
-
     def add_service(self, uuid, name = None, handle = None, primary = True):
         uuid_type = check_uuid(uuid)
         if uuid_type is None:
@@ -480,10 +478,7 @@ class GattServer:
             return None
         service = Service(uuid, uuid_type, name, handle, primary, self.on_add_char)
         self.services[service.handle] = service
-        if primary == True:
-            self.primary_service_handles.append(service.handle)
-        else:
-            self.secondary_service_handles.append(service.handle)
+        self.services = dict(sorted(self.services.items()))
         self.get_service_change_range()
         return service
 
@@ -496,10 +491,6 @@ class GattServer:
     def remove_service_handle(self, handle):
         if handle in self.services:
             service = self.services[handle]
-            if service.primary == True:
-                self.primary_service_handles.remove(service.handle)
-            else:
-                self.secondary_service_handles.remove(service.handle)
             del self.services[handle]
             return True
         return False
@@ -576,7 +567,8 @@ class GattServer:
 
     def find_by_value(self, start_handle, end_handle, att_uuid, att_value):
         handle_bytes = bytes()
-        if att_uuid == ATTR.PRIMARY_SERVICE:
+        print(att_uuid, ATTR.PRIMARY_SERVICE.value)
+        if att_uuid == ATTR.PRIMARY_SERVICE.value:
             test_uuid = bu.to_uuid(att_value, 0)
             for service_handle, service in self.services.items():
                 if service_handle < start_handle or service_handle > end_handle:
@@ -591,34 +583,55 @@ class GattServer:
             print(f"Warning, No Primary Service attribute {att_value} found")
             return ATTCode.ATTRIBUTE_NOT_FOUND, None
         else:
-            print(f"Error, ATTR 0x{att_uuid:02X} not implemented in find by value")
+            print(f"Error, ATTR {att_uuid} not implemented in find by value")
             return ATTCode.REQUEST_NOT_SUPPORTED, None
 
         def read_by_value(self, start_handle, end_handle, att_uuid):
             handle_bytes = bytes()
-            if att_uuid == ATTR.CHARACTERISTIC:
+            print(att_uuid, ATTR.CHARACTERISTIC.value)
+            if att_uuid == ATTR.CHARACTERISTIC.value:
                 for service_handle, service in self.services.items():
                     if service_handle < start_handle or service_handle > end_handle:
                         continue
                         for char_handle, char_inst in service.charactaristics.items():
-                            handle_bytes += 0x00
                             handle_bytes += bu.from_u16(char_inst.cd_handle)
                             handle_bytes += char_inst.properties_byte()
                             handle_bytes += bu.from_u16(char_inst.value_handle)
                             handle_bytes += bu.from_uuid(char_inst.uuid)
-                            handle_bytes[0] = len(handle_bytes) - 1
+                            len_bytes = bu.from_u8(len(handle_bytes) - 1)
+                            handle_bytes = len_bytes + handle_bytes
                             print(handle_bytes)
                             return ATTCode.SUCCESS, handle_bytes
                 print(f"Warning, No Char attribute {att_uuid} found")
                 return ATTCode.ATTRIBUTE_NOT_FOUND, None
             else:
-                print(f"Error, ATTR 0x{att_uuid:02X} not implemented in read by value")
+                print(f"Error, ATTR {att_uuid} not implemented in read by value")
                 return ATTCode.REQUEST_NOT_SUPPORTED, None
 
-                    
-
-
-
+    def get_service_handle_range(self, att_uuid, start_handle, end_handle):
+        return_bytes = bytes()
+        print(att_uuid, ATTR.PRIMARY_SERVICE.value)
+        if att_uuid == ATTR.PRIMARY_SERVICE.value:
+            service_handles = list(self.services.keys())
+            for i, handle in service_handles:
+             if start_handle <= i <= end_handle:
+                return_bytes += bu.from_u16(handle)
+                if i+1 >= len(service_handles):
+                    return_bytes += bu.from_u16(end_handle)
+                elif service_handles[i+1] > end_handle:
+                    return_bytes += bu.from_u16(end_handle)
+                else:
+                    return_bytes += bu.from_u16(service_handles[i+1])
+                service_inst += self.services.get(handle)
+                return_bytes += bu.from_uuid(service_inst.uuid)
+                len_bytes = len(return_bytes)
+                return_bytes = len_bytes + return_bytes
+                return ATTCode.SUCCESS, return_bytes
+            print(f"Warning, No Primary Service attribute {att_value} found")
+            return ATTCode.ATTRIBUTE_NOT_FOUND, None
+        else:
+            print(f"Error, ATTR {att_uuid} not implemented in service handle range")
+            return ATTCode.REQUEST_NOT_SUPPORTED, None
 
     def print_string(self):
         gatt_print = "\nGatt Server:"

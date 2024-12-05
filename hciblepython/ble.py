@@ -877,25 +877,33 @@ class BluetoothLEConnection:
         att_opcode = 0x11
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         packet =  bu.from_u8  (att_opcode)   
-        if gatt_uuid == bu.from_uuid_int(ATTR.PRIMARY_SERVICE):
-            print("Get primary services for handles 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
-            return_code, return_start_handle, return_end_handle, primary_uuid = self.gatt_server.get_service_handle_range(start_handle)
-            if return_code != ATTCode.SUCCESS: 
-                self.do_att_error_rsp(att_opcode_req, handle, return_code)
-                return
-            print("Handles 0x{:04X} to 0x{:04X}".format(return_start_handle, return_end_handle))
-            if end_handle < return_end_handle:
-                print("Service handle 0x{:04X} larger than request max 0x{:04X}, truncating".format(end_handle, return_end_handle))
-                return_end_handle = end_handle
-            att_length = 4 + len(primary_uuid)
-            packet += bu.from_u8(att_length)  
-            packet += bu.from_u16(return_start_handle)
-            packet += bu.from_u16(return_end_handle)
-            packet += primary_uuid
-        else:
-            print(f"GATT Attribute {gatt_uuid} Not Implemented")
-            self.do_att_error_rsp(att_opcode_req, start_handle, ATTCode.UNLIKELY_ERROR)
+        print("Get primary services for handles 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
+        return_code, data = self.gatt_server.get_service_handle_range(gatt_uuid, start_handle, end_handle)
+        if return_code != ATTCode.SUCCESS: 
+            self.do_att_error_rsp(att_opcode_req, handle, return_code)
             return
+        packet += data
+
+
+        # if gatt_uuid == bu.from_uuid_int(ATTR.PRIMARY_SERVICE):
+        #     print("Get primary services for handles 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
+        #     return_code, return_start_handle, return_end_handle, primary_uuid = self.gatt_server.get_service_handle_range(start_handle)
+        #     if return_code != ATTCode.SUCCESS: 
+        #         self.do_att_error_rsp(att_opcode_req, handle, return_code)
+        #         return
+        #     print("Handles 0x{:04X} to 0x{:04X}".format(return_start_handle, return_end_handle))
+        #     if end_handle < return_end_handle:
+        #         print("Service handle 0x{:04X} larger than request max 0x{:04X}, truncating".format(end_handle, return_end_handle))
+        #         return_end_handle = end_handle
+        #     att_length = 4 + len(primary_uuid)
+        #     packet += bu.from_u8(att_length)  
+        #     packet += bu.from_u16(return_start_handle)
+        #     packet += bu.from_u16(return_end_handle)
+        #     packet += primary_uuid
+        # else:
+        #     print(f"GATT Attribute {gatt_uuid} Not Implemented")
+        #     self.do_att_error_rsp(att_opcode_req, start_handle, ATTCode.UNLIKELY_ERROR)
+        #     return
         self.send_acl(packet)
 
     @register_event(0x12, acl_event_handler)
