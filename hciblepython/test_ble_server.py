@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from ble import *
-from test_gatt_server import GattServer
+from gatt_server import GattServer
 from ble_enum import Address
 from ble_enum import AdvertisingDataType
 import byte_utils as bu

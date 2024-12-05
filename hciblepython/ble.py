@@ -334,7 +334,7 @@ class BluetoothLEConnection:
             print(f"Handle 0x{handle:04X}, Connections = {connections}, Total Connections = {new_count}")
 
         # Appears that some use this as an ack to indication
-        # self.gatt_server.clear_ack()  
+        # self.gatt_server.indication_ack_received()  
 
     @register_event(0x3E, hci_event_handlers)
     def on_hci_meta_event(self, data):

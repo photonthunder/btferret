@@ -329,7 +329,6 @@ class GattServer:
         self.services = {}
         self.primary_service_handles = []
         self.secondary_service_handles = []
-        self.all_char = {}
         self.indication_ack_inst = None
         self.indication_sent_time = time.time()
         self.indication_timeout = 30  #seconds
@@ -371,18 +370,8 @@ class GattServer:
         )
         return pnp_id
 
-    def get_all_char(self):
-        self.all_char.clear()
-        for service_handle, service in self.services.items():
-            for cd_handle, char_inst in service.characteristics.items():
-                self.all_char[char_inst.cd_handle] = char_inst
-                self.all_char[char_inst.value_handle] = char_inst
-                if char_inst.descr_handle:
-                    self.all_char[char_inst.descr_handle] = char_inst
-
     def on_add_char(self):
         self.get_service_change_range()
-        self.get_all_char()
 
     def set_base_services(self):
         generic_access = self.add_service(uuid=KEY_SERVICE.GENERIC_ACCESS.value, name="Generic Access")
@@ -416,13 +405,20 @@ class GattServer:
         )
         self.get_service_change_range()
 
+    def get_char_inst_handle(self, handle):
+        for service_handle, service in self.services.items():
+            for char_handle, char_inst in service.characteristics.items():
+                if char_inst.cd_handle == handle or char_inst.value_handle == handle or char_inst.descr_handle == handle:
+                    return char_inst
+        return None
+
     def get_char_value_handle(self, handle):
-        char_inst = self.all_char.get(handle)
-        if char_inst == None:
-            print("Error: Handle 0x{handle:04X} not attached to char")
-            return ATTCode.INVALID_HANDLE, None
-        else:
+        char_inst = self.get_char_inst_handle(handle)
+        if char_inst is not None:
             return char_inst.get_value(handle)
+        else:
+            print(f"Error: Handle 0x{handle:04X} not attached to char")
+            return ATTCode.INVALID_HANDLE, None
 
     def get_char_value_uuid(self, service_uuid, char_uuid):
         for service_handle, service in self.services.items():
@@ -435,12 +431,12 @@ class GattServer:
         return ATTCODE.ATTRIBUTE_NOT_FOUND, None
         
     def set_char_value_handle(self, handle, new_value):
-        char_inst = self.all_char.get(handle)
-        if char_inst == None:
-            print("Error: Handle 0x{handle:04X} not attached to char")
-            return ATTCode.INVALID_HANDLE
+        char_inst = self.get_char_inst_handle(handle)
+        if char_inst is not None:
+            return char_inst.set_value_client(handle, new_value)
         else:
-            return char_inst.set_value_client(handle, new_value) 
+            print(f"Error: Handle 0x{handle:04X} not attached to char")
+            return ATTCode.INVALID_HANDLE
 
     def set_char_value_uuid(self, service_uuid, char_uuid, new_value):
         for service_handle, service in self.services.items():
@@ -498,10 +494,11 @@ class GattServer:
                     char_inst.set_value_client(char_handle, bu.from_u16(CCCD.DISABLED))
                 
     def get_notification(self):
-        for handle, char_inst in self.all_char.items():
-            if char_inst.notification == True and char_inst.value_updated == True:
-                char_inst.value_updated = False
-                return True, handle, char.inst.value
+        for service_handle, service in self.services.items():
+            for char_handle, char_inst in service.characteristics.items():
+                if char_inst.notification == True and char_inst.value_updated == True:
+                    char_inst.value_updated = False
+                    return True, char_handle, char.inst.value
         return False, None, None
 
     def check_indication_timeout(self):
@@ -518,24 +515,19 @@ class GattServer:
                 print(f"Warning: No indication ack received in {self.indication_timeout} seconds")
                 self.indication_ack_inst.wait_indication_ack = False
                 self.indication_ack_inst = None
-        for handle, char_inst in self.all_char.items():
-            if char_inst.indication == True and char_inst.value_updated == True and char_inst.wait_indication_ack == False:
-                self.indication_ack_inst = char_inst
-                char_inst.wait_indication_ack = True
-                char_inst.value_updated = False
-                self.indication_sent_time = time.time()
-                return True, handle, char.inst.value
+        for service_handle, service in self.services.items():
+            for char_handle, char_inst in service.characteristics.items():
+                if char_inst.indication == True and char_inst.value_updated == True and char_inst.wait_indication_ack == False:
+                    self.indication_ack_inst = char_inst
+                    char_inst.wait_indication_ack = True
+                    char_inst.value_updated = False
+                    self.indication_sent_time = time.time()
+                    return True, handle, char.inst.value
         return False, None, None
 
     def indication_ack_received(self):
         self.indication_ack_inst.wait_indication_ack = False
         self.indication_ack_inst = None
-
-    def print_all_char_string(self):
-        char_str = ""
-        for handle, char_inst in self.all_char.items():
-            char_str += f"\n0x{handle:04X} {char_inst}"
-        return char_str
 
     def print_string(self):
         gatt_print = "\nGatt Server:"
@@ -572,57 +564,61 @@ if __name__ == "__main__":
 
     print(gatt_server.print_string())
 
-    uuid = '11223344-5566-7788-99AA-BBCCDDEEFF00'
-    uuid = '1801'
+    # uuid = '11223344-5566-7788-99AA-BBCCDDEEFF00'
+    # uuid = '1801'
 
-    if gatt_server.remove_service_uuid(uuid) == True:
-        print(gatt_server.print_string())
-    else:
-        print("No service found to remove")
+    # if gatt_server.remove_service_uuid(uuid) == True:
+    #     print(gatt_server.print_string())
+    # else:
+    #     print("No service found to remove")
 
-    uuid_char = 'CDEF'
+    # uuid_char = 'CDEF'
 
-    if custom_service.remove_char_uuid(uuid) == True:
-        print(gatt_server.print_string())
-    else:
-        print("No char found to remove")
+    # if custom_service.remove_char_uuid(uuid_char) == True:
+    #     print(gatt_server.print_string())
+    # else:
+    #     print("No char found to remove")
 
-    temp_service = gatt_server.get_service_uuid(uuid)
-    if temp_service:
-        print(temp_service.uuid, temp_service.handle)
-        temp_char = temp_service.get_char_uuid(uuid_char)
-        if temp_char:
-            print(temp_char.uuid, temp_char.cd_handle)
+    # temp_service = gatt_server.get_service_uuid(uuid)
+    # if temp_service:
+    #     print(temp_service.uuid, temp_service.handle)
+    #     temp_char = temp_service.get_char_uuid(uuid_char)
+    #     if temp_char:
+    #         print(temp_char.uuid, temp_char.cd_handle)
 
-    print(uuid)
-    result = bu.from_uuid(uuid)
-    print(result)
-    result = bu.to_uuid(result)
-    print(result)
+    # print(uuid)
+    # result = bu.from_uuid(uuid)
+    # print(result)
+    # result = bu.to_uuid(result)
+    # print(result)
 
     print(gatt_server.gatt_handles.print_string())
-    print()
-    print(gatt_server.print_all_char_string())
-
 
     new_value = b'awesome'[::-1]
     service_uuid = '11223344-5566-7788-99AA-BBCCDDEEFF00'
     char_uuid = 'ABCD'
     value = gatt_server.get_char_value_uuid(service_uuid, char_uuid)
-    print(value)
-    value = gatt_server.get_char_value_handle(0x0011)
-    print(value)
-    value = gatt_server.get_char_value_handle(0x0010)
-    print(value)
-    value = gatt_server.get_char_value_handle(0x000F)
-    print(value)
-    return_code = gatt_server.set_char_value_handle(0x0011, new_value)
-    print(return_code)
-    value = gatt_server.get_char_value_handle(0x0011)
-    print(value)
+    print(f"uuid -> value {value}")
+    gatt_server.set_char_value_uuid(service_uuid, char_uuid, new_value)
+    value = gatt_server.get_char_value_uuid(service_uuid, char_uuid)
+    print(f"uuid -> value {value}")
+    for handle in range(0x000F, 0x001A):
+        value = gatt_server.get_char_value_handle(handle)
+        print(f"0x{handle:04X} -> value {value}")
+
+    new_value = b'great'[::-1]
+    handle = 0x0011
+    value = gatt_server.get_char_value_handle(handle)
+    print(f"0x{handle:04X} -> value {value}")
+    return_code = gatt_server.set_char_value_handle(handle, new_value)
+    if return_code != ATTCode.SUCCESS:
+        print(return_code)
+    value = gatt_server.get_char_value_handle(handle)
+    print(f"0x{handle:04X} -> value {value}")
     new_value = b'power'[::-1]
     return_code = gatt_server.set_char_value_uuid(service_uuid, char_uuid, new_value)
-    print(return_code)
+    if return_code != ATTCode.SUCCESS:
+        print(return_code)
     value = gatt_server.get_char_value_uuid(service_uuid, char_uuid)
-    print(value)
+    print(f"uuid -> value {value}")
     
