@@ -75,6 +75,7 @@ class BLE(BluetoothLEConnection):
             properties=[PROP_FLAGS.READ, PROP_FLAGS.NOTIFY],
             value=b'SET CNT'[::-1]
         )
+        print(self.gatt_server.print_string())
 
 
         self.reset()

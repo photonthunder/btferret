@@ -726,16 +726,17 @@ class BluetoothLEConnection:
         # v5.4  Vol 3 Part F 3.4.3.2 ATT_FIND_INFORMATION_RSP
         att_opcode = 0x05
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
-        return_code, uuid_format, handle_uuid = self.gatt_server.find_information(start_handle, end_handle)
+        return_code, data = self.gatt_server.find_information(start_handle, end_handle)
         if return_code != ATTCode.SUCCESS:
             self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
             return
         packet =  bu.from_u8(att_opcode)
-        packet += bu.from_u8(uuid_format)
-        for each_handle_uuid in handle_uuid:
-            handle, uuid = each_handle_uuid
-            packet += bu.from_u16(start_handle)
-            packet += uuid
+        packet += data
+        # packet += bu.from_u8(uuid_format)
+        # for each_handle_uuid in handle_uuid:
+        #     handle, uuid = each_handle_uuid
+        #     packet += bu.from_u16(start_handle)
+        #     packet += uuid
         self.send_acl(packet)
 
     @register_event(0x06, acl_event_handler)
@@ -877,10 +878,10 @@ class BluetoothLEConnection:
         att_opcode = 0x11
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         packet =  bu.from_u8  (att_opcode)   
-        print("Get primary services for handles 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
+        # print("Get primary services for handles 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
         return_code, data = self.gatt_server.get_service_handle_range(gatt_uuid, start_handle, end_handle)
         if return_code != ATTCode.SUCCESS: 
-            self.do_att_error_rsp(att_opcode_req, handle, return_code)
+            self.do_att_error_rsp(att_opcode_req, start_handle, return_code)
             return
         packet += data
 
@@ -889,7 +890,7 @@ class BluetoothLEConnection:
         #     print("Get primary services for handles 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
         #     return_code, return_start_handle, return_end_handle, primary_uuid = self.gatt_server.get_service_handle_range(start_handle)
         #     if return_code != ATTCode.SUCCESS: 
-        #         self.do_att_error_rsp(att_opcode_req, handle, return_code)
+        #         self.do_att_error_rsp(att_opcode_req, start_handle, return_code)
         #         return
         #     print("Handles 0x{:04X} to 0x{:04X}".format(return_start_handle, return_end_handle))
         #     if end_handle < return_end_handle:
