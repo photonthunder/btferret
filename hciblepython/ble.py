@@ -208,9 +208,9 @@ class BluetoothLEConnection:
         peripheral_latency = bu.to_u16(data, 9)
         supervision_timeout =  bu.to_u16(data, 11)
         print("Connection Update Complete")
-        print("Handle: {:04x} Status: {02x}".format(handle, status))
+        print(f"Handle: 0x{handle:04X} Status: 0x{status:02X}")
         print("Connection Interval {ConnectionInterval.to_time(connection_interval)} seconds}")
-        print("Peripheral Latency 0x{peripheral_latency:04X} connection events}")
+        print(f"Peripheral Latency 0x{peripheral_latency:04X} connection events")
         print("Supervision Timeout {SupervisionTimeout.to_time(supervision_timeout)} seconds}")
 
     @register_event(0x04, meta_event_handlers)
@@ -224,7 +224,7 @@ class BluetoothLEConnection:
         print("Read Remote Features Complete")
         handle = bu.to_u16(data, 5)
         features = bu.to_data_rest(data, 7)
-        print("Handle: {} Features {}".format(handle, bu.as_hex(features)))
+        print(f"Handle: 0x{handle:04X} Features {bu.as_hex(features)}")
 
     @register_event(0x07, meta_event_handlers)
     def on_le_data_length_change(self, data):
@@ -235,7 +235,7 @@ class BluetoothLEConnection:
         max_tx_time = bu.to_u16(data, 8) # 0x0148 to 0x4290
         max_rx_octets = bu.to_u16(data, 10) # 0x001B to 0x00FB
         max_rx_time = bu.to_u16(data, 12) # 0x0148 to 0x4290
-        print(self.event_text, "Data length changed for 0x{:04X}".format(handle))
+        print(self.event_text, f"Data length changed for 0x{handle:04X}")
         print(f"Max TX Octets: 0x{max_tx_octets:04X}, Max TX Time:  0x{max_tx_octets:04X}")
         print(f"Max RX Octets: 0x{max_tx_octets:04X}, Max RX Time:  0x{max_tx_octets:04X}")
 
@@ -273,7 +273,7 @@ class BluetoothLEConnection:
         handle = bu.to_u16 (data, 4)
         reason = bu.to_u8  (data, 6)
         self.client_connected = False
-        print("HCI Disconnection Complete, Handle = 0x{:04X}".format(handle))
+        print(f"HCI Disconnection Complete, Handle = 0x{handle:04X}")
         if reason == BLEErrorCode.REMOTE_USER_TERMINATED_CONNECTION:
             print("Remote User terminated Connection")
         else:
@@ -575,7 +575,7 @@ class BluetoothLEConnection:
         elif enabled_status == Advertising.DISABLED:
             cmd_name = "LE Set Advertising: Disabled"
         else:
-            raise ValueError("Invalid advertising parameter {}".format(enabled_status))
+            raise ValueError(f"Invalid advertising parameter {enabled_status}")
         print(self.cmd_text, cmd_name)
         packet = bu.from_u8(enabled_status)
         self.send_command(opcode, cmd_name, packet)
@@ -800,34 +800,7 @@ class BluetoothLEConnection:
         if return_code != ATTCode.SUCCESS:
             self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
             return
-        packet += data
-
-        # if uuid == bu.from_uuid_int(ATTR.CHARACTERISTIC):
-        #     return_code, char_decl = self.gatt_server.read_char_uuid_value(start_handle, end_handle)
-        #     if return_code != ATTCode.SUCCESS:
-        #         self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
-        #         return
-        #     elif not char_decl:
-        #         print("No CD Handle in range of 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
-        #         self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
-        #         return
-        #     else:
-        #         # len_char_item = len(char_decl)
-        #         packet += bu.from_u8(7) 
-        #         # for idx, char_item in enumerate(char_decl):
-        #         handle, prop_byte, value_handle, char_uuid = char_decl
-        #         packet += bu.from_u16(handle)
-        #         packet += bu.from_u8(prop_byte)
-        #         packet += bu.from_u16(value_handle)
-        #         packet += char_uuid
-        # else:
-        #     return_code, handle, data = self.gatt_server.read_uuid_value(start_handle, end_handle, uuid)
-        #     if return_code != ATTCode.SUCCESS:
-        #         self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
-        #         return  
-        #     packet += bu.from_u8(2 + len(data))
-        #     packet += bu.from_u16 (handle)
-        #     packet += data        
+        packet += data  
         self.send_acl(packet)
 
     def do_att_read_req(self, handle):
@@ -878,33 +851,12 @@ class BluetoothLEConnection:
         att_opcode = 0x11
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         packet =  bu.from_u8  (att_opcode)   
-        # print("Get primary services for handles 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
+        # print("Get primary services for handles 0x{start_handle:04X} to 0x{end_handle:04X}")
         return_code, data = self.gatt_server.get_service_handle_range(gatt_uuid, start_handle, end_handle)
         if return_code != ATTCode.SUCCESS: 
             self.do_att_error_rsp(att_opcode_req, start_handle, return_code)
             return
         packet += data
-
-
-        # if gatt_uuid == bu.from_uuid_int(ATTR.PRIMARY_SERVICE):
-        #     print("Get primary services for handles 0x{:04X} to 0x{:04X}".format(start_handle, end_handle))
-        #     return_code, return_start_handle, return_end_handle, primary_uuid = self.gatt_server.get_service_handle_range(start_handle)
-        #     if return_code != ATTCode.SUCCESS: 
-        #         self.do_att_error_rsp(att_opcode_req, start_handle, return_code)
-        #         return
-        #     print("Handles 0x{:04X} to 0x{:04X}".format(return_start_handle, return_end_handle))
-        #     if end_handle < return_end_handle:
-        #         print("Service handle 0x{:04X} larger than request max 0x{:04X}, truncating".format(end_handle, return_end_handle))
-        #         return_end_handle = end_handle
-        #     att_length = 4 + len(primary_uuid)
-        #     packet += bu.from_u8(att_length)  
-        #     packet += bu.from_u16(return_start_handle)
-        #     packet += bu.from_u16(return_end_handle)
-        #     packet += primary_uuid
-        # else:
-        #     print(f"GATT Attribute {gatt_uuid} Not Implemented")
-        #     self.do_att_error_rsp(att_opcode_req, start_handle, ATTCode.UNLIKELY_ERROR)
-        #     return
         self.send_acl(packet)
 
     @register_event(0x12, acl_event_handler)
@@ -981,7 +933,7 @@ class BluetoothLEConnection:
         value = data[3:]
         return_code = self.gatt_server.write_char_value(handle, value)
         if return_code != ATTCode.SUCCESS:
-            print("No response was requested but write was not successful, Error = 0x{:02X}".format(return_code))
+            print(f"No response was requested but write was not successful, Error = 0x{return_code:02X}")
 
     def on_acl_event(self, data):
         print("ACL data:      ", bu.as_hex(data))
@@ -1014,13 +966,13 @@ class BluetoothLEConnection:
         length = bu.to_u16(data, 3) 
  
         full_packet = False
-        # print('ACL header: handle: {}  bc: {}  pb: {}'.format(handle, bc, pb))
+        # print(f'ACL header: handle: {handle}  bc: {bc}  pb: {pb}')
         if pb & PacketBoundaryFlags.CONTINUING_FRAGMENT == PacketBoundaryFlags.CONTINUING_FRAGMENT:
             size =     bu.to_u16(data, 5)
             channel =  bu.to_u16(data, 7)
             acl_data = bu.to_data_rest(data, 9)
             full_packet = length - size == 4
-            print("Channel: {} Length: {} Data size: {} Full packet? {}".format(channel, length, size, full_packet))
+            print("Channel: {channel} Length: {length} Data size: {size} Full packet? {full_packet}")
             # print("ACL packet:    ", bu.as_hex(acl_data))
             self.acl_total_length = size
             self.acl_packet =       acl_data

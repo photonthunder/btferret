@@ -21,7 +21,7 @@ def to_u8 (byts, ind):
 
 def to_uuid (uuid_bytes):
     if len(uuid_bytes) == 2:
-        temp_string = "{:02X}{:02X}".format(uuid_bytes[1], uuid_bytes[0])
+        temp_string = f"{uuid_bytes[1]:02X}{uuid_bytes[0]:02X}"
         return temp_string
     elif len(uuid_bytes) == 16:
         uuid_bytes_reversed = uuid_bytes[::-1]
