@@ -141,6 +141,7 @@ class Characteristic:
 
         self.descr_handle = None
         self.descr_uuid = None
+        self.descr_uuid_type = None
         self.descr_value = None
         self.notification = False
         self.indication = False
@@ -193,14 +194,18 @@ class Characteristic:
             value = CCCD.DISABLED
         if check_uuid(uuid) != UUID_TYPE.UUID_16BIT:
             print(f"Error: Descriptor has bad uuid {uuid}")
+            return False
+        self.descr_uuid_type = UUID_TYPE.UUID_16BIT
         self.descr_handle = handle
         self.descr_uuid = uuid
         self.descr_value = bu.from_u16(value)
+        return True
 
     def remove_descriptor(self, uuid):
         self.descr_handle = None
         self.descr_uuid = None
         self.descr_value = None
+        self.descr_uuid_type = None
 
     def clear_notif_indic(self):
         self.notification = False
@@ -464,7 +469,7 @@ class GattServer:
                 for char_handle, char_inst in service.characteristics.items():
                     if char_inst.uuid == char_uuid:
                         # print(f"Char Match {char_uuid}")
-                        return char_inst.set_value_client(char_inst.value_handle, new_value)
+                        return char_inst.set_value_client(char_handle, new_value)
         return ATTCode.ATTRIBUTE_NOT_FOUND
 
     def set_value_from_server(self, handle, value):
@@ -514,14 +519,14 @@ class GattServer:
         for service_handle, service in self.services.items():
             for char_handle, char_inst in service.characteristics.items():
                 if char_inst.uuid == ATTR.CLIENT_CHAR_CONFIG:
-                    char_inst.set_value_client(char_handle, bu.from_u16(CCCD.DISABLED))
+                    char_inst.set_value_client(char_inst.descr_handle, bu.from_u16(CCCD.DISABLED))
                 
     def get_notification(self):
         for service_handle, service in self.services.items():
             for char_handle, char_inst in service.characteristics.items():
                 if char_inst.notification == True and char_inst.value_updated == True:
                     char_inst.value_updated = False
-                    return True, char_handle, char.inst.value
+                    return True, char_inst.value_handle, char_inst.value
         return False, None, None
 
     def check_indication_timeout(self):
@@ -545,7 +550,7 @@ class GattServer:
                     char_inst.wait_indication_ack = True
                     char_inst.value_updated = False
                     self.indication_sent_time = time.time()
-                    return True, handle, char.inst.value
+                    return True, char_inst.value_handle, char_inst.value
         return False, None, None
 
     def indication_ack_received(self):
@@ -558,13 +563,22 @@ class GattServer:
         for handle in range(start_handle, end_handle + 1):
             for service_handle, service in self.services.items():
                 for char_handle, char_inst in service.characteristics.items():
-                    if char_inst.cd_handle == handle or char_inst.descr_handle == handle:
+                    if char_inst.cd_handle == handle:
                         if uuid_type is None:
                             uuid_type = char_inst.uuid_type
                             return_bytes += bu.from_u8(uuid_type)
                         if uuid_type == char_inst.uuid_type:
                             return_bytes += bu.from_u16(handle)
                             return_bytes += bu.from_uuid(char_inst.uuid)
+                        else:
+                            return ATTCode.SUCCESS, return_bytes
+                    if char_inst.descr_handle == handle:
+                        if uuid_type is None:
+                            uuid_type = char_inst.descr_uuid_type
+                            return_bytes += bu.from_u8(uuid_type)
+                        if uuid_type == char_inst.descr_uuid_type:
+                            return_bytes += bu.from_u16(handle)
+                            return_bytes += bu.from_uuid(char_inst.descr_uuid)
                         else:
                             return ATTCode.SUCCESS, return_bytes
         if uuid_type is not None:
@@ -600,10 +614,11 @@ class GattServer:
                     if att_uuid == ATTR.CHARACTERISTIC.value:
                         return_bytes += bu.from_u16(char_inst.cd_handle)
                         return_bytes += char_inst.properties_byte()
-                        if char_inst.descr_handle != None:
-                            return_bytes += bu.from_u16(char_inst.descr_handle)
-                        else:
-                            return_bytes += bu.from_u16(char_inst.value_handle)
+                        # if char_inst.descr_handle != None:
+                        #     return_bytes += bu.from_u16(char_inst.descr_handle)
+                        # else:
+                        #     return_bytes += bu.from_u16(char_inst.value_handle)
+                        return_bytes += bu.from_u16(char_inst.value_handle)
                         return_bytes += bu.from_uuid(char_inst.uuid)
                         len_bytes = bu.from_u8(len(return_bytes))
                         return_bytes = len_bytes + return_bytes
@@ -619,7 +634,6 @@ class GattServer:
                         return ATTCode.REQUEST_NOT_SUPPORTED, None
         print(f"Warning, No Char attribute {att_uuid} found")
         return ATTCode.ATTRIBUTE_NOT_FOUND, None
-
 
     def get_service_handle_range(self, att_uuid, start_handle, end_handle):
         return_bytes = bytes()
@@ -645,7 +659,6 @@ class GattServer:
                     return ATTCode.REQUEST_NOT_SUPPORTED, None
         print(f"No Service Handle in range 0x{start_handle:04X} to 0x{end_handle:04X}")
         return ATTCode.ATTRIBUTE_NOT_FOUND, None
-
 
     def print_string(self):
         gatt_print = "\nGatt Server:"

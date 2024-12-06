@@ -920,7 +920,7 @@ class BluetoothLEConnection:
         # v5.4  Vol 3 Part F 3.4.5.2 ATT_WRITE_RSP
         att_opcode = 0x13
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
-        return_code = self.gatt_server.write_char_value(handle, value)
+        return_code = self.gatt_server.set_char_value_handle(handle, value)
         if return_code == ATTCode.SUCCESS:
             packet =  bu.from_u8(att_opcode)   
             self.send_acl(packet)

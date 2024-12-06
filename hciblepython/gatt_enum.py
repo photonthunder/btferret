@@ -58,7 +58,7 @@ class ATTR(Enum):
 class CCCD(IntEnum):  # Client Characteristic Configuration Descriptor
     DISABLED = 0x0000
     NOTIFICATION = 0x0001
-    INDICATIONS = 0x0002
+    INDICATION = 0x0002
 
 # https://www.bluetooth.com/specifications/assigned-numbers/
 # Section 3.8.1
