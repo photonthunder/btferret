@@ -931,7 +931,7 @@ class BluetoothLEConnection:
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode_req:02X}")
         handle = bu.to_u16(data, 1)
         value = data[3:]
-        return_code = self.gatt_server.write_char_value(handle, value)
+        return_code = self.gatt_server.set_char_value_handle(handle, value)
         if return_code != ATTCode.SUCCESS:
             print(f"No response was requested but write was not successful, Error = 0x{return_code:02X}")
 
