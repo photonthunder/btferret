@@ -796,7 +796,7 @@ class BluetoothLEConnection:
         att_opcode = 0x09
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
         packet =  bu.from_u8  (att_opcode)
-        return_code, data = self.gatt_server.read_by_value(start_handle, end_handle, uuid)
+        return_code, data = self.gatt_server.read_by_type(start_handle, end_handle, uuid)
         if return_code != ATTCode.SUCCESS:
             self.do_att_error_rsp(att_opcode_req, start_handle, return_code) 
             return

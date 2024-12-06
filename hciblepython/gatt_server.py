@@ -218,8 +218,8 @@ class Characteristic:
             self.value = value
             return ATTCode.SUCCESS
         if handle == self.cd_handle:
-            self.value = value
-            return ATTCode.SUCCESS
+            print("Error: Can't write to Character Decleration")
+            return ATTCode.WRITE_NOT_PERMITTED
         if self.descr_handle == handle:
             int_value = bu.to_u16(value, 0)
             if int_value == CCCD.NOTIFICATION.value:
@@ -241,7 +241,11 @@ class Characteristic:
         if handle == self.value_handle:
             return ATTCode.SUCCESS, self.value
         if handle == self.cd_handle:
-            return ATTCode.SUCCESS, self.value
+            return_bytes = bytes()
+            return_bytes += self.properties_byte()
+            return_bytes += bu.from_u16(self.value_handle)
+            return_bytes += bu.from_uuid(self.uuid)
+            return ATTCode.SUCCESS, return_bytes
         if self.descr_handle == handle:
                 return ATTCode.SUCCESS, self.descr_value
         return ATTCode.INVALID_HANDLE, None
@@ -430,7 +434,6 @@ class GattServer:
     def get_char_value_handle(self, handle):
         char_inst = self.get_char_inst_handle(handle)
         if char_inst is not None:
-            # print(char_inst.get_value(handle))
             return char_inst.get_value(handle)
         else:
             print(f"Error: Handle 0x{handle:04X} not attached to char")
@@ -443,7 +446,7 @@ class GattServer:
                 for char_handle, char_inst in service.characteristics.items():
                     if char_inst.uuid == char_uuid:
                         # print(f"Char Match {char_uuid}")
-                        return char_inst.get_value(char_handle)
+                        return char_inst.get_value(char_inst.value_handle)
         return ATTCODE.ATTRIBUTE_NOT_FOUND, None
         
     def set_char_value_handle(self, handle, new_value):
@@ -461,7 +464,7 @@ class GattServer:
                 for char_handle, char_inst in service.characteristics.items():
                     if char_inst.uuid == char_uuid:
                         # print(f"Char Match {char_uuid}")
-                        return char_inst.set_value_client(char_handle, new_value)
+                        return char_inst.set_value_client(char_inst.value_handle, new_value)
         return ATTCode.ATTRIBUTE_NOT_FOUND
 
     def set_value_from_server(self, handle, value):
@@ -589,7 +592,7 @@ class GattServer:
         print(f"Warning, No Primary Service attribute {att_value} found")
         return ATTCode.ATTRIBUTE_NOT_FOUND, None
 
-    def read_by_value(self, start_handle, end_handle, att_uuid):
+    def read_by_type(self, start_handle, end_handle, att_uuid):
         return_bytes = bytes()
         for service_handle, service in self.services.items():
             for char_handle, char_inst in service.characteristics.items():
@@ -597,7 +600,10 @@ class GattServer:
                     if att_uuid == ATTR.CHARACTERISTIC.value:
                         return_bytes += bu.from_u16(char_inst.cd_handle)
                         return_bytes += char_inst.properties_byte()
-                        return_bytes += bu.from_u16(char_inst.value_handle)
+                        if char_inst.descr_handle != None:
+                            return_bytes += bu.from_u16(char_inst.descr_handle)
+                        else:
+                            return_bytes += bu.from_u16(char_inst.value_handle)
                         return_bytes += bu.from_uuid(char_inst.uuid)
                         len_bytes = bu.from_u8(len(return_bytes))
                         return_bytes = len_bytes + return_bytes
