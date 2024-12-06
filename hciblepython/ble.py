@@ -853,7 +853,7 @@ class BluetoothLEConnection:
         att_opcode = 0x0B
         cmd_name = "READ"
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode:02X}")
-        return_code, byte_value = self.gatt_server.read_char_value(handle)
+        return_code, byte_value = self.gatt_server.get_char_value_handle(handle)
         if return_code != ATTCode.SUCCESS: 
             self.do_att_error_rsp(att_opcode_req, handle, return_code)
             return
@@ -969,7 +969,7 @@ class BluetoothLEConnection:
         att_opcode_req = 0x1E
         cmd_name = "Indication ACK"
         print(self.att_rsp_text, f"{cmd_name} 0x{att_opcode_req:02X}")
-        self.gatt_server.clear_ack()
+        self.gatt_server.indication_ack_received()
 
     @register_event(0x52, acl_event_handler)
     def do_att_write_no_response(self, data):

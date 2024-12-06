@@ -237,7 +237,7 @@ class Characteristic:
         return ATTCode.INVALID_HANDLE
 
     def get_value(self, handle):
-        # print(handle, self.value_handle)
+        # print(handle, self.cd_handle, self.value_handle, self.descr_handle)
         if handle == self.value_handle:
             return ATTCode.SUCCESS, self.value
         if handle == self.cd_handle:
@@ -430,6 +430,7 @@ class GattServer:
     def get_char_value_handle(self, handle):
         char_inst = self.get_char_inst_handle(handle)
         if char_inst is not None:
+            # print(char_inst.get_value(handle))
             return char_inst.get_value(handle)
         else:
             print(f"Error: Handle 0x{handle:04X} not attached to char")
@@ -464,6 +465,8 @@ class GattServer:
         return ATTCode.ATTRIBUTE_NOT_FOUND
 
     def set_value_from_server(self, handle, value):
+        if not isinstance(value, bytes):
+            print("Error: Value from server must be a byte")
         for service_handle, service in self.services.items():
             for char_handle, char_inst in service.characteristics.items():
                 if char_inst.cd_handle == handle or char_inst.value_handle == handle:

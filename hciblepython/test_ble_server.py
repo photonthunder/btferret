@@ -6,12 +6,12 @@ from ble_enum import Address
 from ble_enum import AdvertisingDataType
 from gatt_enum import PROP_FLAGS
 import byte_utils as bu
+import random
 import sys
 import termios
 import tty
 import time
 import select
-import threading
 
 class BLE(BluetoothLEConnection):
     def __init__(self, device_name, *args, **kwargs):
@@ -42,14 +42,23 @@ class BLE(BluetoothLEConnection):
             if key == '\x1b':  # Escape key (ASCII code)
                 self.escape_pressed = True
 
+    def random_printable_bytes(self, length):
+        allowed_chars = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+        return bytes(random.choice(allowed_chars) for _ in range(length))
+
     def updateCharacteristicValues(self):
         current_time = time.time()
         if current_time - self.last_print_time >= 5: # 5 seconds
             current_seconds = str(int(current_time) % 60)
-            print("Set DEAF to {}".format(current_seconds))
+            print(f"Set DEAF to {current_seconds}")
             handle = 0x0016
-            if self.gatt_server.set_value_from_server(handle, current_seconds) == False:
+            if self.gatt_server.set_value_from_server(handle, current_seconds.encode('utf-8')) == False:
                 print(f"Error: value {current_seconds} didn't update on server for 0x{handle:04X}")
+            random_bytes = self.random_printable_bytes(8)
+            print(f"Set DCBA to {random_bytes}")
+            handle = 0x0019
+            if self.gatt_server.set_value_from_server(handle, random_bytes) == False:
+                print(f"Error: value {random_bytes} didn't update on server for 0x{handle:04X}")
             self.last_print_time = current_time
 
 
