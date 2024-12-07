@@ -29,6 +29,8 @@ class BLE(BluetoothLEConnection):
         self.old_settings = termios.tcgetattr(sys.stdin)
         self.long_wait = 0.05
 
+        self.adv()
+
     def enable_raw_mode(self):
         self.old_settings = termios.tcgetattr(sys.stdin)
         tty.setcbreak(sys.stdin.fileno())
@@ -51,39 +53,53 @@ class BLE(BluetoothLEConnection):
         if current_time - self.last_print_time >= 5: # 5 seconds
             current_seconds = str(int(current_time) % 60)
             print(f"Set DEAF to {current_seconds}")
-            handle = 0x0016
-            if self.gatt_server.set_value_from_server(handle, current_seconds.encode('utf-8')) == False:
-                print(f"Error: value {current_seconds} didn't update on server for 0x{handle:04X}")
+            if self.deaf_char.set_value_server(current_seconds.encode('utf-8')) == False:
+                print(f"Error: value {current_seconds} didn't update for DEAF")
             random_bytes = self.random_printable_bytes(8)
             print(f"Set DCBA to {random_bytes}")
-            handle = 0x0019
-            if self.gatt_server.set_value_from_server(handle, random_bytes) == False:
-                print(f"Error: value {random_bytes} didn't update on server for 0x{handle:04X}")
+            if self.dcba_char.set_value_server(random_bytes) == False:
+                print(f"Error: value {random_bytes} didn't update for DCBA")
             self.last_print_time = current_time
 
+    def abcd_value_changed(self, new_value):
+        # new_value = self.abcd_char.get_value_server()
+        print("ABCD Value Updated, Updating CDEF")
+        if self.cdef_char.set_value_server(new_value) == False:
+            print("Error: value didn't update for ABCD")
 
     def adv(self):
-        custom_service = self.gatt_server.add_service('11223344-5566-7788-99AA-BBCCDDEEFF00', name="My Custom Service")
-        custom_service.add_characteristic(
+        self.custom_service = self.gatt_server.add_service('11223344-5566-7788-99AA-BBCCDDEEFF00', name="My Custom Service")
+        if self.custom_service is None:
+            raise ValueError("Failed to add My Custom Service")
+        self.abcd_char = self.custom_service.add_characteristic(
             uuid="ABCD",
             properties=[PROP_FLAGS.READ, PROP_FLAGS.WRITE_WITHOUT_RESPONSE],
             value=b'ENTER'[::-1]
         )
-        custom_service.add_characteristic(
+        if self.abcd_char is None:
+            raise ValueError("Failed to add ABCD characteristic to My Custom Service")
+        self.abcd_char.callback = self.abcd_value_changed
+        self.cdef_char = self.custom_service.add_characteristic(
             uuid="CDEF",
             properties=[PROP_FLAGS.READ, PROP_FLAGS.NOTIFY, PROP_FLAGS.WRITE_WITHOUT_RESPONSE],
             value=b'0'[::-1]
         )
-        custom_service.add_characteristic(
+        if self.cdef_char is None:
+            raise ValueError("Failed to add CDEF characteristic to My Custom Service")
+        self.deaf_char = self.custom_service.add_characteristic(
             uuid="DEAF",
             properties=[PROP_FLAGS.READ, PROP_FLAGS.INDICATE],
             value=b'210'[::-1]
         )
-        custom_service.add_characteristic(
+        if self.deaf_char is None:
+            raise ValueError("Failed to add deaf characteristic to My Custom Service")
+        self.dcba_char = self.custom_service.add_characteristic(
             uuid="DCBA",
             properties=[PROP_FLAGS.READ, PROP_FLAGS.NOTIFY],
             value=b'SET CNT'[::-1]
         )
+        if self.dcba_char is None:
+            raise ValueError("Failed to add DCBA characteristic to My Custom Service")
         print(self.gatt_server.print_string())
 
 
@@ -151,10 +167,6 @@ class BLE(BluetoothLEConnection):
 if __name__ == "__main__":
     device_name = "My Super Pi"
     ble = BLE(device_name)
-    #ble.conn()
-    ble.adv()
-    #ble.test()
-    
     print("DONE")
     
     
