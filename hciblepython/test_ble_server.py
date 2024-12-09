@@ -92,7 +92,7 @@ class BLE(BluetoothLEConnection):
             value=b'210'[::-1]
         )
         if self.deaf_char is None:
-            raise ValueError("Failed to add deaf characteristic to My Custom Service")
+            raise ValueError("Failed to add DEAF characteristic to My Custom Service")
         self.dcba_char = self.custom_service.add_characteristic(
             uuid="DCBA",
             properties=[PROP_FLAGS.READ, PROP_FLAGS.NOTIFY],
@@ -101,7 +101,6 @@ class BLE(BluetoothLEConnection):
         if self.dcba_char is None:
             raise ValueError("Failed to add DCBA characteristic to My Custom Service")
         print(self.gatt_server.print_string())
-
 
         self.reset()
         self.wait_listen(self.long_wait)
@@ -161,8 +160,6 @@ class BLE(BluetoothLEConnection):
         # Closing steps
         self.do_set_advertise_enable(Advertising.DISABLED)
         self.wait_listen()
-
-
     
 if __name__ == "__main__":
     device_name = "My Super Pi"

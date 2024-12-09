@@ -1,4 +1,5 @@
 from uuid import UUID
+from gatt_enum import UUID_TYPE
 
 
 def as_addr (byts):
@@ -87,6 +88,15 @@ def from_data(val):
 
 def clean_uuid(uuid):
     return uuid.replace('-', '')
+
+def check_uuid(uuid):
+    if len(uuid) == 4 and is_hex(uuid):
+        return UUID_TYPE.UUID_16BIT
+    if len(uuid) == 36:
+        cleaned = clean_uuid(uuid)
+        if len(cleaned) == 32 and is_hex(cleaned):
+            return UUID_TYPE.UUID_128BIT
+    return False
 
 def is_hex(s):
     return all(c in '0123456789abcdefABCDEF' for c in s)

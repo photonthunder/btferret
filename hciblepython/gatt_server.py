@@ -8,15 +8,6 @@ import bisect
 import threading
 import struct
 
-def check_uuid(uuid):
-    if len(uuid) == 4 and bu.is_hex(uuid):
-        return UUID_TYPE.UUID_16BIT
-    if len(uuid) == 36:
-        cleaned = bu.clean_uuid(uuid)
-        if len(cleaned) == 32 and bu.is_hex(cleaned):
-            return UUID_TYPE.UUID_128BIT
-    return False
-
 class GattHandles:
     _instance = None
     _lock = threading.Lock()
