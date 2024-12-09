@@ -372,7 +372,6 @@ class GattServer:
         
         self.set_base_services()
         
-
     def get_service_change_range(self):
         if self.initial_add == False:
             return None
@@ -381,6 +380,9 @@ class GattServer:
         # self.set_char_value_uuid(KEY_SERVICE.GENERIC_ATTRIBUTE.value, KEY_CHAR.SERVICE_CHANGED.value, service_change_bytes)
         # print(service_change_bytes)
         return service_change_bytes
+
+    def on_add_char(self):
+        self.get_service_change_range()
 
     def create_pnp_id(self, vendor_id_source = 0x01, vendor_id = 0x1234, product_id = 0x0203, product_version = 0x0001):
         # vendor_id_source = 0x01   # Bluetooth SIG
@@ -409,9 +411,6 @@ class GattServer:
             product_version      # 2 bytes for Product Version (little-endian)
         )
         return pnp_id
-
-    def on_add_char(self):
-        self.get_service_change_range()
 
     def set_base_services(self):
         self.generic_access = self.add_service(uuid=KEY_SERVICE.GENERIC_ACCESS.value, name="Generic Access")
@@ -453,59 +452,6 @@ class GattServer:
                     return char_inst
         return None
 
-    def get_char_value_handle(self, handle):
-        char_inst = self.get_char_inst_handle(handle)
-        if char_inst is not None:
-            return char_inst.get_value(handle)
-        else:
-            print(f"Error: Handle 0x{handle:04X} not attached to char")
-            return ATTCode.INVALID_HANDLE, None
-
-    # def get_char_value_uuid(self, service_uuid, char_uuid):
-    #     for service_handle, service in self.services.items():
-    #         if service.uuid == service_uuid:
-    #             # print(f"Service Match {service_uuid}")
-    #             for char_handle, char_inst in service.characteristics.items():
-    #                 if char_inst.uuid == char_uuid:
-    #                     # print(f"Char Match {char_uuid}")
-    #                     return char_inst.get_value(char_inst.value_handle)
-    #     return ATTCODE.ATTRIBUTE_NOT_FOUND, None
-        
-    def set_char_value_handle(self, handle, new_value):
-        char_inst = self.get_char_inst_handle(handle)
-        if char_inst is not None:
-            return char_inst.set_value_client(handle, new_value)
-        else:
-            print(f"Error: Handle 0x{handle:04X} not attached to char")
-            return ATTCode.INVALID_HANDLE
-
-    # def set_char_value_uuid(self, service_uuid, char_uuid, new_value):
-    #     for service_handle, service in self.services.items():
-    #         if service.uuid == service_uuid:
-    #             # print(f"Service Match {service_uuid}")
-    #             for char_handle, char_inst in service.characteristics.items():
-    #                 if char_inst.uuid == char_uuid:
-    #                     # print(f"Char Match {char_uuid}")
-    #                     return char_inst.set_value_client(char_inst.value_handle, new_value)
-    #     return ATTCode.ATTRIBUTE_NOT_FOUND
-
-    def set_value_from_server(self, handle, value):
-        if not isinstance(value, bytes):
-            print("Error: Value from server must be a byte")
-        for service_handle, service in self.services.items():
-            for char_handle, char_inst in service.characteristics.items():
-                if char_inst.cd_handle == handle or char_inst.value_handle == handle:
-                    char_inst.set_value_server(value)
-                    return True
-        return False
-
-    def get_value_for_server(self, handle):
-        for service_handle, service in self.services.items():
-            for char_handle, char_inst in service.characteristics.items():
-                if char_inst.cd_handle == handle or char_inst.value_handle == handle:
-                    return char_inst.get_value_server()
-        return None
-
     def add_service(self, uuid, name = None, handle = None, primary = True):
         uuid_type = check_uuid(uuid)
         if uuid_type is None:
@@ -538,6 +484,22 @@ class GattServer:
 
     def get_service_handle(self, handle):
         return self.services.get(handle)
+
+    def get_char_value_handle(self, handle):
+        char_inst = self.get_char_inst_handle(handle)
+        if char_inst is not None:
+            return char_inst.get_value(handle)
+        else:
+            print(f"Error: Handle 0x{handle:04X} not attached to char")
+            return ATTCode.INVALID_HANDLE, None
+        
+    def set_char_value_handle(self, handle, new_value):
+        char_inst = self.get_char_inst_handle(handle)
+        if char_inst is not None:
+            return char_inst.set_value_client(handle, new_value)
+        else:
+            print(f"Error: Handle 0x{handle:04X} not attached to char")
+            return ATTCode.INVALID_HANDLE
 
     def clear_connection_settings(self):
         for service_handle, service in self.services.items():
