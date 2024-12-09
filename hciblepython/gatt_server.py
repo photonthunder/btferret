@@ -188,7 +188,7 @@ class Characteristic:
         else:
             self.gatt_handles.get_new_handle(handle)
 
-        if check_uuid(uuid) != UUID_TYPE.UUID_16BIT:
+        if bu.check_uuid(uuid) != UUID_TYPE.UUID_16BIT:
             print(f"Error: Descriptor has bad uuid {uuid}")
             return False
         self.descr_uuid_type = UUID_TYPE.UUID_16BIT
@@ -313,7 +313,7 @@ class Service:
             self.gatt_handles.get_new_handle(self.handle)
 
     def add_characteristic(self, uuid, properties, value, **kwargs):
-        uuid_type = check_uuid(uuid)
+        uuid_type = bu.check_uuid(uuid)
         if uuid_type is None:
             print(f"Error: Invalid char uuid {uuid}")
             return None
@@ -453,7 +453,7 @@ class GattServer:
         return None
 
     def add_service(self, uuid, name = None, handle = None, primary = True):
-        uuid_type = check_uuid(uuid)
+        uuid_type = bu.check_uuid(uuid)
         if uuid_type is None:
             print(f"Error: Invalid service uuid {uuid}")
             return None
